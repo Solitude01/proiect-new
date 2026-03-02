@@ -9,3 +9,7 @@ git push
 
 
 
+# 查看当前目录下各文件夹占用空间（PowerShell 版）
+du -sh * | sort-object -descending
+
+ls -Recurse | sort length -Descending | select -First 10

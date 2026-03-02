@@ -108,7 +108,7 @@ function Install-Task {
 
     # 创建触发器1: 系统启动时（延迟2分钟）
     $trigger1 = New-ScheduledTaskTrigger -AtStartup
-    $trigger1.Delay = "PT2M"  # 延迟2分钟
+    try { $trigger1.Delay = "PT2M" } catch { Write-Warning "当前系统不支持启动延迟属性，已跳过" }
 
     # 创建触发器2: 每2小时重复执行（无限期）
     $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval (New-TimeSpan -Hours $IntervalHours) -RepetitionDuration (New-TimeSpan -Days 9999)

@@ -6,7 +6,10 @@
       "Bash(powershell -Command \"$content = Get-Content -Path ''install.ps1'' -Raw -Encoding UTF8; $utf8Bom = New-Object System.Text.UTF8Encoding\\($true\\); [System.IO.File]::WriteAllText\\(\\(Join-Path $PWD ''install.ps1''\\), $content, $utf8Bom\\)\")",
       "Bash(powershell -ExecutionPolicy Bypass -File \"D:\\\\proiect\\\\工作\\\\坤云平台定时处理\\\\fix_encoding.ps1\")",
       "Bash(powershell -Command \"[System.IO.File]::ReadAllBytes\\(''D:\\\\proiect\\\\工作\\\\坤云平台定时处理\\\\install.ps1''\\)[0..2] -join '',''\")",
-      "Bash(powershell -Command \"[System.IO.File]::ReadAllText\\(''cleanup.ps1''\\) | Out-File -FilePath ''cleanup.ps1'' -Encoding UTF8\")"
+      "Bash(powershell -Command \"[System.IO.File]::ReadAllText\\(''cleanup.ps1''\\) | Out-File -FilePath ''cleanup.ps1'' -Encoding UTF8\")",
+      "Bash(python:*)",
+      "Bash(.build_venv/Scripts/pip install:*)",
+      "Bash(rm:*)"
     ]
   }
 }
