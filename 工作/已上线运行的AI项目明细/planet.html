@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI项目星轨 - 智能应用组</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Shared Styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        /* ================================
+           Saturn Ring Page - 土星环设计
+        ================================ */
+
+        :root {
+            --saturn-bg: #030308;
+            --saturn-core: #f4d03f;
+            --saturn-core-dark: #8B6914;
+            --saturn-ring-inner: rgba(255, 255, 255, 0.25);
+            --saturn-ring-outer: rgba(100, 150, 200, 0.08);
+            --saturn-glow: rgba(244, 208, 63, 0.4);
+            --saturn-green: #10b981;
+            --saturn-orange: #f59e0b;
+            --saturn-blue: #3b82f6;
+            --saturn-red: #ef4444;
+            --saturn-text: #f0f0f5;
+            --saturn-text-dim: #8888a0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--saturn-bg);
+            color: var(--saturn-text);
+        }
+
+        /* ================================
+           Main Container
+        ================================ */
+        .saturn-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            perspective: 1200px;
+        }
+
+        /* ================================
+           星空背景 Canvas
+        ================================ */
+        .starfield-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* ================================
+           土星系统容器
+        ================================ */
+        .saturn-system {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90vmin;
+            height: 90vmin;
+            z-index: 5;
+            transform-style: preserve-3d;
+        }
+
+        /* ================================
+           土星核心 (中心球体)
+        ================================ */
+        .saturn-core {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 140px;
+            height: 140px;
+            z-index: 100;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%,
+                #fff8dc 0%,
+                #f4d03f 20%,
+                #d4a017 50%,
+                #8B6914 80%,
+                #5a4510 100%);
+            box-shadow:
+                0 0 60px var(--saturn-glow),
+                0 0 120px rgba(244, 208, 63, 0.2),
+                inset -20px -10px 40px rgba(0, 0, 0, 0.4),
+                inset 10px 5px 20px rgba(255, 255, 255, 0.2);
+            animation: corePulse 4s ease-in-out infinite;
+        }
+
+        /* 土星大气层光晕 */
+        .saturn-core::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            border-radius: 50%;
+            background: radial-gradient(circle,
+                rgba(244, 208, 63, 0.15) 0%,
+                rgba(244, 208, 63, 0.05) 50%,
+                transparent 70%);
+            animation: atmospherePulse 6s ease-in-out infinite;
+        }
+
+        /* 土星条纹 */
+        .saturn-core::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 50%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0%,
+                transparent 8%,
+                rgba(139, 105, 20, 0.3) 8%,
+                rgba(139, 105, 20, 0.3) 10%,
+                transparent 10%,
+                transparent 15%,
+                rgba(212, 160, 23, 0.2) 15%,
+                rgba(212, 160, 23, 0.2) 17%
+            );
+            opacity: 0.6;
+        }
+
+        @keyframes corePulse {
+            0%, 100% {
+                box-shadow:
+                    0 0 60px var(--saturn-glow),
+                    0 0 120px rgba(244, 208, 63, 0.2),
+                    inset -20px -10px 40px rgba(0, 0, 0, 0.4),
+                    inset 10px 5px 20px rgba(255, 255, 255, 0.2);
+            }
+            50% {
+                box-shadow:
+                    0 0 80px rgba(244, 208, 63, 0.5),
+                    0 0 160px rgba(244, 208, 63, 0.3),
+                    inset -20px -10px 40px rgba(0, 0, 0, 0.4),
+                    inset 10px 5px 20px rgba(255, 255, 255, 0.2);
+            }
+        }
+
+        @keyframes atmospherePulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+
+        /* ================================
+           土星环容器 (3D 透视)
+        ================================ */
+        .saturn-ring-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotateX(70deg);
+            transform-style: preserve-3d;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ================================
+           土星环层 (背景装饰)
+        ================================ */
+        .ring-layer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* 外环 */
+        .ring-outer {
+            width: 95%;
+            height: 95%;
+            background: radial-gradient(ellipse at center,
+                transparent 55%,
+                rgba(100, 130, 180, 0.03) 56%,
+                rgba(100, 130, 180, 0.08) 65%,
+                rgba(80, 110, 160, 0.05) 75%,
+                transparent 85%);
+        }
+
+        /* 主环 - A环 */
+        .ring-a {
+            width: 85%;
+            height: 85%;
+            background: radial-gradient(ellipse at center,
+                transparent 50%,
+                rgba(200, 200, 220, 0.08) 51%,
+                rgba(180, 180, 200, 0.15) 60%,
+                rgba(160, 160, 180, 0.1) 68%,
+                transparent 70%);
+            animation: ringRotate 120s linear infinite;
+        }
+
+        /* 卡西尼环缝 */
+        .ring-cassini {
+            width: 70%;
+            height: 70%;
+            background: radial-gradient(ellipse at center,
+                transparent 65%,
+                rgba(3, 3, 8, 0.8) 66%,
+                rgba(3, 3, 8, 0.8) 68%,
+                transparent 69%);
+        }
+
+        /* B环 - 最亮 */
+        .ring-b {
+            width: 65%;
+            height: 65%;
+            background: radial-gradient(ellipse at center,
+                transparent 45%,
+                rgba(220, 220, 240, 0.1) 46%,
+                rgba(200, 200, 220, 0.2) 52%,
+                rgba(180, 180, 200, 0.15) 58%,
+                transparent 60%);
+        }
+
+        /* C环 - 最内层 */
+        .ring-c {
+            width: 50%;
+            height: 50%;
+            background: radial-gradient(ellipse at center,
+                transparent 55%,
+                rgba(150, 150, 170, 0.05) 56%,
+                rgba(130, 130, 150, 0.08) 62%,
+                transparent 65%);
+        }
+
+        @keyframes ringRotate {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* ================================
+           粒子环 Canvas
+        ================================ */
+        .ring-particles-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        /* ================================
+           项目节点容器
+        ================================ */
+        .nodes-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ================================
+           项目节点
+        ================================ */
+        .saturn-node {
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            z-index: 50;
+        }
+
+        .saturn-node:hover {
+            z-index: 200;
+        }
+
+        .node-body {
+            position: relative;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--saturn-blue);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+            transition: all 0.3s ease;
+        }
+
+        .saturn-node:hover .node-body {
+            transform: scale(1.8);
+            box-shadow: 0 0 25px currentColor;
+        }
+
+        /* 节点状态颜色 */
+        .saturn-node[data-status="online"] .node-body {
+            background: var(--saturn-green);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+        }
+
+        .saturn-node[data-status="progress"] .node-body {
+            background: var(--saturn-orange);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+        }
+
+        .saturn-node[data-status="pending"] .node-body {
+            background: var(--saturn-blue);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+        }
+
+        .saturn-node[data-status="cancelled"] .node-body {
+            background: var(--saturn-red);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+        }
+
+        /* 节点标签 */
+        .node-label {
+            position: absolute;
+            bottom: calc(100% + 12px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 20, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 0.6rem 1rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 300;
+            backdrop-filter: blur(10px);
+        }
+
+        .saturn-node:hover .node-label {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-5px);
+        }
+
+        .node-label::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: rgba(10, 10, 20, 0.95);
+        }
+
+        .node-label-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--saturn-text);
+            margin-bottom: 3px;
+        }
+
+        .node-label-factory {
+            font-size: 0.7rem;
+            color: var(--saturn-core);
+        }
+
+        /* ================================
+           Header
+        ================================ */
+        .saturn-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background: linear-gradient(180deg,
+                rgba(3, 3, 8, 0.98) 0%,
+                rgba(3, 3, 8, 0.6) 60%,
+                transparent 100%);
+        }
+
+        .saturn-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .saturn-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--saturn-core), var(--saturn-core-dark));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px var(--saturn-glow);
+        }
+
+        .saturn-logo-icon svg {
+            width: 20px;
+            height: 20px;
+            color: white;
+        }
+
+        .saturn-logo-text {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--saturn-text);
+        }
+
+        .saturn-nav {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .saturn-nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--saturn-text-dim);
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .saturn-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--saturn-core);
+            color: var(--saturn-text);
+        }
+
+        .saturn-nav-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* ================================
+           Footer
+        ================================ */
+        .saturn-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background: linear-gradient(0deg,
+                rgba(3, 3, 8, 0.98) 0%,
+                rgba(3, 3, 8, 0.6) 60%,
+                transparent 100%);
+        }
+
+        .saturn-filters {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .saturn-filter-select {
+            padding: 0.5rem 2rem 0.5rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--saturn-text-dim);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238888a0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            min-width: 120px;
+        }
+
+        .saturn-filter-select:focus {
+            outline: none;
+            border-color: var(--saturn-core);
+        }
+
+        .saturn-filter-select option {
+            background: #0a0a1a;
+        }
+
+        .saturn-stats {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .saturn-stat {
+            text-align: right;
+        }
+
+        .saturn-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--saturn-text);
+            line-height: 1;
+        }
+
+        .saturn-stat-value.accent {
+            color: var(--saturn-core);
+        }
+
+        .saturn-stat-label {
+            font-size: 0.65rem;
+            color: var(--saturn-text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0.2rem;
+        }
+
+        /* ================================
+           图例
+        ================================ */
+        .saturn-legend {
+            position: absolute;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(10, 10, 20, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .legend-title {
+            font-size: 0.65rem;
+            color: var(--saturn-text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--saturn-text-dim);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.online { background: var(--saturn-green); box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+        .legend-dot.progress { background: var(--saturn-orange); box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+        .legend-dot.pending { background: var(--saturn-blue); box-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
+        .legend-dot.cancelled { background: var(--saturn-red); box-shadow: 0 0 8px rgba(239, 68, 68, 0.5); }
+
+        /* ================================
+           控制提示
+        ================================ */
+        .saturn-hint {
+            position: absolute;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            padding: 1rem;
+            background: rgba(10, 10, 20, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            font-size: 0.75rem;
+            color: var(--saturn-text-dim);
+        }
+
+        .hint-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .hint-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .hint-item svg {
+            width: 14px;
+            height: 14px;
+            color: var(--saturn-core);
+        }
+
+        /* ================================
+           Loading & Empty States
+        ================================ */
+        .saturn-loading,
+        .saturn-empty {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 200;
+        }
+
+        .saturn-loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--saturn-core);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .saturn-loading-text,
+        .saturn-empty-text {
+            font-size: 0.9rem;
+            color: var(--saturn-text-dim);
+        }
+
+        .saturn-empty-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1rem;
+            color: var(--saturn-text-dim);
+            opacity: 0.5;
+        }
+
+        .saturn-empty-hint {
+            font-size: 0.8rem;
+            color: var(--saturn-text-dim);
+            margin-top: 0.5rem;
+            opacity: 0.7;
+        }
+
+        .saturn-empty-btn {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.6rem 1.2rem;
+            background: linear-gradient(135deg, var(--saturn-core), var(--saturn-core-dark));
+            border-radius: 6px;
+            color: white;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .saturn-empty-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px var(--saturn-glow);
+        }
+
+        /* ================================
+           暂停控制
+        ================================ */
+        .saturn-pause-btn {
+            position: absolute;
+            bottom: 6rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            color: var(--saturn-text-dim);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .saturn-pause-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--saturn-text);
+            border-color: var(--saturn-core);
+        }
+
+        .saturn-pause-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* ================================
+           Responsive
+        ================================ */
+        @media (max-width: 768px) {
+            .saturn-legend,
+            .saturn-hint {
+                display: none;
+            }
+
+            .saturn-system {
+                width: 95vmin;
+                height: 95vmin;
+            }
+
+            .saturn-core {
+                width: 100px;
+                height: 100px;
+            }
+
+            .saturn-header,
+            .saturn-footer {
+                padding: 1rem;
+            }
+
+            .saturn-footer {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .saturn-filters {
+                width: 100%;
+            }
+
+            .saturn-filter-select {
+                flex: 1;
+            }
+
+            .saturn-stats {
+                width: 100%;
+                justify-content: space-around;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="saturn-container">
+        <!-- 星空背景 Canvas -->
+        <canvas class="starfield-canvas" id="starfieldCanvas"></canvas>
+
+        <!-- 土星系统 -->
+        <div class="saturn-system" id="saturnSystem">
+            <!-- 土星核心 -->
+            <div class="saturn-core"></div>
+
+            <!-- 土星环容器 (3D 透视) -->
+            <div class="saturn-ring-container" id="ringContainer">
+                <!-- 环层装饰 -->
+                <div class="ring-layer ring-outer"></div>
+                <div class="ring-layer ring-a"></div>
+                <div class="ring-layer ring-cassini"></div>
+                <div class="ring-layer ring-b"></div>
+                <div class="ring-layer ring-c"></div>
+
+                <!-- 粒子环 Canvas -->
+                <canvas class="ring-particles-canvas" id="ringParticlesCanvas"></canvas>
+
+                <!-- 项目节点容器 -->
+                <div class="nodes-container" id="nodesContainer"></div>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="saturn-header">
+            <div class="saturn-logo">
+                <div class="saturn-logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <ellipse cx="12" cy="12" rx="18" ry="6" transform="rotate(-20)"></ellipse>
+                    </svg>
+                </div>
+                <span class="saturn-logo-text">智能应用组 · AI项目星轨</span>
+            </div>
+            <nav class="saturn-nav">
+                <a href="business.html" class="saturn-nav-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    列表视图
+                </a>
+                <a href="index.html" class="saturn-nav-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                    管理入口
+                </a>
+            </nav>
+        </header>
+
+        <!-- 图例 -->
+        <div class="saturn-legend">
+            <div class="legend-title">状态图例</div>
+            <div class="legend-item">
+                <span class="legend-dot online"></span>
+                已上线
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot progress"></span>
+                进行中
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot pending"></span>
+                待处理
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot cancelled"></span>
+                已取消
+            </div>
+        </div>
+
+        <!-- 操作提示 -->
+        <div class="saturn-hint">
+            <div class="hint-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                悬停查看
+            </div>
+            <div class="hint-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                    <polyline points="10 17 15 12 10 7"></polyline>
+                </svg>
+                点击详情
+            </div>
+            <div class="hint-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="11" y1="8" x2="11" y2="14"></line>
+                    <line x1="8" y1="11" x2="14" y2="11"></line>
+                </svg>
+                滚轮缩放
+            </div>
+        </div>
+
+        <!-- 暂停按钮 -->
+        <button class="saturn-pause-btn" id="pauseBtn">
+            <svg id="pauseIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+            <span id="pauseText">暂停</span>
+        </button>
+
+        <!-- Footer -->
+        <footer class="saturn-footer">
+            <div class="saturn-filters">
+                <select class="saturn-filter-select" id="filterFactory">
+                    <option value="">全部工厂</option>
+                </select>
+                <select class="saturn-filter-select" id="filterStatus">
+                    <option value="">全部状态</option>
+                </select>
+            </div>
+            <div class="saturn-stats">
+                <div class="saturn-stat">
+                    <div class="saturn-stat-value" id="statTotal">0</div>
+                    <div class="saturn-stat-label">项目总数</div>
+                </div>
+                <div class="saturn-stat">
+                    <div class="saturn-stat-value accent" id="statOnline">0</div>
+                    <div class="saturn-stat-label">已上线</div>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Loading State -->
+        <div class="saturn-loading" id="loadingState">
+            <div class="saturn-loading-spinner"></div>
+            <p class="saturn-loading-text">正在加载项目数据...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div class="saturn-empty" id="emptyState" style="display: none;">
+            <svg class="saturn-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+            </svg>
+            <p class="saturn-empty-text">暂无项目数据</p>
+            <p class="saturn-empty-hint">请先在管理页面上传Excel数据</p>
+            <a href="index.html" class="saturn-empty-btn">前往管理页面</a>
+        </div>
+    </div>
+
+    <!-- Project Detail Modal -->
+    <div class="detail-modal" id="detailModal">
+        <div class="detail-modal-backdrop"></div>
+        <div class="detail-modal-container">
+            <button class="detail-modal-close" id="detailModalClose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <div class="detail-modal-content" id="detailModalContent"></div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal" id="imageModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <img id="modalImage" src="" alt="报警图例">
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="shared.js"></script>
+    <script src="planet.js"></script>
+</body>
+</html>

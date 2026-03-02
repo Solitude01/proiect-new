@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>“五险一金”交互式全解指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Harmony -->
+    <!-- Application Structure Plan: 本应用采用“仪表盘+深度探索”结合的结构。顶部是核心概念速览和缴费构成可视化图表，让用户一目了然。中部是六大模块（五险+一金）的卡片式导航，用户可点击任一模块，下方内容区会动态更新，展示该模块的详细信息（如领取条件、待遇标准），实现了非线性探索。特别设计了“养老金模拟器”和“不同就业身份对比”两个强交互模块，将报告中的核心计算逻辑和对比分析转化为直观体验，强化用户理解。这种结构优先考虑用户按需学习的习惯，而非报告的线性叙述，极大提升了可用性和信息获取效率。 -->
+    <!-- Visualization & Content Choices: 1. **缴费构成**: 目标(Goal):直观展示单位与个人缴费比例。方式(Method):Chart.js绘制的甜甜圈图(Donut Chart)。交互(Interaction):鼠标悬浮高亮并显示具体比例。理由(Justification):比静态表格更吸引人，能快速建立“共同承担”的概念。 2. **养老金模拟器**: 目标:阐明“多缴多得、长缴多得”原则。方式:HTML滑块/输入框+Chart.js条形图。交互:用户拖动滑块（月薪、缴费年限）或选择城市，条形图实时更新养老金构成和总额。理由:将复杂的计算公式转化为可感知的即时反馈，是理解养老金机制最有效的方式。 3. **就业身份对比**: 目标:对比不同身份的参保差异。方式:HTML/Tailwind构建的切换按钮+内容卡片。交互:点击按钮切换内容。理由:并排或切换式对比，比长篇文字描述更清晰。 4. **核心信息**: 目标:传达关键规则和条件。方式:结构化的HTML文本块，配合Unicode图标（✔️, 💰, 📅）。交互:点击主导航卡片时动态显示。理由:清晰的排版和图标引导，便于快速扫描和理解。 -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #F8F9FA;
+            color: #343A40;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+                max-height: 400px;
+            }
+        }
+        .nav-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .nav-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .nav-card.active {
+            transform: translateY(-2px);
+            box-shadow: 0 0 0 3px #14B8A6; /* Teal-500 */
+            border-color: #14B8A6;
+        }
+        .tab-button {
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .tab-button.active {
+            background-color: #14B8A6;
+            color: white;
+        }
+        .content-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">“五险一金” 交互式全解指南</h1>
+            <p class="text-md md:text-lg text-gray-600">一个为您量身打造的、看得懂、玩得转的社保与公积金手册。</p>
+        </header>
+
+        <section id="intro" class="bg-white p-6 rounded-xl shadow-md mb-8">
+            <h2 class="text-2xl font-bold text-teal-600 mb-4">核心概念：一分钟搞懂“社保”与“五险一金”</h2>
+            <div class="grid md:grid-cols-2 gap-6 items-center">
+                <div class="prose max-w-none text-gray-700">
+                    <p>您是否也曾困惑，“社保”和“五险一金”到底是什么关系？其实很简单：</p>
+                    <ul class="list-none p-0">
+                        <li class="flex items-start mb-2">
+                            <span class="text-teal-500 font-bold mr-3 text-xl">社保</span>
+                            <span>= 养老保险 + 医疗保险 + 失业保险 + 工伤保险 + 生育保险 (这就是“五险”)。它是国家强制的社会保险体系，旨在抵御人生基本风险。</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-teal-500 font-bold mr-3 text-xl">五险一金</span>
+                            <span>= <strong class="text-teal-600">社保(五险)</strong> + <strong class="text-teal-600">住房公积金(一金)</strong>。它在社保的基础上，增加了一项用于解决住房问题的福利。</span>
+                        </li>
+                    </ul>
+                    <p class="mt-4 bg-teal-50 border-l-4 border-teal-500 p-4 rounded-r-lg">
+                        <strong>关键结论：</strong> “五险一金”是更完整的概念，它完全包含了“社保”。为职工缴纳“五险一金”是用人单位的法定义务，试用期也不例外！
+                    </p>
+                </div>
+                <div class="chart-container h-64 md:h-auto">
+                    <canvas id="contributionChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <main>
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">点击下方卡片，探索“五险一金”的奥秘</h2>
+            <div id="navigation" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            </div>
+
+            <div id="content-area" class="bg-white p-6 rounded-xl shadow-md min-h-[300px]">
+            </div>
+        </main>
+        
+        <section id="simulator" class="bg-white p-6 rounded-xl shadow-md mt-8">
+            <h2 class="text-2xl font-bold text-teal-600 mb-4">交互模块一：养老金模拟器</h2>
+            <p class="text-gray-600 mb-6">想知道退休后大概能领多少钱吗？调整下方参数，直观感受“多缴多得、长缴多得”的核心原则。请注意，这只是一个基于简化模型的估算，实际金额以退休时当地政策为准。</p>
+            <div class="grid md:grid-cols-3 gap-6 mb-6">
+                <div>
+                    <label for="salary" class="block text-sm font-medium text-gray-700">我的当前月薪 (元)</label>
+                    <input type="range" id="salary" min="3000" max="30000" value="8000" step="500" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    <div class="text-center font-bold text-teal-600 mt-1"><span id="salary-value">8000</span> 元</div>
+                </div>
+                <div>
+                    <label for="years" class="block text-sm font-medium text-gray-700">预计累计缴费年限</label>
+                    <input type="range" id="years" min="15" max="40" value="25" step="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    <div class="text-center font-bold text-teal-600 mt-1"><span id="years-value">25</span> 年</div>
+                </div>
+                <div>
+                    <label for="city" class="block text-sm font-medium text-gray-700">我的退休城市</label>
+                    <select id="city" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md">
+                        <option value="beijing">一线城市 (如北京)</option>
+                        <option value="chengdu">新一线城市 (如成都)</option>
+                        <option value="lanzhou">二三线城市 (如兰州)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="pensionChart"></canvas>
+            </div>
+        </section>
+
+        <section id="comparison" class="bg-white p-6 rounded-xl shadow-md mt-8">
+            <h2 class="text-2xl font-bold text-teal-600 mb-4">交互模块二：不同就业身份保障对比</h2>
+            <p class="text-gray-600 mb-6">您的职业身份决定了您能参与的保障项目和缴费方式。点击下方按钮，查看不同身份的社保权益有何不同。</p>
+            <div id="employment-tabs" class="flex justify-center space-x-2 md:space-x-4 mb-6 bg-gray-100 p-1 rounded-lg">
+            </div>
+            <div id="comparison-content" class="min-h-[200px]">
+            </div>
+        </section>
+
+
+        <footer class="text-center mt-12 py-6 border-t">
+            <p class="text-gray-600">主动管理您的社会保障，是构筑未来财务安全的第一步。</p>
+            <p class="text-sm text-gray-500 mt-1">本应用信息根据公开资料整理，仅供学习参考，具体政策请以当地人社局和公积金管理中心为准。</p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const DB = {
+                pension: {
+                    title: "养老保险",
+                    icon: "👴",
+                    description: "保障您“老有所养”，是退休后最主要的收入来源。",
+                    details: `
+                        <h3 class="text-xl font-bold mb-3 text-gray-800">养老保险全解析</h3>
+                        <p class="mb-4">它的核心目标是确保您在达到法定退休年龄后，能按月领取养老金，维持基本生活。</p>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-teal-700">💰 谁来缴费？</h4>
+                                <p>单位和个人共同承担。单位缴16%，进入社会统筹基金(大池子)；个人缴8%，全部进入您的个人账户。</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-teal-700">✔️ 领取条件？</h4>
+                                <p>必须同时满足两个条件：1. 达到法定退休年龄（男60，女干部55，女工人50）；2. 养老保险累计缴费满15年。</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-teal-700">📈 如何计算？</h4>
+                                <p>养老金 = 基础养老金 + 个人账户养老金。遵循“多缴多得、长缴多得”原则，缴费年限越长、缴费基数越高，退休后领得越多。</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-teal-700">🧠 核心策略</h4>
+                                <p class="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-md">对于个人而言，保证<strong class="text-amber-700">“长缴”</strong>（缴费年限）比追求“高缴”（高缴费基数）更重要，也更划算。</p>
+                            </div>
+                        </div>
+                    `
+                },
+                medical: {
+                    title: "医疗保险",
+                    icon: "🏥",
+                    description: "您和家人看病就医的“钱包守护神”，使用频率最高。",
+                    details: `
+                        <h3 class="text-xl font-bold mb-3 text-gray-800">医疗保险全解析</h3>
+                        <p class="mb-4">当您生病需要去医院时，医保可以按比例报销医疗费用，大大减轻您的经济负担。</p>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-teal-700">🔑 三大核心概念</h4>
+                                <ul class="list-disc list-inside ml-2">
+                                    <li><strong>起付线：</strong>医保报销的“门槛”，低于此金额需自费。</li>
+                                    <li><strong>报销比例：</strong>超过起付线后，医保报销的百分比。</li>
+                                    <li><strong>封顶线：</strong>一年内医保报销的最高额度。</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-teal-700">✈️ 异地就医怎么办？</h4>
+                                <p>提前办理“异地就医备案”，即可在异地直接结算。规则是“就医地目录，参保地待遇”，即按您看病地方的报销范围，和您交社保地方的报销比例来计算。</p>
+                            </div>
+                             <div>
+                                <h4 class="font-semibold text-teal-700">🤰 与生育保险合并</h4>
+                                <p>目前生育保险已并入医保，统一管理。这意味着管理更高效，保障也更稳定。</p>
+                            </div>
+                        </div>
+                    `
+                },
+                unemployment: {
+                    title: "失业保险",
+                    icon: "💼",
+                    description: "在您暂时失业时，提供一份基本的生活保障。",
+                    details: `
+                        <h3 class="text-xl font-bold mb-3 text-gray-800">失业保险全解析</h3>
+                        <p class="mb-4">它是在您非自愿失业后，提供临时生活费（失业金）的保障，助您渡过难关。</p>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-teal-700">✔️ 领取条件 (缺一不可)</h4>
+                                <ul class="list-disc list-inside ml-2">
+                                    <li>失业保险已缴满1年。</li>
+                                    <li><strong class="text-red-600">非因本人意愿</strong>中断就业（如被裁员、合同到期单位不续签等）。<strong>主动辞职领不了！</strong></li>
+                                    <li>已办理失业登记，并有求职要求。</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-teal-700">📅 能领多久？领多少？</h4>
+                                <p>领取期限根据缴费年限决定，最长不超过24个月。金额由地方政府根据当地最低工资标准确定。</p>
+                            </div>
+                        </div>
+                    `
+                },
+                injury: {
+                    title: "工伤保险",
+                    icon: "👷",
+                    description: "工作中发生意外的保障，体现雇主责任。",
+                    details: `
+                        <h3 class="text-xl font-bold mb-3 text-gray-800">工伤保险全解析</h3>
+                        <p class="mb-4">保障职工因工作原因受伤或患上职业病后，能获得医疗救治和经济补偿。</p>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-teal-700">💰 谁来缴费？</h4>
+                                <p class="bg-teal-50 border-l-4 border-teal-500 p-3 rounded-r-md">费用<strong class="text-teal-700">完全由单位承担</strong>，个人无需缴纳一分钱。这是雇主的法定责任。</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-teal-700">📝 如何认定工伤？</h4>
+                                <p>核心是“三工”原则：工作时间、工作场所、因工作原因。此外，上下班途中发生非本人主要责任的交通事故、或在工作岗位突发疾病48小时内抢救无效死亡等，也视同工伤。</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-teal-700">⚖️ 举证责任</h4>
+                                <p>当职工与单位对是否为工伤有争议时，由<strong class="text-red-600">单位</strong>承担举证责任，这对劳动者非常有利。</p>
+                            </div>
+                        </div>
+                    `
+                },
+                maternity: {
+                    title: "生育保险",
+                    icon: "👶",
+                    description: "为新生家庭提供支持，促进性别平等。",
+                    details: `
+                        <h3 class="text-xl font-bold mb-3 text-gray-800">生育保险全解析</h3>
+                        <p class="mb-4">为职业女性在生育期间提供经济和医疗支持。目前已并入医疗保险，由单位缴费，个人不缴。</p>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-teal-700">🎁 两大核心待遇</h4>
+                                <ul class="list-disc list-inside ml-2">
+                                    <li><strong>生育医疗费报销：</strong>报销产检、分娩等医疗开支。</li>
+                                    <li><strong>生育津贴：</strong>这是核心。在您休产假期间，由保险基金发一笔钱，相当于“产假工资”，用于弥补您此间的收入损失。</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-teal-700">💡 津贴与工资的关系</h4>
+                                <p class="bg-teal-50 border-l-4 border-teal-500 p-3 rounded-r-md">如果生育津贴高于您的原工资，单位需全额给您；如果低于原工资，<strong class="text-teal-700">单位需要补足差额</strong>。最终确保您产假期间收入不降低。</p>
+                            </div>
+                        </div>
+                    `
+                },
+                fund: {
+                    title: "住房公积金",
+                    icon: "🏠",
+                    description: "帮您圆“住房梦”的强制性储蓄，一笔属于您的资产。",
+                    details: `
+                        <h3 class="text-xl font-bold mb-3 text-gray-800">住房公积金全解析</h3>
+                        <p class="mb-4">与“五险”的保障属性不同，“一金”是纯粹的个人资产，旨在帮您解决住房问题。</p>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-teal-700">💰 谁来缴费？</h4>
+                                <p>单位和个人<strong class="text-teal-700">按同等比例</strong>共同缴存（比例在5%-12%之间）。进入您个人账户的钱（包括单位缴的），<strong class="text-red-600">全部归您个人所有</strong>。</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-teal-700">🛠️ 两大核心用途</h4>
+                                <ul class="list-disc list-inside ml-2">
+                                    <li><strong>低息贷款：</strong>买房时可申请公积金贷款，利率远低于商业贷款，能省一大笔钱。</li>
+                                    <li><strong>灵活提取：</strong>可用于买房、租房、还房贷、大修住房等。尤其是租房提取，手续已非常简化。</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-teal-700">🧠 核心策略</h4>
+                                <p class="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-md">需要权衡：用公积金付房租会缓解当前压力，但可能<strong class="text-amber-700">降低</strong>您未来买房时的最高贷款额度。这是一个短期生活品质与长期资产规划的博弈。</p>
+                            </div>
+                        </div>
+                    `
+                }
+            };
+
+            const employmentData = {
+                employee: {
+                    title: "企业职工",
+                    content: `
+                        <ul class="list-none p-0 space-y-2">
+                            <li class="flex items-center"><span class="text-green-500 mr-2">✔️</span> <strong>养老保险:</strong> 强制参加，单位与个人共担</li>
+                            <li class="flex items-center"><span class="text-green-500 mr-2">✔️</span> <strong>医疗保险:</strong> 强制参加，单位与个人共担</li>
+                            <li class="flex items-center"><span class="text-green-500 mr-2">✔️</span> <strong>失业保险:</strong> 强制参加，单位与个人共担</li>
+                            <li class="flex items-center"><span class="text-green-500 mr-2">✔️</span> <strong>工伤保险:</strong> 强制参加，仅单位承担</li>
+                            <li class="flex items-center"><span class="text-green-500 mr-2">✔️</span> <strong>生育保险:</strong> 强制参加，仅单位承担 (已并入医保)</li>
+                            <li class="flex items-center"><span class="text-green-500 mr-2">✔️</span> <strong>住房公积金:</strong> 强制参加，单位与个人共担</li>
+                        </ul>
+                        <p class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg"><strong>总结：</strong>保障最全面，由国家法律强制规定，单位必须为员工缴纳完整的“五险一金”。</p>
+                    `
+                },
+                flexible: {
+                    title: "灵活就业人员",
+                    content: `
+                        <ul class="list-none p-0 space-y-2">
+                            <li class="flex items-center"><span class="text-yellow-500 mr-2">🟡</span> <strong>养老保险:</strong> 自愿参加，个人全额承担</li>
+                            <li class="flex items-center"><span class="text-yellow-500 mr-2">🟡</span> <strong>医疗保险:</strong> 自愿参加，个人全额承担</li>
+                            <li class="flex items-center"><span class="text-red-500 mr-2">❌</span> <strong>失业保险:</strong> 通常无法参加</li>
+                            <li class="flex items-center"><span class="text-red-500 mr-2">❌</span> <strong>工伤保险:</strong> 通常无法参加</li>
+                            <li class="flex items-center"><span class="text-red-500 mr-2">❌</span> <strong>生育保险:</strong> 通常无法参加</li>
+                            <li class="flex items-center"><span class="text-red-500 mr-2">❌</span> <strong>住房公积金:</strong> 仅部分城市试点，非普适</li>
+                        </ul>
+                        <p class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg"><strong>总结：</strong>保障有“缺口”，主要解决养老和医疗两大问题。缴费压力大，因为需个人承担所有费用。参加的养老保险与职工是<strong class="text-teal-600">完全相同</strong>的制度。</p>
+                    `
+                },
+                self_employed: {
+                    title: "个体工商户",
+                    content: `
+                        <p class="mb-2">分两种情况讨论：</p>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <h5 class="font-semibold mb-2">无雇工的个体户</h5>
+                                <p class="text-sm">户主本人按“灵活就业人员”的规定为自己参保，通常只交养老和医疗。</p>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded-lg">
+                                <h5 class="font-semibold mb-2">有雇工的个体户</h5>
+                                <p class="text-sm">此时个体户被视为一个“用人单位”，必须为雇员缴纳完整的“五险”。</p>
+                            </div>
+                        </div>
+                         <p class="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg"><strong>总结：</strong>是否雇佣员工是关键。一旦有雇员，就必须承担起和公司一样的社保缴纳责任。</p>
+                    `
+                }
+            };
+
+            const navigationEl = document.getElementById('navigation');
+            const contentAreaEl = document.getElementById('content-area');
+            let activeCard = null;
+
+            Object.keys(DB).forEach(key => {
+                const item = DB[key];
+                const card = document.createElement('div');
+                card.className = 'nav-card bg-white p-4 rounded-lg shadow-sm border-2 border-transparent cursor-pointer text-center';
+                card.dataset.key = key;
+                card.innerHTML = `
+                    <div class="text-4xl mb-2">${item.icon}</div>
+                    <h3 class="font-semibold text-gray-800">${item.title}</h3>
+                    <p class="text-xs text-gray-500 mt-1">${item.description}</p>
+                `;
+                card.addEventListener('click', () => {
+                    if (activeCard) {
+                        activeCard.classList.remove('active');
+                    }
+                    card.classList.add('active');
+                    activeCard = card;
+                    
+                    contentAreaEl.innerHTML = `<div class="content-fade-in">${item.details}</div>`;
+                });
+                navigationEl.appendChild(card);
+            });
+
+            const contributionCtx = document.getElementById('contributionChart').getContext('2d');
+            new Chart(contributionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['养老保险', '医疗保险', '失业保险', '住房公积金'],
+                    datasets: [{
+                        label: '缴费构成 (单位+个人)',
+                        data: [24, 10, 1, 24], 
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(239, 68, 68, 0.7)',
+                            'rgba(249, 115, 22, 0.7)',
+                            'rgba(20, 184, 166, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(249, 115, 22, 1)',
+                            'rgba(20, 184, 166, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: '“五险一金”缴费构成概览 (以最高比例为例)'
+                        },
+                        tooltip: {
+                             callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed + '%';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            navigationEl.children[0].click();
+
+            const salaryInput = document.getElementById('salary');
+            const yearsInput = document.getElementById('years');
+            const citySelect = document.getElementById('city');
+            const salaryValue = document.getElementById('salary-value');
+            const yearsValue = document.getElementById('years-value');
+            const pensionCtx = document.getElementById('pensionChart').getContext('2d');
+            let pensionChart;
+
+            const cityData = {
+                beijing: { avgSalary: 12000, name: '一线城市' },
+                chengdu: { avgSalary: 8000, name: '新一线城市' },
+                lanzhou: { avgSalary: 6000, name: '二三线城市' }
+            };
+
+            function calculatePension() {
+                const salary = parseInt(salaryInput.value);
+                const years = parseInt(yearsInput.value);
+                const city = citySelect.value;
+                const avgSalary = cityData[city].avgSalary;
+
+                const personalContribution = salary * 0.08 * 12 * years;
+                const personalPension = personalContribution / 139;
+
+                const avgContributionIndex = salary / avgSalary;
+                const basePension = (avgSalary + avgSalary * avgContributionIndex) / 2 * years * 0.01;
+                
+                return {
+                    base: Math.round(basePension),
+                    personal: Math.round(personalPension),
+                    total: Math.round(basePension + personalPension)
+                };
+            }
+
+            function updatePensionChart() {
+                const pensionData = calculatePension();
+                
+                if (pensionChart) {
+                    pensionChart.data.datasets[0].data = [pensionData.base, pensionData.personal];
+                    pensionChart.options.plugins.title.text = `预计每月养老金: ${pensionData.total} 元`;
+                    pensionChart.update();
+                } else {
+                    pensionChart = new Chart(pensionCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['基础养老金 (来自统筹)', '个人账户养老金'],
+                            datasets: [{
+                                label: '每月养老金构成 (元)',
+                                data: [pensionData.base, pensionData.personal],
+                                backgroundColor: [
+                                    'rgba(59, 130, 246, 0.7)',
+                                    'rgba(20, 184, 166, 0.7)'
+                                ],
+                                borderColor: [
+                                    'rgba(59, 130, 246, 1)',
+                                    'rgba(20, 184, 166, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    beginAtZero: true
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                title: {
+                                    display: true,
+                                    text: `预计每月养老金: ${pensionData.total} 元`,
+                                    font: { size: 16 }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            salaryInput.addEventListener('input', (e) => {
+                salaryValue.textContent = e.target.value;
+                updatePensionChart();
+            });
+            yearsInput.addEventListener('input', (e) => {
+                yearsValue.textContent = e.target.value;
+                updatePensionChart();
+            });
+            citySelect.addEventListener('change', updatePensionChart);
+
+            updatePensionChart();
+            
+            const employmentTabsEl = document.getElementById('employment-tabs');
+            const comparisonContentEl = document.getElementById('comparison-content');
+            let activeTab = null;
+
+            Object.keys(employmentData).forEach(key => {
+                const item = employmentData[key];
+                const button = document.createElement('button');
+                button.className = 'tab-button px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base font-medium rounded-md';
+                button.textContent = item.title;
+                button.dataset.key = key;
+
+                button.addEventListener('click', () => {
+                    if (activeTab) {
+                        activeTab.classList.remove('active');
+                    }
+                    button.classList.add('active');
+                    activeTab = button;
+                    comparisonContentEl.innerHTML = `<div class="content-fade-in">${item.content}</div>`;
+                });
+
+                employmentTabsEl.appendChild(button);
+            });
+            
+            employmentTabsEl.children[0].click();
+
+        });
+    </script>
+</body>
+</html>

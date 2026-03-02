@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>叠板作业 SOP - A4横向宽屏版（修复版）</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        /* 基础重置 */
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: #525659;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 顶部工具栏 */
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            padding: 10px 0;
+            text-align: center;
+            z-index: 999;
+        }
+        .btn {
+            background-color: #0984e3;
+            color: white;
+            border: none;
+            padding: 8px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .btn:hover { background-color: #076cb8; }
+
+        /* A4 横向布局 (Landscape) 核心代码 */
+        .a4-landscape {
+            background: white;
+            /* A4 Landscape 尺寸 */
+            width: 297mm;
+            height: 210mm; 
+            padding: 10mm; /* 稍微减小边距以容纳更多内容 */
+            box-sizing: border-box;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            margin-top: 50px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 0 0 10px 0;
+            border-bottom: 3px solid #333;
+            padding-bottom: 5px;
+            font-size: 24px;
+        }
+
+        /* 图例横排 */
+        .legend {
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 5px;
+            background: #f1f2f6;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .legend span { margin: 0 15px; }
+
+        /* 图表区域自动撑满 */
+        .chart-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center; /* 垂直居中 */
+            overflow: hidden;
+        }
+
+        /* 打印专用设置 */
+        @media print {
+            body { 
+                background: none; 
+                padding: 0; 
+                margin: 0;
+            }
+            .toolbar { display: none; }
+            .a4-landscape {
+                margin: 0;
+                box-shadow: none;
+                width: 100%;
+                height: 100%;
+                page-break-after: always;
+            }
+            @page {
+                size: A4 landscape; /* 强制横向打印 */
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <button class="btn" onclick="window.print()">🖨️ 打印 / 导出横向 PDF</button>
+        <span style="font-size:12px; margin-left:10px; color:#555;">(打印设置中请选择布局为：<strong>横向</strong>)</span>
+    </div>
+
+    <div class="a4-landscape">
+        <h2>智能叠板作业 SOP - 动作时序拆解图</h2>
+        
+        <div class="legend">
+            <strong>图例：</strong>
+            <span style="color:#636e72">■ 钢板(灰)</span>
+            <span style="color:#d63031">■ 红铜(红)</span>
+            <span style="color:#00b894">■ 板件(绿)</span>
+            <span style="border:1px solid #000">□ 白膜(白)</span>
+        </div>
+
+        <div class="mermaid chart-wrapper">
+        flowchart TB
+            %% --- 样式定义 ---
+            classDef steel fill:#b2bec3,stroke:#2d3436,stroke-width:2px,color:#000
+            classDef copper fill:#ff7675,stroke:#d63031,stroke-width:2px,color:#fff
+            classDef board fill:#55efc4,stroke:#00b894,stroke-width:2px,color:#000
+            classDef whitefilm fill:#ffffff,stroke:#0984e3,stroke-width:3px,color:#000
+            classDef kraft fill:#ffeaa7,stroke:#fdcb6e,stroke-width:2px,color:#000
+            classDef nodeStyle fill:#fff,stroke:#333,stroke-width:1px
+
+            %% --- 第一层：初始化 ---
+            Start(("开始")) --> API["看板配方确认"]
+            API --> EnterZone{"进入作业区"}
+
+            %% --- 第二层：核心循环 (强制横向排列) ---
+            EnterZone --> LoopStart
+            
+            subgraph MainCycle ["标准叠板循环 (按顺序从左到右执行)"]
+                direction LR
+                LoopStart(("循环点")) 
+                LoopStart --> S1["1.放钢板"]:::steel
+                S1 --> S2["2.放红铜"]:::copper
+                S2 --> S3["3.放板件"]:::board
+                S3 --> S4["4.放红铜"]:::copper
+                S4 --> S5["5.放钢板"]:::steel
+            end
+
+            %% --- 第三层：判定与结束 ---
+            S5 --> Decision{"系统判定"}
+            
+            Decision -- "识别到红铜/钢板 (继续)" --> LoopStart
+            Decision -- "识别到白色离心膜 (结束)" --> EndStart
+
+            subgraph EndFlow ["收尾流程"]
+                direction LR
+                EndStart["1.放白色离心膜"]:::whitefilm
+                EndStart --> Kraft["2.放牛皮纸"]:::kraft
+                Kraft --> Sign["3.员工签字"]:::nodeStyle
+                Sign --> Finish(("批次完成")):::nodeStyle
+            end
+        </div>
+
+        <div style="position:absolute; bottom:10mm; right:10mm; font-size:10px; color:#888;">
+            Deep South Circuit (SCC) - Intelligent Mfg Dept. | SOP Version 2.0
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'base',
+            flowchart: { 
+                curve: 'basis',
+                padding: 15
+            }
+        });
+    </script>
+</body>
+</html>

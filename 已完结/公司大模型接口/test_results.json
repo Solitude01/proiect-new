@@ -1,0 +1,149 @@
+{
+  "test_time": "2026-02-27 18:56:16",
+  "total": 6,
+  "success": 3,
+  "results": [
+    {
+      "name": "qwen3-8b",
+      "model": "qwen3-8b",
+      "note": "DeepSeek 域名 - Qwen3 8B",
+      "url": "http://ds.scc.com.cn/v1/chat/completions",
+      "status": "成功",
+      "response_time": 1.87,
+      "error": null,
+      "response": {
+        "id": "gd-0vnbp4silb",
+        "object": "chat.completion",
+        "created": 1772189747,
+        "model": "qwen3-8b-pro",
+        "choices": [
+          {
+            "message": {
+              "role": "assistant",
+              "content": "\n\nHello! How can I assist you today? 😊",
+              "reasoning_content": "\nOkay, the user said \"Hello, test.\" I need to respond appropriately. Let me check the guidelines. I should be friendly and offer help. Maybe say hello back and ask how I can assist. Keep it simple and open-ended. Let me make sure the tone is positive and welcoming. Alright, that should work.\n"
+            },
+            "finish_reason": "stop",
+            "index": 0
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 12,
+          "completion_tokens": 81,
+          "total_tokens": 93
+        }
+      },
+      "timestamp": "2026-02-27 18:56:08"
+    },
+    {
+      "name": "ds-v3",
+      "model": "ds-v3",
+      "note": "DeepSeek 域名 - DeepSeek v3",
+      "url": "http://ds.scc.com.cn/v1/chat/completions",
+      "status": "成功",
+      "response_time": 0.62,
+      "error": null,
+      "response": {
+        "id": "gd-z12mgyr874",
+        "object": "chat.completion",
+        "created": 1772189750,
+        "model": "ds-v3",
+        "choices": [
+          {
+            "message": {
+              "role": "assistant",
+              "content": "This is a test."
+            },
+            "finish_reason": "stop",
+            "index": 0
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 6,
+          "completion_tokens": 6,
+          "total_tokens": 12
+        }
+      },
+      "timestamp": "2026-02-27 18:56:10"
+    },
+    {
+      "name": "deepseek-r1",
+      "model": "deepseek-r1",
+      "note": "DeepSeek 域名 - DeepSeek R1",
+      "url": "http://ds.scc.com.cn/v1/chat/completions",
+      "status": "成功",
+      "response_time": 1.89,
+      "error": null,
+      "response": {
+        "id": "chatcmpl-e87130fb-d1d1-4ef6-a202-81eddc42cb5a",
+        "object": "chat.completion",
+        "created": 1772189751,
+        "model": "glm-5-fp8",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "你好！有什么我可以帮助你的吗？无论是问题解答、信息查询还是其他需求，我都很乐意为你提供帮助。",
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [],
+              "reasoning": "The user has sent a greeting \"Hello, test.\" This seems like a simple greeting or perhaps they're testing the system. I should respond in a friendly and helpful manner, acknowledging their message and offering assistance.\n\nI'll keep my response brief and welcoming, and ask how I can help them today."
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "stop_reason": 154827,
+            "token_ids": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 9,
+          "total_tokens": 96,
+          "completion_tokens": 87,
+          "prompt_tokens_details": null
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "kv_transfer_params": null
+      },
+      "timestamp": "2026-02-27 18:56:11"
+    },
+    {
+      "name": "HY-MT1.5",
+      "model": "HY-MT1.5",
+      "note": "千帆 - HY-MT1.5-1.8B (需要有效AccessCode)",
+      "url": "http://10.10.103.251:8088/generativeLargeModel/hy-mt",
+      "status": "HTTP错误 401",
+      "response_time": 0.11,
+      "error": "{\"code\":\"AuthenticateFailed\",\"message\":\"AccessCode[0] not valid\"}",
+      "response": null,
+      "timestamp": "2026-02-27 18:56:14"
+    },
+    {
+      "name": "qwen-vl-thinking",
+      "model": "qwen3-vl-30b-a3b-thinking",
+      "note": "千帆 - Qwen VL 30B 思考版 (需要有效AccessCode)",
+      "url": "http://10.10.103.251:8088/generativeLargeModelImage2Text/qwen3-vl-30b-a3b",
+      "status": "HTTP错误 401",
+      "response_time": 0.12,
+      "error": "{\"code\":\"AuthenticateFailed\",\"message\":\"AccessCode[0] not valid\"}",
+      "response": null,
+      "timestamp": "2026-02-27 18:56:14"
+    },
+    {
+      "name": "qwen-30b",
+      "model": "qwen3-30b-a3b",
+      "note": "千帆 - Qwen3 30B (需要有效AccessCode)",
+      "url": "http://10.10.103.251:8088/generativeLargeModel/qwen3-30b-a3b",
+      "status": "HTTP错误 401",
+      "response_time": 0.09,
+      "error": "{\"code\":\"AuthenticateFailed\",\"message\":\"AccessCode[0] not valid\"}",
+      "response": null,
+      "timestamp": "2026-02-27 18:56:15"
+    }
+  ]
+}

@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预警框绘制工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .upload-section {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .upload-box {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+            position: relative;
+        }
+        
+        .upload-box:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+            transform: translateY(-2px);
+        }
+        
+        .upload-box.drag-over {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+        
+        .upload-box input {
+            display: none;
+        }
+        
+        .upload-box label {
+            cursor: pointer;
+            display: block;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .canvas-section {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+        }
+        
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            cursor: zoom-in;
+            transition: transform 0.3s ease;
+        }
+        
+        canvas:hover {
+            transform: scale(1.02);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.95);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            position: relative;
+            margin: auto;
+            padding: 20px;
+            width: 90%;
+            height: 90%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+        }
+        
+        .modal canvas {
+            max-width: none;
+            max-height: none;
+            object-fit: contain;
+            cursor: grab;
+            border-radius: 0;
+        }
+        
+        .modal canvas:active {
+            cursor: grabbing;
+        }
+        
+        .modal canvas:hover {
+            transform: none;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            color: #fff;
+            font-size: 48px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+            transition: color 0.3s ease;
+        }
+        
+        .close-modal:hover {
+            color: #667eea;
+        }
+        
+        .zoom-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #333;
+            pointer-events: none;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            z-index: 1001;
+        }
+        
+        .zoom-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .zoom-btn:hover {
+            background: #764ba2;
+            transform: scale(1.1);
+        }
+        
+        .info-panel {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .info-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+        
+        .alert-box {
+            margin: 10px 0;
+            padding: 15px;
+            background: #fff5f5;
+            border-left: 4px solid #ff0000;
+            border-radius: 4px;
+        }
+        
+        .alert-box h4 {
+            color: #ff0000;
+            margin-bottom: 8px;
+        }
+        
+        .status {
+            padding: 10px 20px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .layer-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .layer-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .layer-btn.active {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.5);
+        }
+        
+        .layer-btn:active {
+            transform: translateY(0);
+        }
+        
+        .file-name {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+            font-weight: bold;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0f2ff;
+            border-radius: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 预警框绘制工具</h1>
+            <p>上传图片和JSON文件以可视化预警区域 | 支持拖放上传</p>
+        </div>
+        
+        <div class="upload-section">
+            <div class="upload-box" id="imageBox">
+                <input type="file" id="imageInput" accept="image/*">
+                <label for="imageInput">
+                    <div class="upload-icon">🖼️</div>
+                    <h3>上传图片</h3>
+                    <p>支持 JPG, PNG 格式</p>
+                    <p>拖放文件到此处或点击上传</p>
+                    <p class="file-name" id="imageName"></p>
+                </label>
+            </div>
+            
+            <div class="upload-box" id="jsonBox">
+                <input type="file" id="jsonInput" accept=".json">
+                <label for="jsonInput">
+                    <div class="upload-icon">📄</div>
+                    <h3>上传JSON文件</h3>
+                    <p>包含预警框数据</p>
+                    <p>拖放文件到此处或点击上传</p>
+                    <p class="file-name" id="jsonName"></p>
+                </label>
+            </div>
+        </div>
+        
+        <div class="canvas-section">
+            <div id="status"></div>
+            <div class="control-buttons">
+                <button class="layer-btn active" id="btnAll">🎯 全部展示</button>
+                <button class="layer-btn" id="btnTargets">📦 仅展示目标</button>
+                <button class="layer-btn" id="btnAlerts">⚠️ 仅展示预警</button>
+            </div>
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+            <div class="info-panel" id="infoPanel" style="display:none;"></div>
+        </div>
+    </div>
+    
+    <!-- 放大预览模态框 -->
+    <div id="modal" class="modal">
+        <span class="close-modal" id="closeModal">&times;</span>
+        <div class="zoom-controls">
+            <button class="zoom-btn" id="zoomIn" title="放大">+</button>
+            <button class="zoom-btn" id="zoomOut" title="缩小">-</button>
+            <button class="zoom-btn" id="resetZoom" title="重置">⟲</button>
+        </div>
+        <div class="modal-content" id="modalContent">
+            <canvas id="modalCanvas"></canvas>
+        </div>
+        <div class="zoom-hint">点击关闭按钮或按 ESC 关闭 | 使用 +/- 按钮或鼠标滚轮缩放 | 拖拽图片移动</div>
+    </div>
+
+    <script>
+        let imageData = null;
+        let jsonData = null;
+        let zoomLevel = 1;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let translateX = 0;
+        let translateY = 0;
+        let displayMode = 'all'; // 'all', 'targets', 'alerts'
+        
+        const imageInput = document.getElementById('imageInput');
+        const jsonInput = document.getElementById('jsonInput');
+        const imageBox = document.getElementById('imageBox');
+        const jsonBox = document.getElementById('jsonBox');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusDiv = document.getElementById('status');
+        const infoPanel = document.getElementById('infoPanel');
+        
+        const modal = document.getElementById('modal');
+        const modalCanvas = document.getElementById('modalCanvas');
+        const modalCtx = modalCanvas.getContext('2d');
+        const modalContent = document.getElementById('modalContent');
+        const closeModal = document.getElementById('closeModal');
+        const zoomInBtn = document.getElementById('zoomIn');
+        const zoomOutBtn = document.getElementById('zoomOut');
+        const resetZoomBtn = document.getElementById('resetZoom');
+        
+        const btnAll = document.getElementById('btnAll');
+        const btnTargets = document.getElementById('btnTargets');
+        const btnAlerts = document.getElementById('btnAlerts');
+        
+        // 颜色配置 - 移除红色
+        const colors = [
+            { stroke: '#00ff00', fill: 'rgba(0, 255, 0, 0.2)', name: '绿色' },
+            { stroke: '#0000ff', fill: 'rgba(0, 0, 255, 0.2)', name: '蓝色' },
+            { stroke: '#ffff00', fill: 'rgba(255, 255, 0, 0.2)', name: '黄色' },
+            { stroke: '#ff00ff', fill: 'rgba(255, 0, 255, 0.2)', name: '紫色' },
+            { stroke: '#00ffff', fill: 'rgba(0, 255, 255, 0.2)', name: '青色' },
+            { stroke: '#ffa500', fill: 'rgba(255, 165, 0, 0.2)', name: '橙色' },
+        ];
+        
+        imageInput.addEventListener('change', handleImageUpload);
+        jsonInput.addEventListener('change', handleJsonUpload);
+        canvas.addEventListener('click', openModal);
+        closeModal.addEventListener('click', closeModalWindow);
+        
+        // 图层控制按钮
+        btnAll.addEventListener('click', () => {
+            displayMode = 'all';
+            updateButtonStates();
+            drawCanvas();
+        });
+        
+        btnTargets.addEventListener('click', () => {
+            displayMode = 'targets';
+            updateButtonStates();
+            drawCanvas();
+        });
+        
+        btnAlerts.addEventListener('click', () => {
+            displayMode = 'alerts';
+            updateButtonStates();
+            drawCanvas();
+        });
+        
+        function updateButtonStates() {
+            btnAll.classList.remove('active');
+            btnTargets.classList.remove('active');
+            btnAlerts.classList.remove('active');
+            
+            if (displayMode === 'all') btnAll.classList.add('active');
+            else if (displayMode === 'targets') btnTargets.classList.add('active');
+            else if (displayMode === 'alerts') btnAlerts.classList.add('active');
+        }
+        
+        // 拖放事件处理
+        setupDragAndDrop(imageBox, imageInput, handleImageFile);
+        setupDragAndDrop(jsonBox, jsonInput, handleJsonFile);
+        
+        function setupDragAndDrop(box, input, handler) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                box.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                box.addEventListener(eventName, () => box.classList.add('drag-over'), false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                box.addEventListener(eventName, () => box.classList.remove('drag-over'), false);
+            });
+            
+            box.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handler(files[0]);
+                }
+            }, false);
+        }
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (file) handleImageFile(file);
+        }
+        
+        function handleImageFile(file) {
+            document.getElementById('imageName').textContent = file.name;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    imageData = img;
+                    showStatus('图片加载成功 ✓', 'success');
+                    drawCanvas();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function handleJsonUpload(e) {
+            const file = e.target.files[0];
+            if (file) handleJsonFile(file);
+        }
+        
+        function handleJsonFile(file) {
+            document.getElementById('jsonName').textContent = file.name;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    let content = event.target.result.trim();
+                    
+                    // 提取JSON对象
+                    const jsonStart = content.indexOf('{');
+                    const jsonEnd = content.lastIndexOf('}');
+                    if (jsonStart !== -1 && jsonEnd !== -1) {
+                        content = content.substring(jsonStart, jsonEnd + 1);
+                    }
+                    
+                    jsonData = JSON.parse(content);
+                    showStatus('JSON数据加载成功 ✓', 'success');
+                    drawCanvas();
+                } catch (error) {
+                    showStatus('JSON解析失败: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function showStatus(message, type) {
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function drawCanvas() {
+            if (!imageData) {
+                showStatus('请先上传图片', 'error');
+                return;
+            }
+            
+            if (!jsonData) {
+                canvas.width = imageData.width;
+                canvas.height = imageData.height;
+                ctx.drawImage(imageData, 0, 0);
+                showStatus('图片已显示,请上传JSON文件以绘制预警框', 'success');
+                return;
+            }
+            
+            canvas.width = imageData.width;
+            canvas.height = imageData.height;
+            
+            ctx.drawImage(imageData, 0, 0);
+            
+            // 获取所有预警关联的目标ID
+            const alertTargetIds = new Set();
+            if (jsonData.events && jsonData.events.alertInfo) {
+                jsonData.events.alertInfo.forEach(alert => {
+                    if (alert.unionTargets && alert.unionTargets.childTargets) {
+                        alert.unionTargets.childTargets.forEach(child => {
+                            alertTargetIds.add(child.id);
+                        });
+                    }
+                });
+            }
+            
+            // 根据显示模式绘制
+            if (displayMode === 'all' || displayMode === 'targets') {
+                // 绘制所有目标框
+                if (jsonData.targets) {
+                    jsonData.targets.forEach((target, index) => {
+                        if (target.obj && target.obj.rect) {
+                            const color = colors[index % colors.length];
+                            const label = `目标${target.obj.id} (类型${target.obj.type})`;
+                            drawRectOnCanvas(ctx, target.obj.rect, canvas.width, canvas.height, color, label);
+                        }
+                    });
+                }
+            }
+            
+            if (displayMode === 'all' || displayMode === 'alerts') {
+                // 绘制预警框
+                if (jsonData.events && jsonData.events.alertInfo) {
+                    jsonData.events.alertInfo.forEach((alert, index) => {
+                        const target = alert.unionTargets;
+                        if (target && target.region && target.region.rect) {
+                            const color = { stroke: '#ff0000', fill: 'rgba(255, 0, 0, 0.3)' };
+                            const childTargetIds = target.childTargets ? target.childTargets.map(t => t.id).join(',') : '';
+                            const label = `⚠️ ${alert.ruleInfo.ruleName} (目标${childTargetIds})`;
+                            drawRectOnCanvas(ctx, target.region.rect, canvas.width, canvas.height, color, label);
+                        }
+                    });
+                }
+            }
+            
+            displayInfo();
+            const alertCount = jsonData.events && jsonData.events.alertInfo ? jsonData.events.alertInfo.length : 0;
+            const targetCount = jsonData.targets ? jsonData.targets.length : 0;
+            
+            let modeText = '全部';
+            if (displayMode === 'targets') modeText = '仅目标';
+            else if (displayMode === 'alerts') modeText = '仅预警';
+            
+            showStatus(`绘制完成 ✓ [${modeText}] (共${targetCount}个目标,${alertCount}个预警)`, 'success');
+        }
+        
+        function getAlertInfoForTarget(targetId) {
+            if (!jsonData.events || !jsonData.events.alertInfo) return null;
+            
+            for (let alert of jsonData.events.alertInfo) {
+                if (alert.unionTargets && alert.unionTargets.childTargets) {
+                    const found = alert.unionTargets.childTargets.find(child => child.id === targetId);
+                    if (found) {
+                        return alert.ruleInfo;
+                    }
+                }
+            }
+            return null;
+        }
+        
+        function drawRectOnCanvas(context, rect, width, height, color, label) {
+            const x = parseFloat(rect.x) * width;
+            const y = parseFloat(rect.y) * height;
+            const w = parseFloat(rect.w) * width;
+            const h = parseFloat(rect.h) * height;
+            
+            context.strokeStyle = color.stroke;
+            context.lineWidth = 3;
+            context.strokeRect(x, y, w, h);
+            
+            context.fillStyle = color.fill;
+            context.fillRect(x, y, w, h);
+            
+            context.fillStyle = color.stroke;
+            context.font = 'bold 16px Arial';
+            const text = label || (ruleInfo ? ruleInfo.ruleName : `预警 ${index + 1}`);
+            
+            // 文字背景
+            const textMetrics = context.measureText(text);
+            context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            context.fillRect(x, y - 25, textMetrics.width + 10, 25);
+            
+            context.fillStyle = '#ffffff';
+            context.fillText(text, x + 5, y - 7);
+        }
+        
+        function displayInfo() {
+            infoPanel.style.display = 'block';
+            let html = '<h3>📊 检测信息</h3>';
+            
+            html += `<div class="info-item"><strong>图像尺寸:</strong> ${jsonData.width} x ${jsonData.height}</div>`;
+            html += `<div class="info-item"><strong>帧数:</strong> ${jsonData.frameNum}</div>`;
+            html += `<div class="info-item"><strong>检测目标数:</strong> ${jsonData.targets ? jsonData.targets.length : 0}</div>`;
+            html += `<div class="info-item"><strong>预警数量:</strong> ${jsonData.events && jsonData.events.alertInfo ? jsonData.events.alertInfo.length : 0}</div>`;
+            
+            // 显示所有目标
+            if (jsonData.targets && jsonData.targets.length > 0) {
+                html += '<h3 style="margin-top: 20px;">🎯 检测目标</h3>';
+                jsonData.targets.forEach((target, index) => {
+                    const obj = target.obj;
+                    const color = colors[index % colors.length];
+                    html += `<div class="info-item" style="border-left-color: ${color.stroke};">
+                        <strong>目标 ${obj.id}:</strong> 类型 ${obj.type}<br>
+                        <strong>置信度:</strong> ${(obj.confidence / 10).toFixed(1)}%<br>
+                        <strong>位置:</strong> x=${(parseFloat(obj.rect.x) * 100).toFixed(1)}%, y=${(parseFloat(obj.rect.y) * 100).toFixed(1)}%
+                    </div>`;
+                });
+            }
+            
+            // 显示预警信息
+            if (jsonData.events && jsonData.events.alertInfo && jsonData.events.alertInfo.length > 0) {
+                html += '<h3 style="margin-top: 20px;">⚠️ 预警信息</h3>';
+                jsonData.events.alertInfo.forEach((alert, index) => {
+                    html += `<div class="alert-box">
+                        <h4>🚨 预警 ${index + 1}: ${alert.ruleInfo.ruleName}</h4>
+                        <strong>置信度:</strong> ${(alert.unionTargets.confidence / 10).toFixed(1)}%<br>
+                        <strong>规则ID:</strong> ${alert.ruleInfo.ruleID}<br>
+                        <strong>触发类型:</strong> ${alert.ruleInfo.triggerType}<br>
+                        <strong>关联目标:</strong> ${alert.unionTargets.childTargets.map(t => `目标${t.id}`).join(', ')}
+                    </div>`;
+                });
+            }
+            
+            infoPanel.innerHTML = html;
+        }
+        
+        // 模态框控制
+        zoomInBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            zoomLevel *= 1.2;
+            drawModalCanvas();
+        });
+        
+        zoomOutBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            zoomLevel = Math.max(0.1, zoomLevel / 1.2);
+            drawModalCanvas();
+        });
+        
+        resetZoomBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            zoomLevel = 1;
+            translateX = 0;
+            translateY = 0;
+            drawModalCanvas();
+        });
+        
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            if (modal.style.display === 'block') {
+                if (e.key === 'Escape') {
+                    closeModalWindow();
+                } else if (e.key === '+' || e.key === '=') {
+                    zoomLevel *= 1.2;
+                    drawModalCanvas();
+                } else if (e.key === '-') {
+                    zoomLevel = Math.max(0.1, zoomLevel / 1.2);
+                    drawModalCanvas();
+                } else if (e.key === '0') {
+                    zoomLevel = 1;
+                    translateX = 0;
+                    translateY = 0;
+                    drawModalCanvas();
+                }
+            }
+        });
+        
+        // 鼠标滚轮缩放
+        modalContent.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            zoomLevel = Math.max(0.1, zoomLevel * delta);
+            drawModalCanvas();
+        });
+        
+        // 拖拽功能
+        modalCanvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+            modalCanvas.style.cursor = 'grabbing';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                drawModalCanvas();
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            modalCanvas.style.cursor = 'grab';
+        });
+        
+        function openModal() {
+            if (!imageData) return;
+            modal.style.display = 'block';
+            zoomLevel = 1;
+            translateX = 0;
+            translateY = 0;
+            drawModalCanvas();
+        }
+        
+        function closeModalWindow() {
+            modal.style.display = 'none';
+        }
+        
+        function drawModalCanvas() {
+            if (!imageData) return;
+            
+            modalCanvas.width = imageData.width;
+            modalCanvas.height = imageData.height;
+            
+            modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
+            
+            modalCanvas.style.transform = `scale(${zoomLevel}) translate(${translateX/zoomLevel}px, ${translateY/zoomLevel}px)`;
+            
+            modalCtx.drawImage(imageData, 0, 0);
+            
+            // 获取所有预警关联的目标ID
+            const alertTargetIds = new Set();
+            if (jsonData && jsonData.events && jsonData.events.alertInfo) {
+                jsonData.events.alertInfo.forEach(alert => {
+                    if (alert.unionTargets && alert.unionTargets.childTargets) {
+                        alert.unionTargets.childTargets.forEach(child => {
+                            alertTargetIds.add(child.id);
+                        });
+                    }
+                });
+            }
+            
+            // 根据显示模式绘制
+            if (displayMode === 'all' || displayMode === 'targets') {
+                // 绘制所有目标框
+                if (jsonData && jsonData.targets) {
+                    jsonData.targets.forEach((target, index) => {
+                        if (target.obj && target.obj.rect) {
+                            const color = colors[index % colors.length];
+                            const label = `目标${target.obj.id} (类型${target.obj.type})`;
+                            drawRectOnCanvas(modalCtx, target.obj.rect, modalCanvas.width, modalCanvas.height, color, label);
+                        }
+                    });
+                }
+            }
+            
+            if (displayMode === 'all' || displayMode === 'alerts') {
+                // 绘制预警框
+                if (jsonData && jsonData.events && jsonData.events.alertInfo) {
+                    jsonData.events.alertInfo.forEach((alert, index) => {
+                        const target = alert.unionTargets;
+                        if (target && target.region && target.region.rect) {
+                            const color = { stroke: '#ff0000', fill: 'rgba(255, 0, 0, 0.3)' };
+                            const childTargetIds = target.childTargets ? target.childTargets.map(t => t.id).join(',') : '';
+                            const label = `⚠️ ${alert.ruleInfo.ruleName} (目标${childTargetIds})`;
+                            drawRectOnCanvas(modalCtx, target.region.rect, modalCanvas.width, modalCanvas.height, color, label);
+                        }
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>

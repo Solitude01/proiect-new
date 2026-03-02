@@ -1,0 +1,462 @@
+{
+	"code": "0",
+	"msg": "success",
+	"data": {
+		"pageSize": 50,
+		"total": 63,
+		"list": [
+			{
+				"modelId": "cabdf2012b7000014a211f3014b06170cabdf2012b700001b659b0e425002d5",
+				"modelName": "N7钻孔乱放板检测",
+				"version": "V5",
+				"modelIcon": "/aimms/ui/icons/default_assembly_line.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cac367dc22b00001788e1f001e90f9e0cac367dc22b00001fe69116019b0198",
+				"modelName": "N12AOI人员拿板行为识别",
+				"version": "V8",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cac8cf2863c000015beac5ab10001801cac8cf2863c000018631ff5b16eb13f",
+				"modelName": "N7沉铜区抱板抓拍",
+				"version": "V10",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cae853ab4f40000186a410b117261cabcae853ab4f4000014a861a4bb080612",
+				"modelName": "N7_层压MASS叠板对准AI侦测",
+				"version": "V5",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb07e60c4d900001d5b171fa13501f7acb07e60c4d900001a9809198b9a5b7b",
+				"modelName": "N7_阻焊半自动丝印机绿油板过滚平机V8",
+				"version": "V8",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "caedce606d000001e19e15001b933c20caedce606d000001f435c930190015c",
+				"modelName": "N7_显影2号机退洗板检测",
+				"version": "V2",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb0db67fc2f000014afea050dfd93070cb0db67fc2f000017f1a14501600132",
+				"modelName": "N5_层压_Mass拆板单人作业AI侦测V14",
+				"version": "V14",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb0fb95eea70000139da17d045d01904cb0fb95eea7000018123e8c014f078d",
+				"modelName": "W8_层准_邦定不戴手套拿取板件AI侦测V3",
+				"version": "V3",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb1a3a3ddee00001fa2012f099601db9cb1a3a3ddee00001b4e31170424011a",
+				"modelName": "N12_成检_VRS检板人员状态",
+				"version": "V2.3.0build241016",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb20bc5c73d00001fd4e1f0d1cc012becb20bc5c73d00001cb21e380fda6e78",
+				"modelName": "TEST_N5_塞孔烘箱卡板_物体检测V4",
+				"version": "V4",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb20bc72a17000013cd71ae0190015a7cb20bc72a17000018998d8f22f60d8b",
+				"modelName": "N5_塞孔烘箱卡板_新V8",
+				"version": "V8",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb23568c5ad000019525137080601bf9cb23568c5ad000013926ec00c83d44c",
+				"modelName": "N5_电镀_陪镀板分层缸内卡板AI预警12",
+				"version": "V12",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb287947753000015cdcd0d8f020106fcb28794775300001981f1967fdc05cb",
+				"modelName": "TN5_电镀_陪镀板分层缸内卡板AI预警V4",
+				"version": "V4",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "e6efa533fcf145c493687ab240847dd85c11e45f0a6143ca95eca533d8a8032",
+				"modelName": "W8_沉铜_1F_亚智收板",
+				"version": "V4",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb32c2d653f00001d4601f501c3ae270cb32c2d653f00001b8d21e0f8bbb15a",
+				"modelName": "W8_AOI取板检测",
+				"version": "V8",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb3a2ed46f100001381d1ed0c7644200cb3a2ed46f10000162c510046490186",
+				"modelName": "N12_MASS叠板红外对齐检测",
+				"version": "V9",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "26cb091501414527806b05c5cefefe34c4a8cba5511845748a0acc946bc6404",
+				"modelName": "N12_外形_水洗线无人收板AI侦测",
+				"version": "V1",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb3c03dd12800001bf73b6e08820db50cb3c03dd128000014d8fa81512001e7",
+				"modelName": "N5_内层_涂布暂存机人员干预板件AIV13",
+				"version": "V13",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb3ea731efc000014ca4159051221e70cb3ea731efc00001ba331b57c77c46c",
+				"modelName": "N7_三楼字符2人员翻板检测V7",
+				"version": "V7",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb44d4892a1000013a2b3c60e107ad80cb44d4892a200001b45e318712e9175",
+				"modelName": "N5_外形酸洗_收板人员干预板件AI侦测V4",
+				"version": "V4",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb45243fcf0000016a6a14107f0095b0cb45243fcf0000015fc61680b8e0b0c",
+				"modelName": "N12_外形人员干预板件_V9",
+				"version": "V9",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb4602a5f100000111871f00f2e31332cb4602a5f100000199851970a6b0f0e",
+				"modelName": "W8_外检_待产区_插板_",
+				"version": "V6",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb461a16bc100001d965135018201c58cb461a16bc10000139ec19a11f501d3",
+				"modelName": "N12_成检_员工未佩戴手套拿板AI侦测V5",
+				"version": "V5",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb470618b3800001f67fa0da16f04130cb470618b3800001166915093b22477",
+				"modelName": "W8_阻焊前_待产区_取板_V8",
+				"version": "V8",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb474b6fd50000015bc7801012501480cb474b6fd50000015da418e0f091e5d",
+				"modelName": "W8_成检_待产区人员单裸手取板AI侦测_V21",
+				"version": "V21",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb47a6ab5cc0000166ca4c701bf49290cb47a6ab5cc00001367c8a40a4fa101",
+				"modelName": "N12_阻焊_丝印字符人员裸手接触板件V4",
+				"version": "V4",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "8b39c602001a48768053f62efbeb85ad",
+				"modelName": "W8_沉铜_待产取放板AI侦测",
+				"version": "V12",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "6beef5384db946d487c8bd146e4bfdc7",
+				"modelName": "W2_闪镀线_活化板过板_AI侦测",
+				"version": "V7",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb49f889ad400001a4ed15502dd013cfcb49f889ad400001102dd7e0102018c",
+				"modelName": "N12_配板_隧道烘箱进料口AGV异常",
+				"version": "V2",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "e1fbd661c684444bbb6c949a3abab65f937a3f2678904c0c9e9f46beb57740a",
+				"modelName": "TN5_配板_人员手拿PP监控",
+				"version": "V24",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb4e25d790d000016ee8b100b150169acb4e25d790d00001848084d46bf01ea",
+				"modelName": "N5_层压_PIN拆板V9",
+				"version": "V9",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "6e3c3784a2ec453193cd73c500c68792",
+				"modelName": "N7_层压二期叠板挡块丢失AI侦测",
+				"version": "V7",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cfd83510d5024ec89ca2d27608600dfa",
+				"modelName": "W2_VCP放板机_吸嘴清洁频率AI判定",
+				"version": "V2.4.0build250321",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb548878043000013bb9ed335fa6b500cb5488780430000139fde4f24e73f9d",
+				"modelName": "N12_配板_人员搬运pp进出pp房V12",
+				"version": "V12",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb55719f01b000014ace987e23601a2acb55719f01b00001f0e612b0f80077c",
+				"modelName": "W8_沉铜_POFV_创峰翻板机卡掉板AI侦测",
+				"version": "V1",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb57ae633d700001b6982fb0cee517f4cb57ae633d8000014ca011ee12a01ae",
+				"modelName": "N7_沉铜_切片_板件版本",
+				"version": "V1",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb581ddecc100001b8259460d9b018a5cb581ddecc10000123a01c00a1f5174",
+				"modelName": "N7入料处卡叠板报警",
+				"version": "V3",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb5b4f079af00001f0671500c85089b0cb5b4f079af0000160f71fa12bb8abd",
+				"modelName": "N7_VCP电镀上料区_人员关联板件7",
+				"version": "V7",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "75c279d8465544fb9098b52d3180b269",
+				"modelName": "W8_内蚀人员违规取板",
+				"version": "V17",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 2,
+				"needRegister": false
+			},
+			{
+				"modelId": "d0eaa68b07ef466a860680045d407676",
+				"modelName": "W8_层压_叠板台红外线对准度AI侦测",
+				"version": "V10",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb5d4d028bb0000110ab1300ce8013facb5d4d028bb00001309e1193d450107",
+				"modelName": "N5_塞孔_特定板件打磨AI追溯V7",
+				"version": "V7",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "5b54dcd105a54d0c84a74fdbcbaef2c0",
+				"modelName": "N12_阻焊_待产区人员拿板不戴手套AI",
+				"version": "V16",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "cb5e6f7d4990000191221ed07c901eafcb5e6f7d499000018685b3fd19e5152",
+				"modelName": "N12_阻焊_丝印人员手动收放板AI侦测V8",
+				"version": "V8",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "f3fe37c955f04092813dff85fc65f2bd",
+				"modelName": "W8_沉铜__铣边_电镀1_取放板AI侦测",
+				"version": "V12",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "a9e72de1121a433b9bd4c8302ed5183e",
+				"modelName": "N12_阻焊前处理裸手拿板_N7版",
+				"version": "V6",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "dce6d43247f14f44b6669be6e7db60bb",
+				"modelName": "N7_测试_人员违规搬运OK_NG板件AI",
+				"version": "V4",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "1833a19b23154a5c901a6a687adc60e8",
+				"modelName": "N12_阻焊_待产区人员单手拿板AI侦测6",
+				"version": "V6",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "b8f03fd50e424afa8e867df2823620ef",
+				"modelName": "W8_电镀1_直填电镀上板区违规取放板件-V1",
+				"version": "V5",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 3,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "474dfb17221246f3848349377bfcf7de",
+				"modelName": "N7_阻焊_丝印垫板粘尘清洁AI监控",
+				"version": "V14",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			},
+			{
+				"modelId": "0c1cd43ee8cb46518539b7034b0a0490",
+				"modelName": "N5_外协回板区_人员持板动作违规AIV14",
+				"version": "V14",
+				"modelIcon": "/aimms/ui/icons/default.png",
+				"modelType": 1,
+				"modelPrecision": 0,
+				"needRegister": false
+			}
+		],
+		"pageNo": 1,
+		"totalPage": 2
+	}
+}

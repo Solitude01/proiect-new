@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.A.T.U.R.N - Deep Space Visualization</title>
+    <style>
+        /* --- 沉浸式容器 --- */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            font-family: 'Rajdhani', 'Segoe UI', sans-serif; /* 建议引入科幻字体 */
+        }
+
+        #scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, #11111f 0%, #000000 80%);
+            cursor: move; /* 提示可拖拽 */
+        }
+
+        /* --- 扫描线与噪点特效层 --- */
+        .fx-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+                linear-gradient(90deg, rgba(255,0,0,0.03), rgba(0,255,0,0.01), rgba(0,0,255,0.03));
+            background-size: 100% 2px, 3px 100%;
+            z-index: 10;
+        }
+
+        /* --- HUD 界面 --- */
+        .hud-layer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            padding: 30px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 20;
+        }
+
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .brand {
+            border-left: 4px solid #f4d03f;
+            padding-left: 15px;
+        }
+        .brand h1 {
+            margin: 0;
+            color: #fff;
+            font-size: 28px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        .brand p {
+            margin: 5px 0 0;
+            color: #f4d03f;
+            font-size: 12px;
+            letter-spacing: 2px;
+        }
+
+        .hud-stats {
+            text-align: right;
+            color: rgba(255,255,255,0.7);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .hud-stats span { color: #4ade80; }
+
+        .hud-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 20px;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        }
+
+        /* --- 交互提示 --- */
+        .controls-hint {
+            color: rgba(255,255,255,0.4);
+            font-size: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        /* --- 项目详情卡片 (3D 悬浮感) --- */
+        #data-card {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 280px;
+            background: rgba(10, 15, 20, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 2px solid #f4d03f;
+            padding: 20px;
+            color: #fff;
+            transform: translate(-50%, -50%) scale(0.9);
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+        #data-card.active {
+            opacity: 1;
+            transform: translate(-50%, -120%) scale(1);
+        }
+        #data-card h3 { margin: 0 0 10px; font-size: 18px; letter-spacing: 1px; }
+        #data-card .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #aaa; }
+        #data-card .val { color: #fff; font-weight: bold; }
+        #data-card .bar-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 10px; }
+        #data-card .bar-fill { height: 100%; background: #f4d03f; width: 0%; transition: width 0.5s; box-shadow: 0 0 10px #f4d03f; }
+
+    </style>
+</head>
+<body>
+
+    <div class="fx-overlay"></div>
+
+    <div class="hud-layer">
+        <div class="hud-top">
+            <div class="brand">
+                <h1>Saturn OS</h1>
+                <p>AI PROJECT VISUALIZATION SYSTEM</p>
+            </div>
+            <div class="hud-stats">
+                SYS.TIME: <span id="sys-time">00:00:00</span><br>
+                ORBIT.VEL: <span>28,000 km/h</span><br>
+                ACTIVE NODES: <span>42</span>
+            </div>
+        </div>
+        <div class="hud-bottom">
+            <div class="controls-hint">
+                [ DRAG TO ROTATE VIEW ] &nbsp; [ SCROLL TO ZOOM ]
+            </div>
+            <div style="font-family: monospace; color: #555;">
+                RENDER: CANVAS_2D_ACCEL<br>
+                FPS: <span id="fps">60</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="data-card">
+        <h3 id="card-title">Project Name</h3>
+        <div class="row"><span>Status</span><span id="card-status" class="val">Active</span></div>
+        <div class="row"><span>Owner</span><span class="val">AI Lab</span></div>
+        <div class="row"><span>Progress</span><span id="card-prog-text" class="val">75%</span></div>
+        <div class="bar-bg"><div id="card-prog-bar" class="bar-fill"></div></div>
+    </div>
+
+    <canvas id="scene"></canvas>
+
+<script>
+/**
+ * 核心逻辑：
+ * 1. 构建一个简易的 3D 引擎 (World Space -> Camera Space -> Screen Space)
+ * 2. 使用 Painter's Algorithm (画家算法) 处理遮挡：后环 -> 星球 -> 前环
+ * 3. 混合模式 (Composite Operations) 实现科幻发光
+ */
+
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+const card = document.getElementById('data-card');
+
+// --- 配置 ---
+const CONFIG = {
+    particleCount: 2500, // 尘埃数量 (制造体积感)
+    nodeCount: 40,       // 项目节点数量
+    planetRadius: 70,
+    ringInner: 140,
+    ringOuter: 400,
+    colors: {
+        bg: '#050508',
+        planetLight: '#fcd34d', // 光照面颜色
+        planetDark: '#b45309',  // 背光面颜色
+        dust: [255, 255, 255],  // 尘埃基色
+        nodes: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'] // 绿蓝橙红
+    },
+    camera: {
+        x: 0, y: -400, z: 800, // 摄像机位置
+        pitch: 0.4,            // 初始俯仰角
+        yaw: 0.2,              // 初始偏航角
+        zoom: 1
+    }
+};
+
+let width, height, cx, cy;
+let particles = [];
+let nodes = [];
+let mouse = { x: 0, y: 0, isDown: false, lx: 0, ly: 0 };
+let hoveredNode = null;
+
+// --- 数学工具 (3D 投影) ---
+function project(x, y, z) {
+    // 1. 旋转矩阵 (绕 X 轴 - Pitch)
+    let y1 = y * Math.cos(CONFIG.camera.pitch) - z * Math.sin(CONFIG.camera.pitch);
+    let z1 = y * Math.sin(CONFIG.camera.pitch) + z * Math.cos(CONFIG.camera.pitch);
+    
+    // 2. 旋转矩阵 (绕 Y 轴 - Yaw)
+    let x2 = x * Math.cos(CONFIG.camera.yaw) - z1 * Math.sin(CONFIG.camera.yaw);
+    let z2 = x * Math.sin(CONFIG.camera.yaw) + z1 * Math.cos(CONFIG.camera.yaw);
+
+    // 3. 透视投影
+    // 假设视距 (Field of View depth) 为 800
+    const perspective = 800 * CONFIG.camera.zoom;
+    const scale = perspective / (perspective + z2);
+    
+    return {
+        x: cx + x2 * scale,
+        y: cy + y1 * scale,
+        scale: scale,
+        z: z2 // 用于 Z-Sorting
+    };
+}
+
+// --- 初始化 ---
+class Dust {
+    constructor() {
+        this.reset();
+    }
+    reset() {
+        // 在圆环内随机分布
+        const angle = Math.random() * Math.PI * 2;
+        // 使用 sqrt 保证分布均匀，不会聚集在圆心
+        const r = Math.sqrt(Math.random()) * (CONFIG.ringOuter - CONFIG.ringInner) + CONFIG.ringInner;
+        
+        this.x = r * Math.cos(angle);
+        this.z = r * Math.sin(angle); // 原始坐标系中环是平躺在 XZ 平面的
+        this.y = (Math.random() - 0.5) * 15; // 环的厚度
+        
+        this.size = Math.random() * 1.5;
+        this.speed = 100 / r; // 开普勒运动：越近越快
+        this.angle = angle;
+        this.r = r;
+        this.alpha = Math.random() * 0.5 + 0.1;
+    }
+    update() {
+        this.angle += this.speed * 0.005;
+        this.x = this.r * Math.cos(this.angle);
+        this.z = this.r * Math.sin(this.angle);
+    }
+}
+
+class ProjectNode {
+    constructor(id) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random()) * (CONFIG.ringOuter - CONFIG.ringInner) + CONFIG.ringInner;
+        
+        this.id = id;
+        this.x = r * Math.cos(angle);
+        this.z = r * Math.sin(angle);
+        this.y = (Math.random() - 0.5) * 20; // 稍微上下浮动
+        this.r = r;
+        this.angle = angle;
+        this.speed = 100 / r;
+        
+        this.color = CONFIG.colors.nodes[Math.floor(Math.random() * CONFIG.colors.nodes.length)];
+        this.baseSize = 4 + Math.random() * 4;
+        this.name = `PROJECT-${(Math.random()*1000).toFixed(0).padStart(4, '0')}`;
+        this.progress = Math.floor(Math.random() * 100);
+    }
+    update() {
+        this.angle += this.speed * 0.005;
+        this.x = this.r * Math.cos(this.angle);
+        this.z = this.r * Math.sin(this.angle);
+    }
+}
+
+function init() {
+    resize();
+    for(let i=0; i<CONFIG.particleCount; i++) particles.push(new Dust());
+    for(let i=0; i<CONFIG.nodeCount; i++) nodes.push(new ProjectNode(i));
+    loop();
+}
+
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    cx = width / 2;
+    cy = height / 2;
+}
+
+// --- 渲染循环 ---
+function loop() {
+    ctx.fillStyle = CONFIG.colors.bg;
+    ctx.fillRect(0, 0, width, height);
+
+    // 1. 更新所有位置
+    particles.forEach(p => p.update());
+    nodes.forEach(n => n.update());
+
+    // 2. 投影并计算 Z轴深度
+    const renderList = [];
+
+    // 添加尘埃
+    particles.forEach(p => {
+        const pos = project(p.x, p.y, p.z);
+        renderList.push({ type: 'dust', obj: p, pos: pos });
+    });
+
+    // 添加节点
+    nodes.forEach(n => {
+        const pos = project(n.x, n.y, n.z);
+        renderList.push({ type: 'node', obj: n, pos: pos });
+    });
+
+    // 添加土星本体 (作为一个大的渲染对象)
+    // 土星中心永远在 (0,0,0)
+    const planetPos = project(0, 0, 0);
+    renderList.push({ type: 'planet', pos: planetPos });
+
+    // 3. 排序：画家算法 (Z 值大的在后面，先画)
+    renderList.sort((a, b) => b.pos.z - a.pos.z);
+
+    // 4. 绘制
+    renderList.forEach(item => {
+        if (item.type === 'dust') drawDust(item);
+        else if (item.type === 'node') drawNode(item);
+        else if (item.type === 'planet') drawPlanet(item);
+    });
+
+    // 5. 绘制 HUD 连接线 (最上层)
+    drawOverlays();
+    
+    // 6. 交互检测 (只需检测最上层的 Nodes)
+    checkHover(renderList.filter(i => i.type === 'node'));
+
+    requestAnimationFrame(loop);
+    
+    // 更新时间
+    const now = new Date();
+    document.getElementById('sys-time').innerText = now.toLocaleTimeString();
+}
+
+// --- 绘制函数 ---
+
+function drawPlanet(item) {
+    const { x, y, scale } = item.pos;
+    const r = CONFIG.planetRadius * scale;
+
+    // 光晕 (Bloom)
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const glow = ctx.createRadialGradient(x, y, r, x, y, r * 3);
+    glow.addColorStop(0, 'rgba(252, 211, 77, 0.2)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 实体星球 (拟真球体着色)
+    // 根据摄像机 Yaw 计算光照偏移，模拟太阳总是从固定方向照来
+    const lightX = x - r * 0.5; 
+    const lightY = y - r * 0.5;
+
+    const grad = ctx.createRadialGradient(lightX, lightY, r * 0.1, x, y, r);
+    grad.addColorStop(0, '#fff'); // 高光
+    grad.addColorStop(0.2, CONFIG.colors.planetLight);
+    grad.addColorStop(0.8, CONFIG.colors.planetDark);
+    grad.addColorStop(1, '#000'); // 阴影边缘
+
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    
+    // 行星环投射在星球表面的阴影 (可选高级细节)
+    ctx.beginPath();
+    ctx.ellipse(x, y, r*1.1, r * 0.1, CONFIG.camera.pitch, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fill();
+}
+
+function drawDust(item) {
+    const { x, y, scale } = item.pos;
+    if (scale < 0) return; // 裁剪掉视锥体后面的
+
+    // 距离越远越透明
+    const alpha = item.obj.alpha * Math.min(1, scale);
+    
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.beginPath();
+    ctx.rect(x, y, item.obj.size * scale, item.obj.size * scale);
+    ctx.fill();
+}
+
+function drawNode(item) {
+    const { x, y, scale } = item.pos;
+    if (scale < 0) return;
+
+    const isHover = hoveredNode && hoveredNode.id === item.obj.id;
+    const size = item.obj.baseSize * scale * (isHover ? 1.5 : 1);
+
+    // 节点光晕
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowBlur = 10 * scale;
+    ctx.shadowColor = item.obj.color;
+    
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI*2);
+    ctx.fillStyle = item.obj.color;
+    ctx.fill();
+    
+    // 选中态的光环
+    if (isHover) {
+        ctx.beginPath();
+        ctx.arc(x, y, size * 2, 0, Math.PI*2);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // 绘制引线到卡片 (简单的视觉反馈)
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y - 50 * scale);
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawOverlays() {
+    // 绘制虚拟轨道圈 (视觉辅助)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    
+    // 简化的轨道圈绘制（并不精确3D，只是氛围）
+    // 实际应该采样3D点连线，这里为了性能做简单椭圆逼近
+    // ...略去复杂计算，保持画面干净...
+    ctx.restore();
+}
+
+// --- 交互逻辑 ---
+function checkHover(renderNodes) {
+    // 逆序查找，优先选中前面的
+    let found = null;
+    for (let i = renderNodes.length - 1; i >= 0; i--) {
+        const item = renderNodes[i];
+        const dx = mouse.x - item.pos.x;
+        const dy = mouse.y - item.pos.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist < 20) { // 鼠标容差
+            found = item.obj;
+            break;
+        }
+    }
+
+    if (found !== hoveredNode) {
+        hoveredNode = found;
+        document.body.style.cursor = found ? 'pointer' : 'move';
+        updateCard(found, renderNodes.find(n => n.obj === found));
+    }
+}
+
+function updateCard(node, renderItem) {
+    if (node) {
+        card.classList.add('active');
+        // 更新卡片位置
+        card.style.left = renderItem.pos.x + 'px';
+        card.style.top = (renderItem.pos.y - 50) + 'px';
+        
+        // 更新内容
+        document.getElementById('card-title').innerText = node.name;
+        document.getElementById('card-prog-text').innerText = node.progress + '%';
+        document.getElementById('card-prog-bar').style.width = node.progress + '%';
+        document.getElementById('card-status').style.color = node.color;
+    } else {
+        card.classList.remove('active');
+    }
+}
+
+// --- 事件监听 (拖拽旋转) ---
+window.addEventListener('resize', resize);
+window.addEventListener('mousemove', e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    
+    if (mouse.isDown) {
+        const deltaX = e.clientX - mouse.lx;
+        const deltaY = e.clientY - mouse.ly;
+        
+        // 调整摄像机角度
+        CONFIG.camera.yaw -= deltaX * 0.005;
+        CONFIG.camera.pitch -= deltaY * 0.005;
+        
+        // 限制俯仰角，避免翻转
+        CONFIG.camera.pitch = Math.max(-1.5, Math.min(1.5, CONFIG.camera.pitch));
+
+        mouse.lx = e.clientX;
+        mouse.ly = e.clientY;
+    }
+});
+
+window.addEventListener('mousedown', e => {
+    mouse.isDown = true;
+    mouse.lx = e.clientX;
+    mouse.ly = e.clientY;
+    // 关闭卡片
+    card.classList.remove('active');
+});
+
+window.addEventListener('mouseup', () => mouse.isDown = false);
+window.addEventListener('wheel', e => {
+    // 缩放
+    CONFIG.camera.zoom += e.deltaY * -0.001;
+    CONFIG.camera.zoom = Math.max(0.5, Math.min(3, CONFIG.camera.zoom));
+});
+
+// 启动
+init();
+
+</script>
+</body>
+</html>

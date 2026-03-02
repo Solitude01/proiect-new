@@ -1,0 +1,76 @@
+PPT 脚本生成器前端修改说明
+
+本次修改实现了以下功能：
+
+第一轮修改（之前完成）：
+1. ✅ 下载的 JSON 和演讲稿文件名与输入文件名一致
+   - 新增 getOriginalFileName() 函数
+   - 优先使用用户选择的文件名（去掉扩展名）
+   - 示例：test.pptx -> test.json, test_script.txt
+
+2. ✅ 保存演讲稿时只保留 slide_1_script、slide_2_script 等字段
+   - 修改 downloadScript() 和 downloadScriptFromCard() 函数
+   - 格式：slide_1_script: 内容
+   - slide_2_script: 内容
+   - ...
+
+3. ✅ 展开前的卡片上，如果任务处理完成也展示下载按钮
+   - 在卡片按钮区添加了两个新按钮：
+     * 下载 JSON（橙色按钮）
+     * 下载演讲稿（绿色按钮）
+   - 在 updateCardStatus() 中，当 status === 'completed' 时启用这两个按钮
+   - 在 uploadFile() 中，上传时禁用这两个按钮
+   - 用户可以直接从卡片下载，无需先展开
+
+第二轮修改（本次新增）：
+4. ✅ 上传文件后，"点击选择 PPT 文件" 区域自动隐藏
+   - 在 upload-area div 上添加了 id="uploadArea-${cardId}"
+   - 在 handleFileSelect() 中，选择文件后只隐藏上传提示文字，保留文件名显示
+   - 避免 "点击选择 PPT 文件" 文字遮盖界面，同时显示已选择的文件名
+
+5. ✅ 未下载演讲稿之前不允许再添加文件
+   - 新增 scriptDownloaded 标记，记录演讲稿是否已下载
+   - 在 downloadScript() 中，下载后标记 scriptDownloaded = true 并重新显示上传提示
+   - 在 downloadScriptFromCard() 中，下载后也标记 scriptDownloaded = true 并重新显示上传提示
+   - 只有下载演讲稿后，才能重新添加新文件
+
+第三轮修改（本次修复）：
+6. ✅ 修复下载演讲稿内容为空的问题
+   - 从 data.data 中提取实际的文件信息
+   - 正确显示 filename、syllabus、slide_1_script 等字段
+   - 确保演讲稿内容完整
+
+7. ✅ 选择完文件后显示文件名
+   - 保留 fileName 显示，不隐藏
+   - 用户可以清楚看到已选择的文件名
+
+8. ✅ 进度条状态说明改为中文
+   - 新增 page_generated: "页面生成中..."
+   - 新增多种中文状态：
+     * success: "处理成功 ✓"
+     * failed: "处理失败 ✗"
+     * running: "正在运行..."
+     * finished: "已完成 ✓"
+     * pending: "等待处理..."
+     * queued: "已加入队列..."
+     * in_progress: "处理中..."
+     * cancelled: "已取消"
+     * timeout: "超时"
+     * retrying: "正在重试..."
+   - 其他状态保持中文显示
+
+修改的文件：
+- ppt-script.html
+
+主要修改位置：
+- 第235行：为 upload-area 添加 id
+- 第214-216行：在 cardData 中添加 scriptDownloaded 属性
+- 第273-282行：选择文件后只隐藏上传提示文字，保留文件名
+- 第382-391行：任务完成时启用下载按钮
+- 第285-286行：上传时禁用下载按钮
+- 第407-428行：添加所有进度条状态的中文显示
+- 第530-582行：从 data.data 中提取文件信息，修复内容为空的问题
+- 第609-661行：从卡片下载时也从 data.data 中提取信息
+- 第487-492行：模态框中正确显示文件信息
+
+所有修改已完成，功能已实现！

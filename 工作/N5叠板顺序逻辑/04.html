@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>叠板作业 SOP - A4横向流程图</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', 'SimHei', sans-serif;
+            background-color: #525659;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            padding: 10px 0;
+            text-align: center;
+            z-index: 999;
+        }
+        .btn {
+            background-color: #0984e3;
+            color: white;
+            border: none;
+            padding: 8px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .btn:hover { background-color: #076cb8; }
+
+        .a4-landscape {
+            background: white;
+            width: 297mm;
+            height: 210mm; 
+            padding: 10mm 12mm;
+            box-sizing: border-box;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            margin-top: 60px;
+            position: relative;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 0 0 5px 0;
+            border-bottom: 3px solid #333;
+            padding-bottom: 3px;
+            font-size: 18px;
+        }
+
+        .legend {
+            text-align: center;
+            font-size: 10px;
+            margin-bottom: 8px;
+            background: #f1f2f6;
+            padding: 4px;
+            border-radius: 4px;
+        }
+        .legend span { 
+            margin: 0 10px; 
+            display: inline-block;
+        }
+
+        /* SVG 流程图容器 */
+        .flowchart-container {
+            width: 100%;
+            height: calc(100% - 70px);
+            position: relative;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 流程图节点样式 */
+        .node {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .node:hover {
+            filter: brightness(1.1);
+        }
+
+        .node-rect {
+            stroke-width: 2.5;
+        }
+
+        .node-text {
+            font-size: 13px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .arrow {
+            stroke: #2d3436;
+            stroke-width: 2.5;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+
+        .arrow-back {
+            stroke: #d63031;
+            stroke-width: 3;
+            stroke-dasharray: 5,5;
+            fill: none;
+            marker-end: url(#arrowhead-red);
+        }
+
+        .decision-diamond {
+            stroke-width: 2.5;
+        }
+
+        .footer-info {
+            position: absolute; 
+            bottom: 6mm; 
+            right: 12mm; 
+            font-size: 9px; 
+            color: #888;
+        }
+
+        @media print {
+            body { 
+                background: none; 
+                padding: 0; 
+                margin: 0;
+            }
+            .toolbar { display: none; }
+            .a4-landscape {
+                margin: 0;
+                box-shadow: none;
+                width: 100%;
+                height: 100%;
+                page-break-after: always;
+            }
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <button class="btn" onclick="window.print()">🖨️ 打印 / 导出横向 PDF</button>
+        <span style="font-size:12px; margin-left:10px; color:#555;">(打印设置中请选择布局为：<strong>横向</strong>)</span>
+    </div>
+
+    <div class="a4-landscape">
+        <h2>智能叠板作业 SOP - 动作时序流程图</h2>
+        
+        <div class="legend">
+            <strong>图例：</strong>
+            <span>🔲 钢板(灰)</span>
+            <span>🟥 红铜(红)</span>
+            <span>🟩 板件(绿)</span>
+            <span>⬜ 白膜(白)</span>
+            <span>🟨 牛皮纸(黄)</span>
+            <span style="color:#d63031">↩️ 循环路径(红色虚线)</span>
+        </div>
+
+        <div class="flowchart-container">
+            <svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg">
+                <!-- 箭头定义 -->
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#2d3436" />
+                    </marker>
+                    <marker id="arrowhead-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#d63031" />
+                    </marker>
+                </defs>
+
+                <!-- 第一行：准备阶段 -->
+                <!-- 开始 -->
+                <g class="node">
+                    <ellipse cx="60" cy="80" rx="50" ry="35" fill="#a29bfe" stroke="#6c5ce7" class="node-rect"/>
+                    <text x="60" y="80" class="node-text" fill="#fff">开始作业</text>
+                </g>
+                <path d="M 110 80 L 150 80" class="arrow"/>
+
+                <!-- 配方确认 -->
+                <g class="node">
+                    <rect x="150" y="50" width="100" height="60" rx="8" fill="#74b9ff" stroke="#0984e3" class="node-rect"/>
+                    <text x="200" y="80" class="node-text" fill="#000">看板配方</text>
+                    <text x="200" y="95" class="node-text" fill="#000" font-size="11">确认</text>
+                </g>
+                <path d="M 250 80 L 290 80" class="arrow"/>
+
+                <!-- 进入作业区判断 -->
+                <g class="node">
+                    <polygon points="340,40 380,80 340,120 300,80" fill="#74b9ff" stroke="#0984e3" class="decision-diamond"/>
+                    <text x="340" y="75" class="node-text" fill="#000" font-size="11">进入</text>
+                    <text x="340" y="88" class="node-text" fill="#000" font-size="11">作业区?</text>
+                </g>
+                <path d="M 380 80 L 420 80" class="arrow"/>
+
+                <!-- 第二行：5步循环 -->
+                <!-- 循环起点 -->
+                <g class="node">
+                    <circle cx="460" cy="80" r="35" fill="#ffeaa7" stroke="#fdcb6e" class="node-rect"/>
+                    <text x="460" y="75" class="node-text" fill="#000" font-size="11">循环</text>
+                    <text x="460" y="88" class="node-text" fill="#000" font-size="11">起点</text>
+                </g>
+                <path d="M 460 115 L 460 155" class="arrow"/>
+
+                <!-- 步骤1: 放钢板 -->
+                <g class="node">
+                    <rect x="410" y="155" width="100" height="60" rx="8" fill="#b2bec3" stroke="#2d3436" class="node-rect"/>
+                    <text x="460" y="175" class="node-text" fill="#000" font-size="12">步骤①</text>
+                    <text x="460" y="195" class="node-text" fill="#000">放钢板</text>
+                </g>
+                <path d="M 510 185 L 550 185" class="arrow"/>
+
+                <!-- 步骤2: 放红铜 -->
+                <g class="node">
+                    <rect x="550" y="155" width="100" height="60" rx="8" fill="#ff7675" stroke="#d63031" class="node-rect"/>
+                    <text x="600" y="175" class="node-text" fill="#fff" font-size="12">步骤②</text>
+                    <text x="600" y="195" class="node-text" fill="#fff">放红铜</text>
+                </g>
+                <path d="M 650 185 L 690 185" class="arrow"/>
+
+                <!-- 步骤3: 放板件 -->
+                <g class="node">
+                    <rect x="690" y="155" width="100" height="60" rx="8" fill="#55efc4" stroke="#00b894" class="node-rect"/>
+                    <text x="740" y="175" class="node-text" fill="#000" font-size="12">步骤③</text>
+                    <text x="740" y="195" class="node-text" fill="#000">放板件</text>
+                </g>
+                <path d="M 740 215 L 740 255" class="arrow"/>
+
+                <!-- 步骤4: 放红铜 -->
+                <g class="node">
+                    <rect x="690" y="255" width="100" height="60" rx="8" fill="#ff7675" stroke="#d63031" class="node-rect"/>
+                    <text x="740" y="275" class="node-text" fill="#fff" font-size="12">步骤④</text>
+                    <text x="740" y="295" class="node-text" fill="#fff">放红铜</text>
+                </g>
+                <path d="M 690 285 L 650 285" class="arrow"/>
+
+                <!-- 步骤5: 放钢板 -->
+                <g class="node">
+                    <rect x="550" y="255" width="100" height="60" rx="8" fill="#b2bec3" stroke="#2d3436" class="node-rect"/>
+                    <text x="600" y="275" class="node-text" fill="#000" font-size="12">步骤⑤</text>
+                    <text x="600" y="295" class="node-text" fill="#000">放钢板</text>
+                </g>
+                <path d="M 550 285 L 510 285" class="arrow"/>
+
+                <!-- 系统识别判断 -->
+                <g class="node">
+                    <polygon points="460,245 510,285 460,325 410,285" fill="#74b9ff" stroke="#0984e3" class="decision-diamond"/>
+                    <text x="460" y="275" class="node-text" fill="#000" font-size="10">是否再叠</text>
+                    <text x="460" y="290" class="node-text" fill="#000" font-size="10">看配方</text>
+                </g>
+
+                <!-- 循环回路 (红色虚线) -->
+                <path d="M 410 285 L 380 285 L 380 80 L 420 80" class="arrow-back"/>
+                <text x="395" y="180" fill="#d63031" font-size="11" font-weight="bold"></text>
+
+                <!-- 向右到收尾流程 -->
+                <path d="M 510 285 L 550 285 L 550 380 L 590 380" class="arrow"/>
+                <text x="520" y="335" fill="#00b894" font-size="11" font-weight="bold"></text>
+
+                <!-- 第三行：收尾阶段 -->
+                <!-- 放白膜 -->
+                <g class="node">
+                    <rect x="590" y="350" width="100" height="60" rx="8" fill="#dfe6e9" stroke="#0984e3" class="node-rect" stroke-width="3"/>
+                    <text x="640" y="370" class="node-text" fill="#000" font-size="12">步骤⑥</text>
+                    <text x="640" y="390" class="node-text" fill="#000">放白膜</text>
+                </g>
+                <path d="M 690 380 L 730 380" class="arrow"/>
+
+                <!-- 放牛皮纸 -->
+                <g class="node">
+                    <rect x="730" y="350" width="100" height="60" rx="8" fill="#ffeaa7" stroke="#fdcb6e" class="node-rect"/>
+                    <text x="780" y="370" class="node-text" fill="#000" font-size="12">步骤⑦</text>
+                    <text x="780" y="390" class="node-text" fill="#000">放牛皮纸</text>
+                </g>
+                <path d="M 780 410 L 780 450" class="arrow"/>
+
+                <!-- 员工签字 -->
+                <g class="node">
+                    <rect x="730" y="450" width="100" height="60" rx="8" fill="#74b9ff" stroke="#0984e3" class="node-rect"/>
+                    <text x="780" y="470" class="node-text" fill="#000" font-size="12">步骤⑧</text>
+                    <text x="780" y="490" class="node-text" fill="#000">员工签字</text>
+                </g>
+                <path d="M 830 480 L 870 480" class="arrow"/>
+
+                <!-- 批次完成 -->
+                <g class="node">
+                    <ellipse cx="920" cy="480" rx="50" ry="35" fill="#a29bfe" stroke="#6c5ce7" class="node-rect"/>
+                    <text x="920" y="480" class="node-text" fill="#fff">批次完成</text>
+                </g>
+
+                <!-- 循环区域标注框 -->
+                <rect x="400" y="140" width="400" height="190" rx="10" fill="none" stroke="#0984e3" stroke-width="2" stroke-dasharray="8,4"/>
+                <text x="600" y="135" fill="#0984e3" font-size="14" font-weight="bold" text-anchor="middle">核心叠板循环区</text>
+
+            </svg>
+        </div>
+
+        <div class="footer-info">
+            Deep South Circuit (SCC) - Intelligent Mfg Dept. | Rev 1.0 | Page 1/1
+        </div>
+    </div>
+
+</body>
+</html>

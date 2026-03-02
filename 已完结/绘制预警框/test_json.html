@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON解析测试</title>
+</head>
+<body>
+    <h1>JSON解析测试</h1>
+    <div id="result"></div>
+
+    <script>
+        // 测试JSON解析
+        const testJson = `{
+  "width": 1920,
+  "height": 1080,
+  "frameNum": 1,
+  "targets": [
+    {
+      "obj": {
+        "id": 1,
+        "type": 1,
+        "confidence": 850,
+        "rect": {
+          "x": 0.1,
+          "y": 0.2,
+          "w": 0.2,
+          "h": 0.3
+        }
+      }
+    }
+  ],
+  "events": {
+    "alertInfo": [
+      {
+        "ruleInfo": {
+          "ruleID": 101,
+          "ruleName": "入侵检测",
+          "triggerType": 1
+        },
+        "unionTargets": {
+          "confidence": 950,
+          "region": {
+            "rect": {
+              "x": 0.05,
+              "y": 0.15,
+              "w": 0.4,
+              "h": 0.5
+            }
+          },
+          "childTargets": [
+            {
+              "id": 1
+            }
+          ]
+        }
+      }
+    ]
+  }
+}`;
+
+        try {
+            const parsed = JSON.parse(testJson);
+            document.getElementById('result').innerHTML = '<p style="color: green;">✓ JSON解析成功</p>';
+            console.log('解析后的数据:', parsed);
+
+            // 测试访问嵌套属性
+            if (parsed.events && parsed.events.alertInfo) {
+                console.log('预警信息:', parsed.events.alertInfo);
+            }
+
+            if (parsed.targets) {
+                console.log('目标信息:', parsed.targets);
+            }
+
+        } catch (error) {
+            document.getElementById('result').innerHTML = `<p style="color: red;">✗ JSON解析失败: ${error.message}</p>`;
+            console.error('解析错误:', error);
+        }
+    </script>
+</body>
+</html>

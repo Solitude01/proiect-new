@@ -1,0 +1,318 @@
+{
+	"code": 0,
+	"message": "",
+	"result": [
+		{
+			"model_name": "HY-MT1.5-1.8B",
+			"value": "HY-MT1.5",
+			"params": {
+				"temperature": 0.1,
+				"top_p": 0.1
+			},
+			"provider": "other",
+			"code": "other",
+			"is_available": true,
+			"charge_status": "FREE",
+			"model_type": "custom",
+			"model_url": "http://10.10.103.251:8088/generativeLargeModel/hy-mt",
+			"company": "千帆⼤模型接⼊",
+			"desc": null,
+			"used_for": [
+				"rag",
+				"thought",
+				"writing_generate"
+			],
+			"recommend_order": {
+				"thought": {
+					"order": 99,
+					"label": ""
+				},
+				"rag": {
+					"order": 99,
+					"label": ""
+				},
+				"follow_up": {
+					"order": 99,
+					"label": ""
+				},
+				"writing_generate": {
+					"order": 99,
+					"label": ""
+				}
+			},
+			"appbuilder_marketing": false,
+			"ext": "system",
+			"private_api_source": null,
+			"id": "e9259100-a5bd-425f-84c2-703ca1adb8d1",
+			"platform": "system",
+			"supports_reasoning": false,
+			"has_free_quota": true,
+			"allowed_multiple_output_fields": false,
+			"suggest_deep_thought": true,
+			"supports_search": false,
+			"supported_protocol_versions": [
+				1
+			]
+		},
+		{
+			"model_name": "qwen3-vl-30b-a3b-thinking",
+			"value": "qwen3-vl-30b-a3b-thinking",
+			"params": {
+				"temperature": 0.1,
+				"top_p": 0.1
+			},
+			"provider": "qwen",
+			"code": "qwen",
+			"is_available": true,
+			"charge_status": "FREE",
+			"model_type": "custom",
+			"model_url": "http://10.10.103.251:8088/generativeLargeModelImage2Text/qwen3-vl-30b-a3b",
+			"company": "千帆⼤模型接⼊",
+			"desc": null,
+			"used_for": [
+				"rag",
+				"thought",
+				"writing_generate"
+			],
+			"recommend_order": {
+				"thought": {
+					"order": 99,
+					"label": ""
+				},
+				"rag": {
+					"order": 99,
+					"label": ""
+				},
+				"follow_up": {
+					"order": 99,
+					"label": ""
+				},
+				"writing_generate": {
+					"order": 99,
+					"label": ""
+				}
+			},
+			"appbuilder_marketing": false,
+			"ext": "system",
+			"private_api_source": null,
+			"id": "e60976c4-b5a1-447f-8b00-1571636de742",
+			"platform": "system",
+			"supports_reasoning": false,
+			"has_free_quota": true,
+			"allowed_multiple_output_fields": false,
+			"suggest_deep_thought": true,
+			"supports_search": false,
+			"supported_protocol_versions": [
+				1
+			]
+		},
+		{
+			"model_name": "Qwen3-30B-A3B",
+			"value": "qwen3-30b-a3b",
+			"params": {
+				"temperature": 0.1,
+				"top_p": 0.1
+			},
+			"provider": "qwen",
+			"code": "qwen",
+			"is_available": true,
+			"charge_status": "FREE",
+			"model_type": "custom",
+			"model_url": "http://10.10.103.251:8088/generativeLargeModel/qwen3-30b-a3b",
+			"company": "千帆⼤模型接⼊",
+			"desc": null,
+			"used_for": [
+				"rag",
+				"thought",
+				"writing_generate"
+			],
+			"recommend_order": {
+				"thought": {
+					"order": 99,
+					"label": ""
+				},
+				"rag": {
+					"order": 99,
+					"label": ""
+				},
+				"follow_up": {
+					"order": 99,
+					"label": ""
+				},
+				"writing_generate": {
+					"order": 99,
+					"label": ""
+				}
+			},
+			"appbuilder_marketing": false,
+			"ext": "system",
+			"private_api_source": null,
+			"id": "9fb1abf7-126c-4108-b9be-9f8aa1ba1686",
+			"platform": "system",
+			"supports_reasoning": false,
+			"has_free_quota": true,
+			"allowed_multiple_output_fields": false,
+			"suggest_deep_thought": true,
+			"supports_search": false,
+			"supported_protocol_versions": [
+				1
+			]
+		},
+		{
+			"model_name": "qwen3-8b-pro",
+			"value": "qwen3-8b",
+			"params": {
+				"temperature": 0.1,
+				"top_p": 0.1
+			},
+			"provider": "qwen",
+			"code": "qwen",
+			"is_available": true,
+			"charge_status": "FREE",
+			"model_type": "custom",
+			"model_url": "http://10.10.103.251:8088/lm/v2/chat/completions",
+			"company": "千帆⼤模型接⼊",
+			"desc": null,
+			"used_for": [
+				"rag",
+				"thought",
+				"writing_generate"
+			],
+			"recommend_order": {
+				"thought": {
+					"order": 99,
+					"label": ""
+				},
+				"rag": {
+					"order": 99,
+					"label": ""
+				},
+				"follow_up": {
+					"order": 99,
+					"label": ""
+				},
+				"writing_generate": {
+					"order": 99,
+					"label": ""
+				}
+			},
+			"appbuilder_marketing": false,
+			"ext": "system",
+			"private_api_source": null,
+			"id": "08e01dc9-fe50-44db-977c-b8a865b202cc",
+			"platform": "system",
+			"supports_reasoning": false,
+			"has_free_quota": true,
+			"allowed_multiple_output_fields": false,
+			"suggest_deep_thought": true,
+			"supports_search": false,
+			"supported_protocol_versions": [
+				1
+			]
+		},
+		{
+			"model_name": "ds-v3",
+			"value": "ds-v3",
+			"params": {
+				"temperature": 0.1,
+				"top_p": 0.1
+			},
+			"provider": "deepseek",
+			"code": "deepseek",
+			"is_available": true,
+			"charge_status": "FREE",
+			"model_type": "custom",
+			"model_url": "http://10.10.103.248:8088/lm/v2/chat/completions",
+			"company": "千帆⼤模型接⼊",
+			"desc": null,
+			"used_for": [
+				"rag",
+				"thought",
+				"writing_generate"
+			],
+			"recommend_order": {
+				"thought": {
+					"order": 99,
+					"label": ""
+				},
+				"rag": {
+					"order": 99,
+					"label": ""
+				},
+				"follow_up": {
+					"order": 99,
+					"label": ""
+				},
+				"writing_generate": {
+					"order": 99,
+					"label": ""
+				}
+			},
+			"appbuilder_marketing": false,
+			"ext": "",
+			"private_api_source": null,
+			"id": "5a2ec4d6-3764-47b6-935c-b8a0a231bcf3",
+			"platform": "",
+			"supports_reasoning": false,
+			"has_free_quota": true,
+			"allowed_multiple_output_fields": false,
+			"suggest_deep_thought": true,
+			"supports_search": false,
+			"supported_protocol_versions": [
+				1
+			]
+		},
+		{
+			"model_name": "eb-speed-appbuilder",
+			"value": "eb-speed-appbuilder",
+			"params": {
+				"temperature": 0.1,
+				"top_p": 0.1
+			},
+			"provider": "baidu",
+			"code": "baidu",
+			"is_available": false,
+			"charge_status": "NOTOPEN",
+			"model_type": "custom",
+			"model_url": "http://10.92.168.38:8410/ernie-foundry/v1/chat/completions/ai_apaas",
+			"company": "千帆⼤模型接⼊",
+			"desc": null,
+			"used_for": [
+				"rag",
+				"thought",
+				"writing_generate"
+			],
+			"recommend_order": {
+				"thought": {
+					"order": 99,
+					"label": ""
+				},
+				"rag": {
+					"order": 99,
+					"label": ""
+				},
+				"follow_up": {
+					"order": 99,
+					"label": ""
+				},
+				"writing_generate": {
+					"order": 99,
+					"label": ""
+				}
+			},
+			"appbuilder_marketing": false,
+			"ext": "",
+			"private_api_source": null,
+			"id": "94d079d6-3971-417a-a1fa-8c29447fea0c",
+			"platform": "",
+			"supports_reasoning": false,
+			"has_free_quota": true,
+			"allowed_multiple_output_fields": false,
+			"suggest_deep_thought": true,
+			"supports_search": false,
+			"supported_protocol_versions": [
+				1
+			]
+		}
+	]
+}

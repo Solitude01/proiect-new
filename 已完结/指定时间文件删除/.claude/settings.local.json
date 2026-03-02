@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python file_cleaner.py:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "base_dir": "C:\\Users\\Lane\\Downloads\\NVR",
+  "pre_seconds": 5,
+  "post_seconds": 2,
+  "tail_seconds": 60,
+  "tracks_suffix": "01",
+  "download_timeout": 180,
+  "max_workers": 40
+}

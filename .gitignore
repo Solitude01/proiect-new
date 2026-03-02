@@ -1,0 +1,59 @@
+# Python 虚拟环境与缓存
+/.venv/
+__pycache__/
+*.pyc
+
+# 二进制与执行文件
+*.exe
+*.dll
+*.pyd
+*.so
+*.onnx
+
+# 压缩包与大型镜像
+*.iso
+*.zip
+*.rar
+*.7z
+*.pth
+
+# IDE 配置文件
+.idea/
+.vscode/
+
+# --- 忽略所有图片 ---
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.webp
+*.svg
+*.ico
+
+# --- 忽略所有 Office 文档 (Word, Excel, PPT) ---
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.csv
+*.ppt
+*.pptx
+
+# 特定项目目录忽略
+工作/已上线运行的AI项目明细/AAA/
+工作/已上线运行的AI项目明细/images/
+.dotnet/
+auto-py-to-exe/
+
+
+# 忽略所有 xlsx (特别是 CCC.xlsx)
+**/*.xlsx
+**/*.WAV
+
+# 忽略所有打包生成的 exe (包括 output 目录)
+**/*.exe
+**/output/
+
+# 忽略 .dotnet
+**/.dotnet/

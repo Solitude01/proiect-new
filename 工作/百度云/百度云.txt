@@ -1,0 +1,8 @@
+中心节点   http://spi.scc.com:8520/    idaas   yijian   Iip@2024
+广州1     http://edge31.scc.com:8520/  
+广州2    http://10.65.233.46:8412/spi  
+无锡     http://10.20.7.165:8412/spi    
+
+堡垒机    https://10.10.96.87/login.html?redirectUrl=/szywz/devOps/host    
+账号  baidu
+密码  Baidu123=

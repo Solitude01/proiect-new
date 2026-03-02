@@ -1,0 +1,142 @@
+{
+  "name": "LA-接受43.129专用",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "93e17da3-efe3-4617-a591-ae71d582849d",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        -48
+      ],
+      "id": "9040c59f-8a67-4aac-aa57-8ddfb8e9ce3f",
+      "name": "Webhook",
+      "webhookId": "93e17da3-efe3-4617-a591-ae71d582849d"
+    },
+    {
+      "parameters": {
+        "command": "=sh -c '/opt/n8n-python-venv/bin/python3 /scripts/download_event.py \\\n  --event_id \"{{ $json.event_id2 }}\" \\\n  --beginTime \"{{ $json.beginTime2 }}\" \\\n  --endTime \"{{ $json.endTime2 }}\" \\\n  --Deepmind \"{{ $json.Deepmind }}\" \\\n  --Channel \"{{ $json.Channel }}\" \\\n  --base_dir /vol1/1000/aa/LA \\\n  --deepmind_json /scripts/Deepmind.json \\\n  2>&1'\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -48
+      ],
+      "id": "43438acb-fb7b-4198-a00b-2df4254790b0",
+      "name": "Execute Command"
+    },
+    {
+      "parameters": {
+        "jsCode": "// beginTime 往前 padding（仅在“原始时长 <= 2分钟”时使用）\nconst preSeconds = 5;\n\n// endTime 往后 padding（永远叠加）\nconst postSeconds = 2;\n\n// 超过两分钟时：只取 endTime 往前 2分钟\nconst tailSeconds = 120;\n\n// 兼容：字段可能在 $json 或 $json.body\nconst src = $json.body ?? $json;\n\nconst beginTime = src.beginTime;\nconst endTime = src.endTime;\n\nif (!beginTime || !endTime) {\n  throw new Error(\n    `Missing beginTime/endTime. Got keys: ${Object.keys(src).join(', ')}; ` +\n    `beginTime=${beginTime}, endTime=${endTime}`\n  );\n}\n\n// 解析 \"YYYY-MM-DD HH:mm:ss.SSS\" 为 +08:00 时间\nfunction parseLocalMs(s) {\n  if (typeof s !== \"string\") throw new Error(`Time is not string: ${String(s)}`);\n  const iso = s.replace(\" \", \"T\") + \"+08:00\";\n  const d = new Date(iso);\n  if (Number.isNaN(d.getTime())) throw new Error(`Invalid time: ${s}`);\n  return d;\n}\n\n// 格式化回 \"YYYY-MM-DD HH:mm:ss.SSS\"\nfunction fmtLocalMs(d) {\n  const t = new Date(d.getTime() + 8 * 3600 * 1000);\n  const yyyy = t.getUTCFullYear();\n  const MM = String(t.getUTCMonth() + 1).padStart(2, \"0\");\n  const dd = String(t.getUTCDate()).padStart(2, \"0\");\n  const hh = String(t.getUTCHours()).padStart(2, \"0\");\n  const mm = String(t.getUTCMinutes()).padStart(2, \"0\");\n  const ss = String(t.getUTCSeconds()).padStart(2, \"0\");\n  const SSS = String(t.getUTCMilliseconds()).padStart(3, \"0\");\n  return `${yyyy}-${MM}-${dd} ${hh}:${mm}:${ss}.${SSS}`;\n}\n\nconst b = parseLocalMs(beginTime);\nconst e = parseLocalMs(endTime);\n\nif (e.getTime() < b.getTime()) {\n  throw new Error(`endTime < beginTime: begin=${beginTime}, end=${endTime}`);\n}\n\nconst rawSeconds = (e.getTime() - b.getTime()) / 1000;\n\n// endTime2 永远按 postSeconds 往后叠加\nlet end2 = new Date(e.getTime() + postSeconds * 1000);\n\n// beginTime2：\n// - 若原始时长 > 2分钟：begin2 = endTime 往前 2分钟（只取尾段）\n// - 否则：begin2 = beginTime 往前 preSeconds\nlet begin2;\nlet usedTail2Min = false;\n\nif (rawSeconds > tailSeconds) {\n  begin2 = new Date(e.getTime() - tailSeconds * 1000);\n  usedTail2Min = true;\n} else {\n  begin2 = new Date(b.getTime() - preSeconds * 1000);\n}\n\n// 诊断字段：最终窗口秒数\nconst windowSeconds = (end2.getTime() - begin2.getTime()) / 1000;\n\n// ---- Task Result 前缀：生成 event_id2 ----\nconst taskResultRaw = src[\"Task Result\"] ?? \"UNK\";\nconst taskResult = String(taskResultRaw).trim() || \"UNK\";\nconst resultPrefix = taskResult.replace(/[^\\w-]+/g, \"_\");\nconst event_id2 = `${resultPrefix}_${src.event_id}`;\n\n// 输出：保留原字段，同时新增 beginTime2/endTime2，以及诊断字段 + event_id2\nreturn [\n  {\n    ...$json,\n    beginTime,\n    endTime,\n    preSeconds,\n    postSeconds,\n    tailSeconds,\n    rawSeconds,\n    usedTail2Min,          // ✅ 是否触发“超过两分钟取尾段2分钟”\n    windowSeconds,\n    beginTime2: fmtLocalMs(begin2),\n    endTime2: fmtLocalMs(end2),\n\n    event_id: src.event_id,\n    event_id2,\n    taskResult,\n    resultPrefix,\n    Deepmind: src.Deepmind,\n    Channel: src.Channel,\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -48
+      ],
+      "id": "67702ad0-31fe-433f-beaf-ca982dad5484",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ ($json.stdout || '').split('\\n')[0] }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        320,
+        -48
+      ],
+      "id": "7cac2f34-b23f-46a1-bce4-7463dd9ffb59",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded",
+            "host": "10.30.43.199:5678",
+            "content-length": "185",
+            "connection": "Keep-Alive"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event_id": "电感1##",
+            "event_time": "2026-02-14 08:44:24.897",
+            "beginTime": "2026-02-14 08:44:20.711",
+            "endTime": "2026-02-14 07:57:35.498",
+            "Deepmind": "13",
+            "Channel": "12",
+            "Task Result": "NG"
+          },
+          "webhookUrl": "http://0.0.0.0:5678/webhook/93e17da3-efe3-4617-a591-ae71d582849d",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Command": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "veq8afa1lbYTdjZ2"
+  },
+  "versionId": "41edb3df-a0a4-46a8-925d-a49d3607e08b",
+  "meta": {
+    "instanceId": "b6e3e67acb272585c6a2d135289e37878fdf38c41cff22bf56b4bb8208937c25"
+  },
+  "id": "veq8afa1lbYTdjZ2",
+  "tags": []
+}

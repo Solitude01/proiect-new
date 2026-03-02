@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025年度已上线运行的AI项目明细 - 智能制造推进部</title>
+
+    <!-- 使用系统字体，避免外部依赖 -->
+    <style>
+        /* 字体回退方案 */
+        .title, .stat-value, .metric-value {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            font-weight: 700;
+        }
+    </style>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="bg-grid"></div>
+    <div class="bg-particles" id="particles"></div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">智能应用组-图像AI项目明细</h1>
+                <p class="subtitle">智能制造推进部</p>
+            </div>
+            <div class="header-actions">
+                <a href="business.html" class="btn btn-nav">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    业务展示
+                </a>
+                <a href="planet.html" class="btn btn-nav btn-planet">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <ellipse cx="12" cy="12" rx="10" ry="4"></ellipse>
+                        <line x1="12" y1="2" x2="12" y2="22"></line>
+                    </svg>
+                    星球视图
+                </a>
+                <button class="btn btn-print" id="btnPrint" disabled>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    打印
+                </button>
+            </div>
+        </header>
+
+        <!-- Statistics Cards -->
+        <section class="stats-section" id="statsSection" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-icon project-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value" id="totalProjects">0</span>
+                    <span class="stat-label">项目总数</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon online-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value" id="onlineProjects">0</span>
+                    <span class="stat-label">已上线项目</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon money-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value" id="totalRevenue">0</span>
+                    <span class="stat-label">总收益金额(万元)</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon time-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-value" id="totalTimeSaved">0</span>
+                    <span class="stat-label">总结余时间(小时/月)</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filter Section -->
+        <section class="filter-section" id="filterSection" style="display: none;">
+            <div class="filter-group">
+                <label class="filter-label">工厂筛选</label>
+                <select class="filter-select" id="filterFactory">
+                    <option value="">全部工厂</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">项目状态</label>
+                <select class="filter-select" id="filterStatus">
+                    <option value="">全部状态</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">时间范围</label>
+                <select class="filter-select" id="filterTimeRange">
+                    <option value="">全部时间</option>
+                    <option value="month">最近一个月</option>
+                    <option value="quarter">最近三个月</option>
+                    <option value="halfyear">最近半年</option>
+                    <option value="year">最近一年</option>
+                </select>
+            </div>
+            <div class="filter-group search-group">
+                <label class="filter-label">关键词搜索</label>
+                <div class="search-input-wrapper">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="filter-input" id="filterKeyword" placeholder="搜索项目名称、申请人...">
+                </div>
+            </div>
+            <button class="btn btn-reset" id="btnReset">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                </svg>
+                重置筛选
+            </button>
+        </section>
+
+        <!-- Data Table Section -->
+        <section class="table-section" id="tableSection" style="display: none;">
+            <div class="table-container">
+                <table class="data-table" id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>项目名称</th>
+                            <th>工厂名称</th>
+                            <th>项目目标</th>
+                            <th>收益说明</th>
+                            <th>折算成金额收益(万元)</th>
+                            <th>结余时间(小时/月)</th>
+                            <th>申请人</th>
+                            <th>创建时间</th>
+                            <th>提交时间</th>
+                            <th>开发人</th>
+                            <th>审核时间</th>
+                            <th>上线时间</th>
+                            <th>项目取消时间</th>
+                            <th>项目状态</th>
+                            <th>报警图例</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <span class="record-count">显示 <span id="displayCount">0</span> 条记录，共 <span id="totalCount">0</span> 条</span>
+            </div>
+        </section>
+
+        <!-- Empty State -->
+        <section class="empty-state" id="emptyState" style="display: none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                <polyline points="13 2 13 9 20 9"></polyline>
+            </svg>
+            <p>暂无数据，请使用导入脚本添加数据</p>
+        </section>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal" id="imageModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <img id="modalImage" src="" alt="报警图例">
+        </div>
+    </div>
+
+    <!-- Project Detail Modal -->
+    <div class="detail-modal" id="detailModal">
+        <div class="detail-modal-backdrop"></div>
+        <div class="detail-modal-container">
+            <button class="detail-modal-close" id="detailModalClose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <div class="detail-modal-content" id="detailModalContent">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>正在加载数据...</p>
+    </div>
+
+    <!-- Shared JS -->
+    <script src="shared.js"></script>
+    <!-- Custom Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>

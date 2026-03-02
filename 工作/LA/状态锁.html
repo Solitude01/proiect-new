@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOP检测流程图 - LogicAgent状态锁机制</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .node {
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            min-width: 280px;
+            text-align: center;
+            position: relative;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .node:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .start {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .decision {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            padding: 30px 40px;
+            font-weight: bold;
+        }
+
+        .process {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .success {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .error {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .arrow {
+            width: 3px;
+            height: 40px;
+            background: linear-gradient(to bottom, #667eea, #764ba2);
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .arrow::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 12px solid #764ba2;
+        }
+
+        .branch-container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .branch {
+            flex: 1;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .label {
+            background: #ecf0f1;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .label.yes {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .label.no {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+
+        .variable-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .code {
+            font-family: 'Courier New', monospace;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .legend {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 40px;
+            border: 2px solid #e9ecef;
+        }
+
+        .legend h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .legend-color {
+            width: 50px;
+            height: 35px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            .branch-container {
+                flex-direction: column;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 SOP检测流程图</h1>
+        <div class="subtitle">LogicAgent 状态锁机制 - 防呆控制逻辑</div>
+
+        <div class="flowchart">
+            <!-- 初始状态 -->
+            <div class="node start">
+                初始状态: 无板/无券<br>
+                <span class="code">g_AreaStatus=0, g_IsVerified=0</span>
+            </div>
+
+            <div class="arrow"></div>
+
+            <!-- 流程1: 校验电感笔 -->
+            <div class="node decision">
+                流程1: 触发红灯<br>
+                当前是空台面吗?<br>
+                <span class="code">g_AreaStatus == 0 ?</span>
+            </div>
+
+            <div class="branch-container">
+                <div class="branch">
+                    <div class="label yes">是 ✓</div>
+                    <div class="arrow"></div>
+                    <div class="node process">
+                        发放通行证<br>
+                        <span class="code">g_IsVerified = 1</span>
+                        <div class="variable-box">✅ 已校验,允许放板</div>
+                    </div>
+                </div>
+
+                <div class="branch">
+                    <div class="label no">否 ✗</div>
+                    <div class="arrow"></div>
+                    <div class="node error">
+                        违规操作<br>
+                        不动作或语音提示<br>
+                        "请先移走板件"
+                    </div>
+                </div>
+            </div>
+
+            <div class="arrow"></div>
+
+            <!-- 流程3: 放入板件 -->
+            <div class="node decision">
+                流程3: 放入板件<br>
+                有入场券吗?<br>
+                <span class="code">g_IsVerified == 1 ?</span>
+            </div>
+
+            <div class="branch-container">
+                <div class="branch">
+                    <div class="label yes">有券 ✓</div>
+                    <div class="arrow"></div>
+                    <div class="node success">
+                        作业OK<br>
+                        <span class="code">g_AreaStatus = 1</span><br>
+                        <span class="code">g_IsVerified = 0</span>
+                        <div class="variable-box">✅ 核销通行证,锁定台面</div>
+                    </div>
+                </div>
+
+                <div class="branch">
+                    <div class="label no">无券 ✗</div>
+                    <div class="arrow"></div>
+                    <div class="node error">
+                        报警NG<br>
+                        <span class="code">g_AreaStatus = 1</span>
+                        <div class="variable-box">⚠️ 未校验放板,锁定台面</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arrow"></div>
+
+            <!-- 流程2: 移走板件 -->
+            <div class="node decision">
+                流程2: 拿走板件<br>
+                刚才是有板状态吗?<br>
+                <span class="code">g_AreaStatus == 1 ?</span>
+            </div>
+
+            <div class="branch-container">
+                <div class="branch">
+                    <div class="label yes">是 ✓</div>
+                    <div class="arrow"></div>
+                    <div class="node process">
+                        系统复位<br>
+                        <span class="code">g_AreaStatus = 0</span><br>
+                        <span class="code">g_IsVerified = 0</span>
+                        <div class="variable-box">🔄 解锁区域,清除通行证</div>
+                    </div>
+                    <div class="arrow"></div>
+                    <div class="node start">
+                        返回初始状态<br>
+                        等待下次校验
+                    </div>
+                </div>
+
+                <div class="branch">
+                    <div class="label no">否 ✗</div>
+                    <div class="arrow"></div>
+                    <div class="node error">
+                        防抖保护<br>
+                        什么都不做<br>
+                        <div class="variable-box">🛡️ 防止相机持续信号干扰</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图例说明 -->
+        <div class="legend">
+            <h3>📋 变量说明与颜色图例</h3>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                    <div>
+                        <strong>初始/结束状态</strong><br>
+                        <span class="code">g_IsVerified=0, g_AreaStatus=0</span>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div>
+                    <div>
+                        <strong>判断节点</strong><br>
+                        条件分支逻辑
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+                    <div>
+                        <strong>处理节点</strong><br>
+                        变量赋值操作
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);"></div>
+                    <div>
+                        <strong>成功状态</strong><br>
+                        作业OK,允许继续
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);"></div>
+                    <div>
+                        <strong>错误/报警</strong><br>
+                        违规操作或防呆保护
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 25px; padding-top: 25px; border-top: 2px solid #e9ecef;">
+                <h4 style="color: #2c3e50; margin-bottom: 15px;">🔑 核心变量</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div class="variable-box">
+                        <strong>g_IsVerified</strong> (校验通行证)<br>
+                        0: 未校验/已失效<br>
+                        1: 已校验(持有入场券)
+                    </div>
+                    <div class="variable-box">
+                        <strong>g_AreaStatus</strong> (区域状态锁)<br>
+                        0: 系统认为当前无板<br>
+                        1: 系统认为当前有板
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 25px; padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                <strong>💡 方案亮点:</strong> 通过 <span class="code">g_AreaStatus</span> 实现"上升沿/下降沿"逻辑效果,避免工业相机持续信号带来的干扰,确保每次板件移动都能被正确识别。
+            </div>
+        </div>
+    </div>
+</body>
+</html>

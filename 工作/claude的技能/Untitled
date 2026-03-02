@@ -1,0 +1,11 @@
+Ctrl + J → 直接换行
+
+输错指令，按 ESC 键  随时打断它工作
+
+/init 初始化项目记忆指南
+
+在Claude Code 命令行中输入 /init 无参数，
+命令输入后在项目根目录下将生成一个CLAUDE.md 文件，
+作为该项目的知识指南，接着你询问 “> summarize this project”，
+Claude很快给出代码库概览，记忆文件提供的上下文，每次在该项目目录启动Claude Code，
+它都会首先读取 CLAUDE.md。

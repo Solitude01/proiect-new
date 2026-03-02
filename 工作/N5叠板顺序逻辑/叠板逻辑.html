@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>叠板作业全动作拆解流程图（修复版）</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h2 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px;}
+        .instruction {
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 14px;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        /* 打印时隐藏背景，只保留图 */
+        @media print {
+            body { background-color: white; }
+            .instruction { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <h2>叠板作业全动作拆解流程图</h2>
+    <div class="instruction">
+        提示：请等待图片加载。如果图片太小，可以右键选择“在新标签页打开图片”或缩放网页。
+        <br>图例说明：
+        <span style="color:#636e72">■ 钢板(灰)</span> | 
+        <span style="color:#d63031">■ 红铜(红)</span> | 
+        <span style="color:#00b894">■ 板件(绿)</span> | 
+        <span style="border:1px solid #000">□ 白膜(白)</span>
+    </div>
+
+    <div class="mermaid">
+    flowchart TD
+        %% --- 样式定义 ---
+        classDef steel fill:#b2bec3,stroke:#636e72,stroke-width:2px,color:#000
+        classDef copper fill:#ff7675,stroke:#d63031,stroke-width:2px,color:#fff
+        classDef board fill:#55efc4,stroke:#00b894,stroke-width:2px,color:#000
+        classDef whitefilm fill:#ffffff,stroke:#0984e3,stroke-width:4px,color:#000
+        classDef kraft fill:#ffeaa7,stroke:#fdcb6e,stroke-width:2px,color:#000
+        classDef action fill:#dfe6e9,stroke:#2d3436,stroke-width:1px
+
+        %% --- 1. 开始阶段 ---
+        Start(("开始: 识别启动")) --> CheckRecipe["对接看板: 确认配方"]:::action
+        CheckRecipe --> loopStart{"进入叠板作业"}
+
+        %% --- 2. 标准五步循环 (核心部分) ---
+        subgraph StandardCycle ["标准叠层单元 (循环)"]
+            direction TB
+            loopStart -->|步骤 1| PutSteel_1["动作: 放钢板"]:::steel
+            PutSteel_1 -->|步骤 2| PutCopper_1["动作: 放红铜箔"]:::copper
+            PutCopper_1 -->|步骤 3| PutBoard["动作: 放板件/PCB"]:::board
+            PutBoard -->|步骤 4| PutCopper_2["动作: 放红铜箔"]:::copper
+            PutCopper_2 -->|步骤 5| PutSteel_2["动作: 放钢板"]:::steel
+        end
+
+        %% --- 3. 循环判定 ---
+        PutSteel_2 --> CheckEnd{"查看配房要叠几次 就要重复N次"}
+        
+        %% 判定逻辑
+        CheckEnd -- "识别到: 红铜色/钢板 (继续叠)" --> loopStart
+        CheckEnd -- "识别到: 白色物体 (结束信号)" --> EndPhase_1
+
+        %% --- 4. 结束/收尾阶段 ---
+        subgraph EndSequence ["收尾封板流程"]
+            direction TB
+            EndPhase_1["关键节点: 放白色三合一离心膜"]:::whitefilm
+            EndPhase_1 --> EndPhase_2["动作: 放牛皮纸"]:::kraft
+            EndPhase_2 --> EndPhase_3["动作: 员工签字"]:::action
+        end
+
+        EndPhase_3 --> Finish(("流程结束"))
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html>

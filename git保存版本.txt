@@ -1,0 +1,11 @@
+# 1. 添加所有（未被忽略的）更改
+git add .
+
+# 2. 提交一个快照
+git commit -m "这里写你的新修改描述"
+
+# 3. 推送到 GitHub (因为之前用了 -u，现在只需要 git push)
+git push
+
+
+

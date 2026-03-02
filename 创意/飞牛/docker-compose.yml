@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-python
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_SECURE_COOKIE=false
+      - N8N_HOST=0.0.0.0
+      # 开启 Python 代码节点支持
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_PYTHON_INTERPRETER=/usr/bin/python3
+      # 时区设置
+      - GENERIC_TIMEZONE=Asia/Shanghai
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./n8n_data:/home/node/.n8n
+    # 核心魔改：启动时自动安装 python-pptx 库
+    # 注意：每次重启容器都会重新下载安装一次，NAS网络环境要好，或者配置pip国内源
+    command: >
+      /bin/sh -c "
+        apk add --no-cache python3 py3-pip &&
+        pip3 install python-pptx --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple &&
+        n8n
+      "
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    volumes:
+      - ./openwebui_data:/app/backend/data
+    environment:
+      - ENABLE_OLLAMA_API=false
+      - WEBUI_NAME=DeepSeek-Agent
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # 允许 Open WebUI 访问宿主机端口

@@ -1,0 +1,12 @@
+{
+  "default_keywords": {
+    "企密A": true,
+    "企密AA": true,
+    "企密AAA": true
+  },
+  "custom_keywords": [
+    "内部公开"
+  ],
+  "check_content": false,
+  "last_directory": "D:/本地素材/密级标识空白模板"
+}

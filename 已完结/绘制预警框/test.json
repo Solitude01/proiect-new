@@ -1,0 +1,60 @@
+{
+  "width": 1920,
+  "height": 1080,
+  "frameNum": 1,
+  "targets": [
+    {
+      "obj": {
+        "id": 1,
+        "type": 1,
+        "confidence": 850,
+        "rect": {
+          "x": 0.1,
+          "y": 0.2,
+          "w": 0.2,
+          "h": 0.3
+        }
+      }
+    },
+    {
+      "obj": {
+        "id": 2,
+        "type": 2,
+        "confidence": 900,
+        "rect": {
+          "x": 0.5,
+          "y": 0.3,
+          "w": 0.2,
+          "h": 0.3
+        }
+      }
+    }
+  ],
+  "events": {
+    "alertInfo": [
+      {
+        "ruleInfo": {
+          "ruleID": 101,
+          "ruleName": "入侵检测",
+          "triggerType": 1
+        },
+        "unionTargets": {
+          "confidence": 950,
+          "region": {
+            "rect": {
+              "x": 0.05,
+              "y": 0.15,
+              "w": 0.4,
+              "h": 0.5
+            }
+          },
+          "childTargets": [
+            {
+              "id": 1
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(/c/Users/Lane/AppData/Local/Programs/Python/Python314/python:*)",
+      "Bash(bash:*)",
+      "WebSearch",
+      "WebFetch(domain:hub.docker.com)",
+      "Bash(ssh:*)",
+      "Bash(curl:*)",
+      "Bash(HTTP_PROXY=\"\" HTTPS_PROXY=\"\" curl:*)"
+    ]
+  }
+}

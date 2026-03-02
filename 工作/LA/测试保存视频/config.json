@@ -1,0 +1,10 @@
+{
+  "base_dir": "D:/本地素材/模型包",
+  "pre_seconds": 5,
+  "post_seconds": 5,
+  "tail_seconds": 60,
+  "tracks_suffix": "01",
+  "download_timeout": 180,
+  "max_workers": 40,
+  "download_delay": 30
+}

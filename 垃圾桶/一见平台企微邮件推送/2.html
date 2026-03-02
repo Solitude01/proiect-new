@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一见视觉AI平台-告警推送与内网闭环处理系统需求文档</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 50px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            color: #0056b3;
+        }
+
+        h2 {
+            border-left: 5px solid #0056b3;
+            padding-left: 15px;
+            margin-top: 40px;
+            background-color: #f9f9f9;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: #444;
+            margin-top: 25px;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 5px;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        ul,
+        ol {
+            margin-bottom: 20px;
+            padding-left: 25px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        code {
+            background-color: #f0f0f0;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: Consolas, monospace;
+            color: #c7254e;
+        }
+
+        .tech-note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            color: #856404;
+        }
+
+        .img-req {
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #fcfcfc;
+            margin: 10px 0;
+        }
+
+        /* 按钮样式 */
+        .btn-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .btn {
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #004494;
+        }
+
+        @media print {
+            .btn-container {
+                display: none;
+            }
+
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="btn-container">
+        <button class="btn" onclick="exportToWord()">💾 保存为 Word 文档</button>
+    </div>
+
+    <div class="container" id="export-content">
+        <h1>需求文档：一见视觉AI平台<br>告警推送与内网闭环处理系统</h1>
+        <p style="text-align: center; color: #666;">版本：V1.0 | 日期：2025-12-03</p>
+
+        <h2>1. 项目背景</h2>
+        <p>目前“一见”视觉大模型平台产生的告警仅在原系统内展示。为提高响应效率，需开发一套对接系统，实现以下目标：</p>
+        <ol>
+            <li><strong>消息推送</strong>：将告警实时推送至<strong>企业微信</strong>和<strong>邮件</strong>。</li>
+            <li><strong>闭环处理</strong>：提供内网Web落地页，复刻原平台的详情展示（包含图像/视频的算法图层叠加渲染），并支持“处理/误报”操作。</li>
+            <li><strong>数据同步</strong>：处理结果实时回写至原平台。</li>
+        </ol>
+
+        <h2>2. 业务流程</h2>
+        <ol>
+            <li><strong>平台回调</strong>：一见平台检测到异常，通过 webhook 推送 JSON 数据至我方服务器。</li>
+            <li><strong>渲染推送</strong>：我方服务器解析数据，生成带有内网落地页链接的消息，发送给相关人员。</li>
+            <li><strong>详情查看</strong>：用户点击链接进入内网落地页，页面自动加载原始图片/视频，并根据坐标数据<strong>动态绘制</strong>告警框、电子围栏和绊线。</li>
+            <li><strong>处置反馈</strong>：用户点击“处理”或“误报”，系统调用一见 API 更新状态。</li>
+        </ol>
+
+        <h2>3. 核心功能模块</h2>
+
+        <h3>模块一：内网告警处置落地页 (Web端)</h3>
+        <p>这是本项目的核心开发工作。需开发一个 Web 页面，通过 URL 参数（如 <code>alarmID</code>）加载告警详情。</p>
+
+        <h4>3.1 媒体展示区（重难点：图层叠加渲染）</h4>
+        <div class="img-req">
+            <p><strong>需求描述：</strong>页面需使用 HTML5 Canvas 或 SVG 技术，在原始媒体流上方覆盖一层绘图层，用于标识告警触发原因。</p>
+
+            <p><strong>A. 图片模式（默认展示）：</strong></p>
+            <ul>
+                [cite_start]<li><strong>底层：</strong>展示告警抓拍原图（字段：<code>imageURL</code>） [cite: 477]。</li>
+                [cite_start]<li><strong>叠加层 1（告警目标）：</strong>根据 API 返回的 <code>bbox</code> 坐标绘制红色矩形框，标识违规人员/物体 [cite:
+                    764]。</li>
+                [cite_start]<li><strong>叠加层 2（规则区域）：</strong>根据 API 返回的 <code>rois</code>
+                    坐标绘制电子围栏（多边形）或绊线（线段），通常显示为绿色或蓝色 [cite: 759]。</li>
+            </ul>
+
+            <p><strong>B. 视频模式（点击播放）：</strong></p>
+            <ul>
+                [cite_start]<li><strong>底层：</strong>播放告警录像片段（字段：<code>videoURL</code>） [cite: 477]。</li>
+                <li><strong>叠加层（规则区域）：</strong>在视频上方持续显示电子围栏或绊线（静态绘制）。<em>注：视频模式下仅需渲染静态的围栏/绊线，无需渲染动态的人体追踪框。</em></li>
+            </ul>
+        </div>
+
+        <h4>3.2 详细信息区</h4>
+        <p>页面右侧需展示以下关键字段（数据源自 <code>GET /v1/alarms/{id}</code>）：</p>
+        <ul>
+            <li><strong>告警名称：</strong><code>name</code></li>
+            [cite_start]<li><strong>发生时间：</strong><code>alarmTime</code> [cite: 477]</li>
+            [cite_start]<li><strong>设备名称：</strong><code>device.name</code> [cite: 477]</li>
+            <li><strong>所属部门：</strong><code>deptName</code></li>
+            [cite_start]<li><strong>当前状态：</strong><code>status</code> (pending: 待处理, processed: 已处理) [cite: 750]</li>
+        </ul>
+
+        <h4>3.3 处置操作区</h4>
+        <ul>
+            <li>若状态为 <strong>pending</strong>：显示【处理（有效）】和【误报（无效）】两个按钮。</li>
+            <li>若状态为 <strong>processed/mistaken</strong>：显示“已处置”标签，禁用按钮。</li>
+            <li><strong>交互逻辑：</strong>点击按钮后，调用一见平台 API 回写状态，成功后刷新页面状态。</li>
+        </ul>
+
+        <h2>4. 技术实现与接口映射</h2>
+
+        <h3>4.1 告警框与围栏渲染逻辑 (前端开发必读)</h3>
+        <p>需调用详情接口 <code>GET /v1/alarms/{alarmID}</code> 获取绘图数据。</p>
+
+        <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+            <tr style="background-color: #eee;">
+                <th>渲染对象</th>
+                <th>数据源字段 (JSON Path)</th>
+                <th>数据结构说明</th>
+                <th>渲染样式建议</th>
+            </tr>
+            <tr>
+                <td><strong>告警红框</strong><br>(仅图片)</td>
+                [cite_start]<td><code>annotations[].bbox</code><br>[cite: 764]</td>
+                <td>数组 <code>[x, y, w, h]</code><br>x: 左上角横坐标<br>y: 左上角纵坐标<br>w: 宽, h: 高</td>
+                <td><span style="color:red; font-weight:bold;">红色边框</span> (2px)，背景透明</td>
+            </tr>
+            <tr>
+                <td><strong>电子围栏</strong><br>(ROI)</td>
+                [cite_start]<td><code>skill.rois[].points</code><br>(类型为 Polygon) [cite: 232]</td>
+                <td>数组 <code>[x1, y1, x2, y2, ...]</code><br>需按顺序连接成闭合多边形</td>
+                <td><span style="color:green; font-weight:bold;">绿色边框</span>，这也是截图中的样式</td>
+            </tr>
+            <tr>
+                <td><strong>绊线</strong><br>(Tripwire)</td>
+                [cite_start]<td><code>skill.rois[].points</code><br>(类型为 TripWire) [cite: 232, 759]</td>
+                <td>数组 <code>[x1, y1, x2, y2]</code><br>定义线段的起止点</td>
+                <td><span style="color:cyan; font-weight:bold;">青色线条</span>，需显示方向箭头</td>
+            </tr>
+        </table>
+
+        <div class="tech-note">
+            <strong>⚠️ 注意坐标系：</strong> API 返回的坐标通常基于原始分辨率（如 1920x1080）。前端在 CSS 缩放显示图片/视频时（例如显示为 800px 宽），必须按比例缩放坐标值：<br>
+            <code>渲染X = API_X * (当前Canvas宽 / 原始图片宽)</code>
+        </div>
+
+        <h3>4.2 告警处置接口 (后端开发必读)</h3>
+        <ul>
+            [cite_start]<li><strong>接口地址：</strong> <code>PUT /v1/alarms/{uuid}</code> [cite: 724]</li>
+            <li><strong>请求头：</strong> <code>Authorization: {sign}</code> (参考文档 P2 鉴权机制)</li>
+            <li><strong>请求体 (Body)：</strong>
+                <pre><code>{
+  "processType": "efficient"  // 标记为有效/处理
+  // 或
+  "processType": "invalid"    // 标记为无效/误报
+}</code></pre>
+            </li>
+        </ul>
+
+        <h2>5. 附件与参考</h2>
+        <ul>
+            <li><strong>API 文档：</strong>《一见-视觉大模型平台API文档（V4.6.0）》</li>
+            <li><strong>UI 参考：</strong>请参照附件截图《翻越围栏-已处理.png》进行布局开发。</li>
+        </ul>
+    </div>
+
+    <script>
+        function exportToWord() {
+            var content = document.getElementById('export-content').innerHTML;
+
+            // 构建完整的HTML结构，包含内联样式，确保Word能正确渲染
+            var header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+                "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+                "xmlns='http://www.w3.org/TR/REC-html40'>" +
+                "<head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title>" +
+                "<style>" +
+                "body { font-family: 'Microsoft YaHei', sans-serif; }" +
+                "h1 { color: #0056b3; text-align: center; border-bottom: 2px solid #0056b3; }" +
+                "h2 { background-color: #f0f0f0; padding: 5px; border-left: 5px solid #0056b3; }" +
+                "table { border-collapse: collapse; width: 100%; }" +
+                "td, th { border: 1px solid #999; padding: 8px; text-align: left; }" +
+                ".tech-note { background-color: #fffbe6; padding: 10px; border: 1px solid #ffe58f; }" +
+                ".img-req { border: 1px solid #ccc; padding: 10px; background: #f9f9f9; }" +
+                "</style></head><body>";
+
+            var footer = "</body></html>";
+            var sourceHTML = header + content + footer;
+
+            var source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            var fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            fileDownload.download = '一见平台告警闭环系统_需求文档.doc';
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+        }
+    </script>
+</body>
+
+</html>

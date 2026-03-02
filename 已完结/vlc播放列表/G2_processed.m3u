@@ -1,0 +1,163 @@
+#EXTM3U
+#EXTINF:-1,G2-3F剧毒分析室
+rtsp://admin:Admin123@10.66.104.120
+#EXTINF:-1,G2-3F剧毒分析室
+rtsp://admin:Admin123@10.66.104.120
+#EXTINF:-1,G2-3F剧毒分析室
+rtsp://admin:Admin123@10.66.104.120
+#EXTINF:-1,G2-3F剧毒分析室
+rtsp://admin:Admin123@10.66.104.120
+#EXTINF:-1,G2-3F剧毒分析室
+rtsp://admin:Admin123@10.66.104.120
+#EXTINF:-1,4F计量室
+rtsp://admin:Admin123@10.66.100.86
+#EXTINF:-1,4F计量室温湿度检验箱
+rtsp://admin:Admin123@10.66.100.88
+#EXTINF:-1,401 电镜
+rtsp://admin:Admin123@10.66.112.86
+#EXTINF:-1,401 切片室
+rtsp://admin:Admin123@10.66.112.87
+#EXTINF:-1,401 取样间
+rtsp://admin:Admin123@10.66.112.88
+#EXTINF:-1,401 3D轮廓仪
+rtsp://admin:Admin123@10.66.112.90
+#EXTINF:-1,401 FIB
+rtsp://admin:Admin123@10.66.112.92
+#EXTINF:-1,401 化性试验
+rtsp://admin:Admin123@10.66.112.94
+#EXTINF:-1,401 FTIR
+rtsp://admin:Admin123@10.66.112.95
+#EXTINF:-1,401 电测
+rtsp://admin:Admin123@10.66.112.96
+#EXTINF:-1,401 热油机
+rtsp://admin:Admin123@10.66.112.97
+#EXTINF:-1,401 回流焊
+rtsp://admin:Admin123@10.66.112.99
+#EXTINF:-1,401 打线机
+rtsp://admin:Admin123@10.66.112.102
+#EXTINF:-1,401 焊接室
+rtsp://admin:Admin123@10.66.112.103
+#EXTINF:-1,401 收样间
+rtsp://admin:Admin123@10.66.112.106
+#EXTINF:-1,盲孔检查机
+rtsp://admin:Admin123@10.66.120.30
+#EXTINF:-1,盲孔检查机
+rtsp://admin:Admin123@10.66.120.29
+#EXTINF:-1,x-ray层间偏移测量仪
+rtsp://admin:Admin123@10.66.104.173
+#EXTINF:-1,307 镀金检验点
+rtsp://admin:Admin123@10.66.104.124
+#EXTINF:-1,G2-1F-层压前处理操作侧
+rtsp://admin:Admin123@10.66.112.40
+#EXTINF:-1,G2-1F-1#层压叠板机操作侧
+rtsp://admin:Admin123@10.66.112.51
+#EXTINF:-1,G2-1F-回流线拆解#1
+rtsp://admin:Admin123@10.66.112.45
+#EXTINF:-1,G2-1F-压机回流区
+rtsp://admin:Admin123@10.66.112.23
+#EXTINF:-1,G2-1F-压机
+rtsp://admin:Admin123@10.66.112.24
+#EXTINF:-1,G2-1F-钻靶
+rtsp://admin:Admin123@10.66.112.46
+#EXTINF:-1,G2-1F-铣边后清洗收板机
+rtsp://admin:Admin123@10.66.112.44
+#EXTINF:-1,铣床
+rtsp://admin:Admin123@10.66.104.146
+#EXTINF:-1,TRAY盘清洗
+rtsp://admin:Admin123@10.66.104.144
+#EXTINF:-1,G2-3F-抗镀金前处理放板机
+rtsp://admin:Admin123@10.66.100.67
+#EXTINF:-1,G2-3F-抗镀金显影收板机
+rtsp://admin:Admin123@10.66.100.70
+#EXTINF:-1,208酸性蚀刻收板机1
+rtsp://admin:Admin123@10.66.116.63
+#EXTINF:-1,208酸性蚀刻收板机2
+rtsp://admin:Admin123@10.66.116.64
+#EXTINF:-1,205 垂直显影1
+rtsp://admin:Admin123@10.66.108.44
+#EXTINF:-1,205陶瓷刷板线1
+rtsp://admin:Admin123@10.66.104.79
+#EXTINF:-1,205微蚀前处理1
+rtsp://admin:Admin123@10.66.104.65
+#EXTINF:-1,205酸洗前处理1
+rtsp://admin:Admin123@10.66.104.68
+#EXTINF:-1,G2-2F-水平沉铜收板机1
+rtsp://admin:Admin123@10.66.116.104
+#EXTINF:-1,G2-2F-水平沉铜放板机1
+rtsp://admin:Admin123@10.66.120.50
+#EXTINF:-1,G2-2F-电镀线收板机1
+rtsp://admin:Admin123@10.66.116.72
+#EXTINF:-1,G2-2F-图形去膜放板机1
+rtsp://admin:Admin123@10.66.116.95
+#EXTINF:-1,G2-2F-快速蚀刻放板机1
+rtsp://admin:Admin123@10.66.116.88
+#EXTINF:-1,镀金去膜
+rtsp://admin:Admin123@10.66.104.111
+#EXTINF:-1,烧孔后清洗
+rtsp://admin:Admin123@10.66.104.119
+#EXTINF:-1,烘板-2
+rtsp://admin:Admin123@10.66.116.56
+#EXTINF:-1,烘板-3
+rtsp://admin:Admin123@10.66.116.50
+#EXTINF:-1,钻孔前后处理-1
+rtsp://admin:Admin123@10.66.116.54
+#EXTINF:-1,钻孔前后处理-2
+rtsp://admin:Admin123@10.66.116.49
+#EXTINF:-1,钻孔前后处理-3
+rtsp://admin:Admin123@10.66.116.47
+#EXTINF:-1,钻孔前后处理-4
+rtsp://admin:Admin123@10.66.116.45
+#EXTINF:-1,钻孔前后处理-5
+rtsp://admin:Admin123@10.66.116.42
+#EXTINF:-1,钻孔前后处理-9
+rtsp://admin:Admin123@10.66.116.48
+#EXTINF:-1,钻孔前后处理-10
+rtsp://admin:Admin123@10.66.116.51
+#EXTINF:-1,钻孔前后处理-11
+rtsp://admin:Admin123@10.66.116.53
+#EXTINF:-1,机械钻物料房
+rtsp://admin:Admin123@10.66.116.35
+#EXTINF:-1,机械钻-2
+rtsp://admin:Admin123@10.66.116.31
+#EXTINF:-1,机械钻-17
+rtsp://admin:Admin123@10.66.116.29
+#EXTINF:-1,机械钻-3
+rtsp://admin:Admin123@10.66.104.57
+#EXTINF:-1,机械钻-16
+rtsp://admin:Admin123@10.66.104.56
+#EXTINF:-1,机械钻-4
+rtsp://admin:Admin123@10.66.104.51
+#EXTINF:-1,机械钻-15
+rtsp://admin:Admin123@10.66.104.54
+#EXTINF:-1,等离子1
+rtsp://admin:Admin123@10.66.116.55
+#EXTINF:-1,等离子气瓶房
+rtsp://admin:Admin123@10.66.116.58
+#EXTINF:-1,激光钻气瓶房
+rtsp://admin:Admin123@10.66.116.36
+#EXTINF:-1,激光钻-1
+rtsp://admin:Admin123@10.66.108.28
+#EXTINF:-1,激光钻-7
+rtsp://admin:Admin123@10.66.108.27
+#EXTINF:-1,激光钻-2
+rtsp://admin:Admin123@10.66.108.29
+#EXTINF:-1,激光钻-8
+rtsp://admin:Admin123@10.66.104.58
+#EXTINF:-1,激光钻-3
+rtsp://admin:Admin123@10.66.108.30
+#EXTINF:-1,激光钻-9
+rtsp://admin:Admin123@10.66.104.55
+#EXTINF:-1,激光钻-4
+rtsp://admin:Admin123@10.66.108.33
+#EXTINF:-1,激光钻-10
+rtsp://admin:Admin123@10.66.104.47
+#EXTINF:-1,激光钻-11
+rtsp://admin:Admin123@10.66.104.43
+#EXTINF:-1,激光钻-5
+rtsp://admin:Admin123@10.66.108.34
+#EXTINF:-1,激光钻-12
+rtsp://admin:Admin123@10.66.104.41
+#EXTINF:-1,激光钻-6
+rtsp://admin:Admin123@10.66.120.26
+#EXTINF:-1,激光钻物料房
+rtsp://admin:Admin123@10.66.120.28

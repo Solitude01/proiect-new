@@ -1,0 +1,58 @@
+只紧随其后运行的那一条命令生效，
+            HTTPS_PROXY="http://10.30.44.154:7897" HTTP_PROXY="http://10.30.44.154:7897" git clone https://github.com/openai/CLIP.git
+
+
+一行命令（走代理 + 强制官方源）
+    HTTP_PROXY=http://10.30.44.154:1111 HTTPS_PROXY=http://10.30.44.154:1111 pip install nvidia-cudnn-cu11==8.9.7.29 -i https://pypi.org/simple --extra-index-url https://pypi.nvidia.com
+
+
+HTTP_PROXY=你的代理地址 HTTPS_PROXY=你的代理地址 pip install 包名==版本号 -i https://pypi.org/simple --extra-index-url https://pypi.nvidia.com
+
+-i https://pypi.org/simple：强制主源走官方 PyPI，避免默认的清华源（清华不镜像 NVIDIA 包）。
+--extra-index-url https://pypi.nvidia.com：添加 NVIDIA 官方仓库，大部分 nvidia-* 包都在这里。
+代理部分：根据你习惯用环境变量或 --proxy 都可以，效果一样。
+
+这样写基本能覆盖所有 NVIDIA pip 包的安装需求。如果以后遇到其他包（非 NVIDIA），通常只用代理 + -i https://pypi.org/simple 就够了，不需要额外加 NVIDIA 的 url。
+
+HTTP_PROXY=http://10.30.44.154:1111 HTTPS_PROXY=http://10.30.44.154:1111 sudo -E apt-get update 
+
+HTTP_PROXY=http://10.30.44.154:1111 HTTPS_PROXY=http://10.30.44.154:1111 pip install matplotlib
+HTTP_PROXY=http://10.30.44.154:1111 HTTPS_PROXY=http://10.30.44.154:1111 sudo apt-get update && sudo apt-get install inotify-tools
+
+当前这一个窗口（会话）一直走代理-直接修改就是覆盖
+
+   export HTTP_PROXY="http://10.30.44.154:1111"
+    export HTTPS_PROXY="http://10.30.44.154:1111"
+
+
+    export HTTP_PROXY="http://10.30.44.154:666"
+    export HTTPS_PROXY="http://10.30.44.154:666"
+代理上网端口
+    export HTTP_PROXY="http://10.30.44.154:7897"
+    export HTTPS_PROXY="http://10.30.44.154:7897"
+
+sudo http_proxy=http://10.30.44.154:7897 https_proxy=http://10.30.44.154:7897 apt-get update
+
+
+
+    export HTTP_PROXY="http://10.30.43.34:7897"
+    export HTTPS_PROXY="http://10.30.43.34:7897"
+
+
+python inference.py --data_root "./checkpoints/ditto_pytorch" --cfg_pkl "./checkpoints/ditto_cfg/v0.4_hubert_cfg_pytorch.pkl" --audio_path "./mydata/120701.WAV" --source_path "./mydata/120801.png" --output_path "./mydata/result_4090.mp4"
+
+
+使用 gitclone.com (老牌加速)
+    git clone https://gitclone.com/github.com/comfyanonymous/ComfyUI.git
+    git clone https://github.com/comfyanonymous/ComfyUI.git
+
+
+    cd custom_nodes
+    git clone https://gitclone.com/github.com/ltdrdata/ComfyUI-Manager.git
+    cd ..
+
+
+用 aria2 多线程下载模型
+    aria2c -x 16 -s 16 -k 1M --header="User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" --all-proxy=http://10.30.44.154:7897 "https://huggingface.co/tencent/Hunyuan3D-2/resolve/main/hunyuan3d-paint-v2-0/text_encoder/pytorch_model.bin" -o pytorch_model.bin
+
+    aria2c -x 16 -s 16 -k 1M --header="User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" --all-proxy=http://10.30.44.154:7897 "https://huggingface.co/tencent/Hunyuan3D-2/resolve/main/hunyuan3d-paint-v2-0/text_encoder/pytorch_model.bin" -o pytorch_model.bin

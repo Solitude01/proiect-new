@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(taskkill:*)",
+      "Bash(del:*)",
+      "Bash(copy \"D:\\proiect\\工作\\ico图标\\favicon.ico\" \"D:\\proiect\\工作\\定时复制转移txt\\icon.ico\")",
+      "Bash(d:/proiect/.venv/Scripts/pip.exe install:*)",
+      "Bash(d:/proiect/.venv/Scripts/python.exe -c \"import 定期处理txt_tray; print(''导入成功'')\")",
+      "Bash(d:/proiect/.venv/Scripts/pyinstaller.exe:*)",
+      "Bash(findstr:*)",
+      "Bash(pip install:*)",
+      "Bash(pyinstaller:*)",
+      "Bash(dir:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

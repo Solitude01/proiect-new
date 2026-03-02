@@ -1,0 +1,76 @@
+[
+  
+    {
+      
+      
+    "headers": {
+      
+      
+      
+    "content-type": "application/x-www-form-urlencoded",
+      
+      
+      
+    "host": "10.30.43.199:5678",
+      
+      
+      
+    "content-length": "185"
+      
+      
+    },
+      
+      
+    "params": {
+      
+      
+    },
+      
+      
+    "query": {
+      
+      
+    },
+      
+      
+    "body": {
+      
+      
+      
+    "event_id": "电感2##",
+      
+      
+      
+    "event_time": "2026-02-24 06:53:09.037",
+      
+      
+      
+    "beginTime": "2026-02-24 06:53:06.215",
+      
+      
+      
+    "endTime": "2026-02-24 06:53:09.037",
+      
+      
+      
+    "Deepmind": "13",
+      
+      
+      
+    "Channel": "11",
+      
+      
+      
+    "Task Result": "NG"
+      
+      
+    },
+      
+      
+    "webhookUrl": "http://0.0.0.0:5678/webhook/93e17da3-efe3-4617-a591-ae71d582849d",
+      
+      
+    "executionMode": "production"
+      
+    }
+    ]

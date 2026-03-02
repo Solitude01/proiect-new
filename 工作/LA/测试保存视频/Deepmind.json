@@ -1,0 +1,91 @@
+[
+    {
+        "Deepmind": "10",
+        "IP": "10.30.5.186",
+        "Password": "wdzn6688",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http"
+  },
+    {
+        "Deepmind": "11",
+        "IP": "10.30.5.187",
+        "Password": "wdzn6688",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http"
+  },
+    {
+        "Deepmind": "12",
+        "IP": "10.20.26.83",
+        "Password": "scc@2019",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http",
+        "SearchBeforeDownload": true
+  },
+    {
+        "Deepmind": "13",
+        "IP": "10.152.208.51",
+        "Password": "scc147258+",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http"
+  },
+    {
+        "Deepmind": "14",
+        "IP": "10.152.208.52",
+        "Password": "scc147258+",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http"
+  },
+    {
+        "Deepmind": "15",
+        "IP": "10.152.208.53",
+        "Password": "scc147258+",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http"
+  },
+    {
+        "Deepmind": "16",
+        "IP": "10.30.5.193",
+        "Password": "wdzn6688",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http"
+  },
+    {
+        "Deepmind": "17",
+        "IP": "10.153.109.199",
+        "Password": "wdzn6688",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http"
+  },
+    {
+        "Deepmind": "18",
+        "IP": "10.153.109.200",
+        "Password": "wdzn6688",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http"
+  },
+    {
+        "Deepmind": "19",
+        "IP": "10.30.5.111",
+        "Password": "wdzn6688",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http"
+  },
+    {
+        "Deepmind": "20",
+        "IP": "10.30.5.112",
+        "Password": "wdzn6688",
+        "HttpPort": 80,
+        "RtspPort": 554,
+        "Scheme": "http"
+    }
+]

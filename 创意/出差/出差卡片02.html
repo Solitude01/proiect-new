@@ -1,0 +1,126 @@
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib import font_manager
+import os
+
+# 尝试寻找中文字体
+def get_chinese_font():
+font_names = ['SimHei', 'Heiti TC', 'PingFang HK', 'Arial Unicode MS', 'Noto Sans CJK JP', 'WenQuanYi Micro Hei', 'Droid
+Sans Fallback']
+# 检查系统字体
+available_fonts = set(f.name for f in font_manager.fontManager.ttflist)
+for font in font_names:
+if font in available_fonts:
+return font
+# 如果找不到名字，尝试找路径
+font_paths = [
+'/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf',
+'/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+'/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+'/System/Library/Fonts/PingFang.ttc'
+]
+for path in font_paths:
+if os.path.exists(path):
+return font_manager.FontProperties(fname=path).get_name()
+return 'sans-serif' # 兜底
+
+chinese_font = get_chinese_font()
+plt.rcParams['font.sans-serif'] = [chinese_font]
+plt.rcParams['axes.unicode_minus'] = False
+
+def draw_card(title, date_str, items, color_theme, filename):
+fig, ax = plt.subplots(figsize=(6, 8), dpi=150)
+ax.set_xlim(0, 10)
+ax.set_ylim(0, 15)
+ax.axis('off')
+
+# 颜色定义
+colors = {
+'blue': ('#3b82f6', '#eff6ff'),
+'green': ('#10b981', '#ecfdf5'),
+'orange': ('#f59e0b', '#fffbeb')
+}
+header_bg, body_bg = colors.get(color_theme, colors['blue'])
+
+# 背景
+rect = patches.FancyBboxPatch((0.5, 0.5), 9, 14, boxstyle="round,pad=0.2",
+linewidth=1, edgecolor='#e5e7eb', facecolor='white', zorder=1)
+ax.add_patch(rect)
+
+# 标题栏
+header = patches.FancyBboxPatch((0.5, 12.5), 9, 2, boxstyle="round,pad=0.2",
+linewidth=0, facecolor=header_bg, zorder=2)
+# 遮挡下半圆角以形成顶部圆角效果 (简单处理：直接画矩形覆盖)
+# 这里直接画一个矩形
+header_rect = patches.Rectangle((0.5, 12.5), 9, 2.2, color=header_bg, zorder=2)
+# 修正圆角：用clip path太复杂，简单画法：
+# 直接在顶部写字即可，背景由上面的FancyBboxPatch控制，但头部颜色需要独立
+
+# 重新画头部
+top_rect = patches.Rectangle((0.3, 13), 9.4, 1.7, facecolor=header_bg, zorder=2, edgecolor=None)
+# 圆角遮罩有点复杂，我们简化为整体背景白，头部单独色块
+
+# 绘制
+# 1. 标题头
+header_patch = patches.Rectangle((0.5, 13), 9, 1.5, color=header_bg) # 简单矩形
+ax.add_patch(header_patch)
+
+ax.text(1, 13.9, title, color='white', fontsize=18, fontweight='bold', va='center')
+ax.text(1, 13.4, date_str, color='white', fontsize=12, alpha=0.9, va='center')
+
+# 2. 内容
+y_pos = 12
+for item in items:
+# 时间点
+ax.text(1, y_pos, item['time'], fontsize=12, fontweight='bold', color='#374151')
+# 连接线
+if item != items[-1]:
+ax.plot([1.2, 1.2], [y_pos-0.4, y_pos-1.8], color='#e5e7eb', linewidth=2, zorder=1)
+
+# 主要内容
+y_content = y_pos - 0.5
+ax.text(1.5, y_content, item['content'], fontsize=11, color='#4b5563', va='top')
+
+# 备注/价格
+if 'note' in item:
+ax.text(1.5, y_content - 0.6, item['note'], fontsize=10, color='#ef4444', va='top')
+
+y_pos -= 2.2 # 间距
+
+# 底部价格汇总(如果是预算卡片)
+if color_theme == 'orange':
+ax.text(5, 2, items[-1]['total'], fontsize=24, color='#d97706', ha='center', fontweight='bold')
+ax.text(5, 1.2, "人均约 ¥842", fontsize=10, color='#9ca3af', ha='center')
+
+plt.tight_layout()
+plt.savefig(filename, bbox_inches='tight', pad_inches=0.2)
+plt.show()
+
+# 卡片1数据：去程
+card1_items = [
+{'time': '18:00', 'content': '出发前往 南通西站', 'note': '🚕 打车 (约¥60)'},
+{'time': '19:29', 'content': 'D3063 转 D2125\n(上海虹桥同站换乘)', 'note': '🚄 往杭州东 (换乘19分钟)'},
+{'time': '22:00', 'content': '抵达杭州东站\n直接打滴滴去酒店', 'note': '🚕 约 ¥40 (P1/P西停车场)'},
+{'time': '22:40', 'content': '全季酒店 入住\n(滨江奥体江南大道店)', 'note': '🏨 双床+大床 (住2晚)'}
+]
+
+# 卡片2数据：返程
+card2_items = [
+{'time': '17:50', 'content': '江陵路站 进站\n乘坐 地铁1号线', 'note': '🚇 避开晚高峰 (约40分钟)'},
+{'time': '19:44', 'content': '杭州东站 发车\nD2290 次列车', 'note': '🚄 票价 ¥137/人'},
+{'time': '22:13', 'content': '抵达 南通站\n(注意是永兴大道)', 'note': '🛑 终点不是南通西！'},
+{'time': '22:20', 'content': '分两辆车回家', 'note': '🚕🚕 预估 ¥60 x 2 = ¥120'}
+]
+
+# 卡片3数据：预算
+card3_items = [
+{'time': '去程', 'content': '¥466 (含南通/杭州打车)', 'note': ''},
+{'time': '住宿', 'content': '¥1,500 (2间房 x 2晚)', 'note': ''},
+{'time': '返程', 'content': '¥546 (含南通打车)', 'note': ''},
+{'time': '市内', 'content': '¥15 (地铁)', 'note': ''},
+{'time': '', 'content': '', 'note': '', 'total': '¥2,527'}
+]
+
+draw_card("🛫 去程出发", "12.24 周三", card1_items, 'blue', 'departure_card.png')
+draw_card("🏡 返程回家", "12.26 周五", card2_items, 'green', 'return_card.png')
+draw_card("💰 三人预算", "不含餐饮", card3_items, 'orange', 'budget_card.png')

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>告警处置中心 - 内网闭环系统</title>
+    <style>
+        :root {
+            --primary-color: #1890ff;
+            --danger-color: #ff4d4f;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-main: #333;
+            --text-sub: #666;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 1200px;
+            background: var(--card-bg);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* 左侧媒体区域 */
+        .media-section {
+            flex: 2;
+            padding: 20px;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .tabs {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 5px 15px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        /* 核心：Canvas叠加层容器 */
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .media-content {
+            width: 100%;
+            display: block;
+            border-radius: 4px;
+        }
+
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            /* 让点击事件穿透Canvas */
+        }
+
+        /* 右侧信息区域 */
+        .info-section {
+            flex: 1;
+            padding: 24px;
+            border-left: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-row {
+            margin-bottom: 20px;
+        }
+
+        .alarm-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tag {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .tag-invalid {
+            background: #eee;
+            color: #999;
+        }
+
+        .tag-level {
+            background: #e6f7ff;
+            color: var(--primary-color);
+            border: 1px solid #91d5ff;
+        }
+
+        .detail-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex: 1;
+        }
+
+        .detail-item {
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: var(--text-sub);
+            display: flex;
+        }
+
+        .detail-label {
+            width: 80px;
+            color: #999;
+        }
+
+        .detail-value {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        /* 底部操作栏 */
+        .action-bar {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background: white;
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .btn-save {
+            background: #52c41a;
+            color: white;
+        }
+
+        /* 绿色保存按钮 */
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+
+        /* 隐藏元素 */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="media-section">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchMedia('image')">事件图片</button>
+                <button class="tab-btn" onclick="switchMedia('video')">事件视频</button>
+            </div>
+
+            <div class="canvas-wrapper">
+                <img id="alarmImg" class="media-content" src="" alt="告警截图" crossorigin="anonymous">
+                <video id="alarmVideo" class="media-content hidden" controls muted loop crossorigin="anonymous"></video>
+                <canvas id="overlayCanvas"></canvas>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="header-row">
+                <div class="alarm-title">
+                    <span id="alarmName">加载中...</span>
+                    <span class="tag tag-invalid" id="statusTag">待处理</span>
+                </div>
+            </div>
+
+            <ul class="detail-list">
+                <li class="detail-item"><span class="detail-label">摄像头:</span><span class="detail-value"
+                        id="deviceName">-</span></li>
+                <li class="detail-item"><span class="detail-label">所属组织:</span><span class="detail-value"
+                        id="deptName">-</span></li>
+                <li class="detail-item"><span class="detail-label">预警等级:</span><span class="detail-value tag tag-level"
+                        id="alarmLevel">四级</span></li>
+                <li class="detail-item"><span class="detail-label">发生时间:</span><span class="detail-value"
+                        id="alarmTime">-</span></li>
+                <li class="detail-item"><span class="detail-label">预警规则:</span><span class="detail-value"
+                        id="ruleName">ROI/绊线检测</span></li>
+                <li class="detail-item"><span class="detail-label">处理人:</span><span class="detail-value">当前用户</span>
+                </li>
+            </ul>
+
+            <div class="action-bar">
+                <button class="btn btn-primary" onclick="handleAlarm('efficient')">处理 (有效)</button>
+                <button class="btn btn-danger" onclick="handleAlarm('mistaken')">标记误报</button>
+                <button class="btn btn-save" onclick="saveToArchive()">保存至档案</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. 模拟数据源 (基于您提供的JSON结构)
+        // 实际开发中，这里的数据通过 API GET /v1/alarms/{id} 获取 [cite: 461]
+        // ==========================================
+        const mockAlarmData = {
+            "id": "1f3ad9f901454b0880d5cb53d8b5962a",
+            "name": "翻越围栏",
+            "alarmTime": "2025-12-01 22:25:27",
+            "imageURL": "https://placehold.co/800x450/333/fff?text=Industrial+Camera+Snapshot", // 替换为真实URL
+            "videoURL": "https://www.w3schools.com/html/mov_bbb.mp4", // 替换为真实URL
+            "device": { "name": "G6北侧蜂巢柜外围" },
+            "deptName": "广州安全环保部",
+            "level": 4,
+            "status": "pending",
+
+            // 关键绘制数据：人体框 (Annotations) [cite: 764]
+            "annotations": [
+                {
+                    "bbox": [140, 100, 50, 120], // [x, y, w, h] 假设基于原图尺寸
+                    "categoryName": "人体",
+                    "confidence": 0.88
+                }
+            ],
+
+            // 关键绘制数据：电子围栏与绊线 (Skill ROIs) [cite: 759, 297]
+            "skill": {
+                "rois": [
+                    {
+                        "kind": "roi", // 电子围栏 (多边形)
+                        "name": "禁入区域",
+                        // 假设数据格式为 flat array [x1, y1, x2, y2...] [cite: 223]
+                        "points": [100, 300, 300, 280, 280, 400, 120, 420]
+                    },
+                    {
+                        "kind": "tripWire", // 绊线 (线段)
+                        "name": "围墙线",
+                        "points": [400, 200, 600, 220]
+                    }
+                ]
+            }
+        };
+
+        // 全局变量
+        let currentMedia = 'image'; // image | video
+        const canvas = document.getElementById('overlayCanvas');
+        const ctx = canvas.getContext('2d');
+        const imgEl = document.getElementById('alarmImg');
+        const videoEl = document.getElementById('alarmVideo');
+
+        // ==========================================
+        // 2. 初始化页面信息
+        // ==========================================
+        function initPage() {
+            document.getElementById('alarmName').textContent = mockAlarmData.name;
+            document.getElementById('deviceName').textContent = mockAlarmData.device.name;
+            document.getElementById('deptName').textContent = mockAlarmData.deptName;
+            document.getElementById('alarmTime').textContent = mockAlarmData.alarmTime;
+            document.getElementById('statusTag').textContent = mockAlarmData.status === 'pending' ? '待处理' : '已处理';
+
+            // 加载媒体资源
+            imgEl.src = mockAlarmData.imageURL;
+            videoEl.src = mockAlarmData.videoURL;
+
+            // 图片加载完成后执行绘制（确保能获取到图片原始尺寸）
+            imgEl.onload = () => {
+                resizeCanvas();
+                drawOverlays();
+            };
+
+            // 窗口大小改变时重绘
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                drawOverlays();
+            });
+        }
+
+        // ==========================================
+        // 3. 核心绘制逻辑 (叠加渲染)
+        // ==========================================
+
+        // 调整Canvas尺寸以匹配媒体元素的实际显示尺寸
+        function resizeCanvas() {
+            const mediaEl = currentMedia === 'image' ? imgEl : videoEl;
+            canvas.width = mediaEl.clientWidth;
+            canvas.height = mediaEl.clientHeight;
+        }
+
+        // 主绘制函数
+        function drawOverlays() {
+            if (!mockAlarmData) return;
+
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 计算缩放比例 (API返回的坐标通常是基于原始分辨率的)
+            // 假设原始分辨率为 800x450 (实际项目中应从 img.naturalWidth 获取或 API metadata 获取)
+            const naturalWidth = imgEl.naturalWidth || 800;
+            const naturalHeight = imgEl.naturalHeight || 450;
+
+            const scaleX = canvas.width / naturalWidth;
+            const scaleY = canvas.height / naturalHeight;
+
+            // --- 1. 绘制电子围栏 (ROI) & 绊线 (Tripwire) ---
+            // 无论看图还是看视频，这些规则区域都需要显示 [cite: 759]
+            if (mockAlarmData.skill && mockAlarmData.skill.rois) {
+                mockAlarmData.skill.rois.forEach(roi => {
+                    const points = parsePoints(roi.points, scaleX, scaleY);
+
+                    if (roi.kind === 'roi' || roi.type === 'POLYGON') {
+                        // 绘制多边形围栏 (蓝色填充)
+                        drawPolygon(ctx, points, 'rgba(24, 144, 255, 0.3)', '#1890ff');
+                        drawLabel(ctx, points[0], roi.name || '电子围栏', '#1890ff');
+                    } else if (roi.kind === 'tripWire') {
+                        // 绘制绊线 (橙色线条)
+                        drawLine(ctx, points, '#faad14', 3);
+                        drawLabel(ctx, points[0], roi.name || '绊线', '#faad14');
+                    }
+                });
+            }
+
+            // --- 2. 绘制告警目标红框 (Annotations) ---
+            // 通常只在“事件图片”模式下绘制具体的检测框，视频因为是动态的，
+            // 除非有每一帧的结构化数据，否则只画静态围栏。
+            if (currentMedia === 'image' && mockAlarmData.annotations) {
+                mockAlarmData.annotations.forEach(anno => {
+                    // bbox格式: [x, y, w, h] [cite: 764]
+                    const [x, y, w, h] = anno.bbox;
+
+                    // 转换坐标
+                    const rect = {
+                        x: x * scaleX,
+                        y: y * scaleY,
+                        w: w * scaleX,
+                        h: h * scaleY
+                    };
+
+                    // 绘制红框
+                    ctx.strokeStyle = '#ff4d4f';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+
+                    // 绘制标签 (类别 + 置信度)
+                    const label = `${anno.categoryName} ${(anno.confidence * 100).toFixed(0)}%`;
+                    drawLabel(ctx, { x: rect.x, y: rect.y }, label, '#ff4d4f');
+                });
+            }
+        }
+
+        // 工具：将扁平数组 [x1,y1,x2,y2...] 转换为点对象数组 [{x,y},...] [cite: 223]
+        function parsePoints(flatArr, sx, sy) {
+            const points = [];
+            for (let i = 0; i < flatArr.length; i += 2) {
+                points.push({
+                    x: flatArr[i] * sx,
+                    y: flatArr[i + 1] * sy
+                });
+            }
+            return points;
+        }
+
+        // 工具：绘制多边形
+        function drawPolygon(ctx, points, fillColor, strokeColor) {
+            if (points.length < 3) return;
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.closePath();
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // 工具：绘制线条
+        function drawLine(ctx, points, color, width) {
+            if (points.length < 2) return;
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.stroke();
+        }
+
+        // 工具：绘制文字标签背景
+        function drawLabel(ctx, point, text, color) {
+            ctx.font = '12px Arial';
+            const padding = 4;
+            const textWidth = ctx.measureText(text).width;
+
+            ctx.fillStyle = color;
+            ctx.fillRect(point.x, point.y - 20, textWidth + padding * 2, 20);
+
+            ctx.fillStyle = '#fff';
+            ctx.fillText(text, point.x + padding, point.y - 6);
+        }
+
+        // ==========================================
+        // 4. 交互逻辑
+        // ==========================================
+
+        function switchMedia(type) {
+            currentMedia = type;
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(t => t.classList.remove('active'));
+
+            if (type === 'image') {
+                tabs[0].classList.add('active');
+                imgEl.classList.remove('hidden');
+                videoEl.classList.add('hidden');
+                videoEl.pause();
+            } else {
+                tabs[1].classList.add('active');
+                imgEl.classList.add('hidden');
+                videoEl.classList.remove('hidden');
+                // 切换到视频时，需要等视频元数据加载完才能正确计算尺寸
+                videoEl.onloadeddata = () => {
+                    resizeCanvas();
+                    drawOverlays();
+                };
+                if (videoEl.readyState >= 1) {
+                    resizeCanvas();
+                    drawOverlays();
+                }
+            }
+
+            // 延迟一点时间确保DOM切换完成
+            setTimeout(() => {
+                resizeCanvas();
+                drawOverlays();
+            }, 50);
+        }
+
+        // 模拟调用 API 处理告警 [cite: 724]
+        function handleAlarm(type) {
+            const payload = {
+                processType: type // efficient (有效) / mistaken (误报)
+            };
+
+            // 模拟 API PUT 请求
+            console.log(`正在调用 PUT /v1/alarms/${mockAlarmData.id}`, payload);
+            alert(`已提交处理结果：${type === 'efficient' ? '有效告警' : '误报'}`);
+
+            document.getElementById('statusTag').textContent = '已处理';
+            document.getElementById('statusTag').className = 'tag tag-level'; // 变为蓝色
+        }
+
+        // 保存至档案功能
+        function saveToArchive() {
+            // 这里可以实现将当前处理结果保存到本地数据库的逻辑
+            console.log("Saving alarm data to internal archive...", mockAlarmData);
+            alert("已保存至内部档案系统！");
+        }
+
+        // 启动
+        initPage();
+    </script>
+
+</body>
+
+</html>

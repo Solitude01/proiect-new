@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  ppt_api:
+    # 告诉 Docker 先构建当前目录下的 Dockerfile
+    build: .
+    # 容器名称
+    container_name: ppt-script-api-service
+    
+    # 端口映射：宿主机8081 -> 容器内部8080
+    ports:
+      - "8090:8080"
+      
+    # 挂载卷：将宿主机的 ./app 目录映射到容器的 /app 目录
+    # 这样修改 main.py 时无需重新构建镜像
+    volumes:
+      - ./app:/app
+      - ./data:/data # 用于存放 SQLite 数据库文件 (tasks.db)
+      
+    # 重启策略：意外退出时自动重启
+    restart: unless-stopped
+    
+    # 网络配置（可选，如果你需要它和 n8n 容器在同一个网络下）
+    # networks:
+    #   - your_custom_network
+
+# networks:
+#   your_custom_network:
+#     external: true # 如果使用现有的 Docker 网络，则设置为 external

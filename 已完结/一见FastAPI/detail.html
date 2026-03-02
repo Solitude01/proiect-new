@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>预警详情</title>
+</head>
+<body>
+
+<h2>预警详情</h2>
+
+<pre>{{ json }}</pre>
+
+{% if alarm.image_url %}
+<p><a href="{{ alarm.image_url }}" target="_blank">查看图片</a></p>
+{% endif %}
+
+{% if alarm.video_url %}
+<p><a href="{{ alarm.video_url }}" target="_blank">查看视频</a></p>
+{% endif %}
+
+<p><a href="/ui">返回列表</a></p>
+
+</body>
+</html>

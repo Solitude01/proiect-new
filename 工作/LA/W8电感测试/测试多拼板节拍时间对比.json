@@ -1,0 +1,217 @@
+# 多拼板“工单孔数 + 最小测试时长”防呆方案（LogicAgent 实现草案）
+
+> 目标：扫码得到工单号 → 获取该工单孔数（或直接得到最小测试时长阈值）→ 允许开始识别作业 → 对**每张板**从“放入待测区”到“取走”的驻留时间做判定（≥ 标准时间才合格），
+不合格立即语音预警，并在每批结束时统计板数与每张板检测时长。
+
+---
+
+## 1. 需求拆解
+
+### 1.1 输入
+- **工单二维码**：扫码枪输出“扫码值”。（USB 扫码枪控件支持“扫码触发 + 输出扫码值”） :contentReference[oaicite:0]{index=0}
+- **工单 → 孔数**：来自“其他后台数据表/接口”，建议走 **HTTP 客户端设备**（异步返回，需用事件中心把设备输出变量包装成自定义事件）。 :contentReference[oaicite:1]{index=1}
+- **相机事件**：待测区“有板/无板”、红灯（电感笔校验）等（你前面已实现状态锁 SOP）。
+
+### 1.2 输出
+- UI显示：当前工单、孔数、标准最小时长、当前板驻留时长、判定结果、批次统计等  
+  （文本/输入框可绑定变量；需要列表形式可用“动态数据展示”控件用 JSON 报文更新） :contentReference[oaicite:2]{index=2}  
+- 声音提示：合格/不合格语音或音效（音频播放控件支持 TTS 或按索引播放音频文件）。 :contentReference[oaicite:3]{index=3}
+- 批次结束：UI点击“结束作业”（可用 USB 按钮/按钮控件触发）。 :contentReference[oaicite:4]{index=4}
+
+---
+
+## 2. 关键实现思路（最小驻留时间校验）
+
+### 2.1 标准时间
+- 每孔最少 0.25s  
+- 标准最小时长：`T_min = HoleCount * 0.25`
+
+> 你也可以让后台接口直接返回 `HoleCount` 或 `T_min`，两者皆可。
+
+### 2.2 “单张板”驻留时间定义
+- **开始时刻**：该张板“放入待测区”的**上升沿**（无板→有板，仅触发一次）
+- **结束时刻**：该张板“取走”的**下降沿**（有板→无板，仅触发一次）
+- **实际时长**：`T_actual = End - Start`
+
+> LogicAgent 有“计时算子”，可直接计算两个事件首次发生时间差，单位支持秒/毫秒。 :contentReference[oaicite:5]{index=5} :contentReference[oaicite:6]{index=6}
+
+---
+
+## 3. 推荐变量/状态（在你原有 SOP 变量基础上扩展）
+
+### 3.1 继续保留（你已在用）
+- `g_AreaStatus`：区域状态锁（0 无板 / 1 有板）
+- `g_IsVerified`：电感笔校验令牌（0 无券 / 1 有券）
+
+### 3.2 新增（最小驻留时间 + 统计）
+- `g_WorkOrder`（Text）：当前工单号（扫码解析结果）
+- `g_HoleCount`（Int）：当前工单孔数（接口返回或映射）
+- `g_Tmin`（Float）：标准最小时长（=孔数*0.25）
+- `g_Tactual`（Float）：当前板实际驻留时长（秒）
+- `g_BoardCount`（Int）：本批完成板数
+- `g_TotalDuration`（Float）：本批累计时长
+- `g_LastDuration`（Float）：最近一张板时长（用于列表/提示）
+- `g_JobState`（Int）：作业状态（0 未就绪 / 1 就绪可检测 / 2 检测中 / 3 批次结束）
+- `g_AlarmLatch`（Int）：报警锁存（避免同一张板重复播报）
+
+> 全局变量用于流程间共享、运行态不清空。 :contentReference[oaicite:7]{index=7}  
+> “计算算子”可对变量/常量加减乘除并将结果赋值给全局变量。 :contentReference[oaicite:8]{index=8}
+
+---
+
+## 4. 外部孔数获取（两种落地方式）
+
+### 方案 A：HTTP 接口查询（推荐）
+1) 配置 **HTTP 客户端设备**：填接口地址/请求头体/接收字段映射，成功后会生成设备输出变量。 :contentReference[oaicite:9]{index=9}  
+2) 触发请求：可在流程里通过“数据发送”调用接口，或在 UI 触发里调用。 :contentReference[oaicite:10]{index=10}  
+3) **关键点：异步返回**  
+   若你要“拿到返回孔数后再允许开始检测”，需要在事件中心把设备输出变量配置成自定义事件，然后流程用事件匹配等待“接口返回事件”。 :contentReference[oaicite:11]{index=11}  
+
+### 方案 B：本地映射表（临时方案）
+- 扫码值里若能解析出产品类型（例如 `TYPE-12`），直接映射孔数/阈值（6→1.5s、12→3s）。
+- 优点：不依赖网络；缺点：维护成本高，无法覆盖所有工单。
+
+---
+
+## 5. 逻辑流程编排（建议拆成 4~6 条并行流程）
+
+> 说明：事件匹配/计时等算子需要在节拍内工作，通常要挂在节拍控件后才能选到事件来源。 :contentReference[oaicite:12]{index=12}  
+> 以下用“流程名 + 触发 + 关键判断/动作”描述，你按 LogicAgent 画布连线即可。
+
+---
+
+### 流程 0：作业初始化（可选）
+- 触发：应用启动/手动“初始化”按钮
+- 动作：清零统计、`g_JobState=0`、`g_AreaStatus=0`、`g_IsVerified=0`、`g_AlarmLatch=0`
+
+---
+
+### 流程 1：扫码设置工单（配置孔数与 Tmin）
+- 触发：USB 扫码枪“扫码” :contentReference[oaicite:13]{index=13}
+- 动作：
+  1. `g_WorkOrder = 扫码值`
+  2. 调 HTTP 请求（或本地映射）
+  3. 等待“接口返回事件”（HTTP 异步返回要做事件中心自定义事件） :contentReference[oaicite:14]{index=14}
+  4. `g_HoleCount = 返回孔数`
+  5. 计算：`g_Tmin = g_HoleCount * 0.25`（用计算算子写入全局变量） :contentReference[oaicite:15]{index=15}
+  6. UI 输出：显示工单/孔数/最短时间
+  7. `g_JobState = 1`（就绪：允许进入 SOP 校验与检测）
+
+**边界建议**
+- 如果接口失败/超时：`g_JobState` 保持 0，并语音提示“工单孔数获取失败，禁止开始作业”。
+
+---
+
+### 流程 2：电感笔校验（发券，沿用你现有 SOP）
+- 触发：红灯事件
+- 判断：`g_AreaStatus==0` 且 `g_JobState==1`  
+- 动作：`g_IsVerified=1`（发券），UI提示“校验通过可放板”
+
+---
+
+### 流程 3：放入板件（上升沿 + 允许检测 + 计时开始）
+- 触发：有板事件
+- 关键防抖（上升沿）：只在 `g_AreaStatus==0` 时处理（把“持续有板”变成一次动作）
+- 分支：
+  - **OK 放板（合规）**：条件 `g_IsVerified==1` 且 `g_JobState==1`
+    - 动作：
+      - `g_IsVerified=0`
+      - `g_AreaStatus=1`
+      - `g_AlarmLatch=0`
+      - 记录“开始事件”供计时（两种做法二选一）：
+        - 做法 A：用“计时算子”直接以【本流程的有板上升沿事件】作为开始事件（推荐）
+        - 做法 B：用全局变量记录开始时间戳（如果你已有获取时间戳方式）
+      - UI：显示“检测中…”
+      - `g_JobState=2`（检测中）
+  - **NG 放板（违规）**：无券直接放板
+    - 动作：报警/语音 + `g_AreaStatus=1`（闭环，保证后续拿走能触发下降沿复位）
+
+---
+
+### 流程 4：取走板件（下降沿 + 计时结束 + 判定 + 统计）
+- 触发：无板事件
+- 关键防抖（下降沿）：只在 `g_AreaStatus==1` 时处理（把“持续无板”变成一次动作）
+- 动作（按顺序）：
+  1. `g_AreaStatus=0`
+  2. `g_IsVerified=0`（强制下一张必须重新校验，沿用 SOP）
+  3. 计算 `g_Tactual`（二选一）：
+     - **用计时算子**：计时单位选“秒/毫秒”，输出差值变量即为时长 :contentReference[oaicite:16]{index=16}  
+     - **用时间戳差**：`Tactual=(Now-Start)/1000`
+  4. 判定：`g_Tactual >= g_Tmin`
+     - 合格：UI 显示“OK + 时长”，播放 OK 音/播报（音频播放：TTS或音频索引） :contentReference[oaicite:17]{index=17}
+     - 不合格：若 `g_AlarmLatch==0` 则立即语音报警，并置 `g_AlarmLatch=1`（避免重复播报）
+  5. 统计累加：
+     - `g_BoardCount += 1`
+     - `g_TotalDuration += g_Tactual`
+     - `g_LastDuration = g_Tactual`
+  6. 写入列表（可选）：
+     - 用“动态数据展示”更新一行记录（工单、序号、孔数、Tmin、Tactual、判定）。 :contentReference[oaicite:18]{index=18}
+  7. `g_JobState=1`（回到就绪，等待下一张：再次红灯校验→放板）
+
+---
+
+### 流程 5：结束作业（批次结算）
+- 触发：UI 点击“结束作业”（USB 按钮或普通按钮都可作为触发源） :contentReference[oaicite:19]{index=19}
+- 前置建议：只允许在 `g_AreaStatus==0` 时结束（避免板还在台面）
+- 动作：
+  - 计算均值：`Avg = g_TotalDuration / g_BoardCount`（注意除 0）
+  - UI 显示本批统计：板数、平均/最大/最小（最大最小可用额外变量维护）
+  - `g_JobState=3`（结束态），并提供“开始新批次/清零”按钮
+
+---
+
+## 6. 你提到的“所有事件与边界”清单（建议逐条做防呆）
+
+### 6.1 扫码与工单边界
+- **重复扫码**：新工单扫码应重置批次统计（或弹窗确认）
+- **检测中扫码**：禁止切换标准（或仅允许在 `g_AreaStatus==0 && g_JobState!=2`）
+- **接口失败/超时/返回空孔数**：置 `g_JobState=0`，语音提示并锁死后续放板合规路径
+- **孔数异常**（0/负数/超大）：当作配置失败处理
+
+### 6.2 放板/取板边界（时序与抖动）
+- **有板/无板持续输出**：必须用 `g_AreaStatus` 做上升沿/下降沿锁（你已验证有效）
+- **短暂遮挡导致闪烁**：可增加“最小稳定时间”或延时确认（例如连续 2 次有板才认定上升沿）
+- **违规放板也要 `g_AreaStatus=1`**：否则拿走时不会进入下降沿流程，统计/复位断链
+
+### 6.3 计时与判定边界
+- **最小时间阈值**：建议加一个可配置系数/补偿（例如 `Tmin = Hole*0.25 + Buffer`），避免“刚好卡边”误判
+- **超长驻留**（忘记取走/人离开）：可以加“最大时间”告警（例如超过 60s 提示“板未取走”）
+  - 可用倒计时/定时器/正计时控件辅助提示（正计时支持开始/暂停/重置）。 :contentReference[oaicite:20]{index=20}
+
+### 6.4 批次统计边界
+- `g_BoardCount==0` 时结束：显示“本批未检测到板”
+- 单张板重复报警：用 `g_AlarmLatch` 锁存，直到下一次上升沿重置
+- 统计一致性：只在“下降沿结算”时计数+1（避免中途误触发）
+
+### 6.5 SOP 结合边界（与你现有校验流程融合）
+- **未校验放板**：立刻报警 + 仍进入占用态（便于后续拿走复位）
+- **有板时校验红灯**：不发券，可提示“请先移走板件”
+- **拿走后券作废**：下降沿流程里强制 `g_IsVerified=0`
+
+---
+
+## 7. UI 组件建议（最少可用集）
+- 文本/输入框：显示 `工单、孔数、Tmin、Tactual、结果、板数、均值`
+- 音频播放：OK/NG（TTS 或音频索引） :contentReference[oaicite:21]{index=21}
+- 动态数据展示：每张板一行记录（JSON 更新/移除/重置） :contentReference[oaicite:22]{index=22}
+- 结束作业按钮：USB 按钮/按钮触发 :contentReference[oaicite:23]{index=23}
+
+---
+
+## 8. 最小落地版本（MVP）
+1) 扫码得到工单 → HTTP 取孔数 → 计算 Tmin → UI 显示“就绪”
+2) 维持你现有：红灯发券、上升沿放板验券、下降沿拿走复位
+3) 在上升沿记录开始、下降沿计算时长并与 Tmin 比对 → NG 立即语音
+4) 下降沿累加板数/总时长；结束作业按钮输出统计
+
+---
+
+### 参考：手册中与本需求最相关的点
+- USB 扫码枪：扫码触发 + 输出扫码值 :contentReference[oaicite:24]{index=24}
+- HTTP 客户端：配置、调用方式、异步返回需自定义事件 :contentReference[oaicite:25]{index=25}
+- 计时算子：事件间时差，秒/毫秒 :contentReference[oaicite:26]{index=26} :contentReference[oaicite:27]{index=27}
+- 计算算子：运算并赋值全局变量 :contentReference[oaicite:28]{index=28}
+- 全局变量：生命周期内不清空，适合跨流程共享 :contentReference[oaicite:29]{index=29}
+- 音频播放：TTS/音频索引播放 :contentReference[oaicite:30]{index=30}
+- 动态数据展示：用 JSON 报文更新列表 :contentReference[oaicite:31]{index=31}
+- USB 按钮：可做“结束作业”触发 :contentReference[oaicite:32]{index=32}

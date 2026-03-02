@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>需求文档：一见视觉AI平台告警推送与内网闭环处理系统</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .container {
+            background-color: white;
+            padding: 40px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ddd;
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+            border-left: 5px solid #3498db;
+            padding-left: 10px;
+        }
+
+        h3 {
+            color: #16a085;
+            margin-top: 20px;
+        }
+
+        p {
+            margin-bottom: 10px;
+        }
+
+        ul,
+        ol {
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 5px;
+        }
+
+        code {
+            background-color: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: Consolas, monospace;
+            color: #e74c3c;
+        }
+
+        .note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+
+        .btn-container {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        .save-btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .save-btn:hover {
+            background-color: #219150;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+    <script>
+        function exportToWord() {
+            var header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
+                "xmlns:w='urn:schemas-microsoft-com:office:word' " +
+                "xmlns='http://www.w3.org/TR/REC-html40'>" +
+                "<head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title></head><body>";
+            var footer = "</body></html>";
+            var sourceHTML = header + document.getElementById("document-content").innerHTML + footer;
+
+            var source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            var fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            fileDownload.download = '一见平台对接需求文档.doc';
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+        }
+    </script>
+</head>
+
+<body>
+
+    <div class="btn-container">
+        <button class="save-btn" onclick="exportToWord()">💾 保存到 Word</button>
+    </div>
+
+    <div class="container" id="document-content">
+        <h1>需求文档：一见视觉AI平台告警推送与内网闭环处理系统</h1>
+        <p><strong>版本：</strong>V1.1（增加高级渲染需求）<br>
+            <strong>日期：</strong>2025-12-03
+        </p>
+
+        <h2>1. 项目背景</h2>
+        <p>目前“一见”视觉大模型平台产生的告警仅在原系统内展示。为了提高响应速度，需开发一套对接系统，将告警信息实时推送到<strong>企业微信</strong>和<strong>邮件</strong>，并通过<strong>内网独立落地页</strong>实现告警详情查看与状态处置。本次更新重点增加了对告警图片和视频的<strong>可视化叠加渲染</strong>需求（红框、围栏、绊线），以提升点检效率。
+        </p>
+
+        <h2>2. 业务流程图</h2>
+        <ol>
+            <li><strong>告警产生</strong>：一见平台触发告警。</li>
+            <li><strong>回调推送</strong>：一见平台通过回调接口将数据推送给内部IT服务器。</li>
+            <li><strong>消息分发</strong>：内部IT服务器解析数据，发送消息至企业微信/邮件（包含带参数的详情页链接）。</li>
+            <li><strong>用户点击</strong>：用户点击链接，进入“内网告警处置页”。</li>
+            <li><strong>高级渲染展示</strong>：页面根据坐标数据，在图片/视频上动态绘制告警框及电子围栏/绊线。</li>
+            <li><strong>处置与同步</strong>：用户点击“处理”或“误报”，内部IT服务器调用API同步状态至一见平台。</li>
+        </ol>
+
+        <h2>3. 功能模块详细说明</h2>
+
+        <h3>模块一：告警接收与消息推送</h3>
+        <ul>
+            [cite_start]<li><strong>输入</strong>：接收一见平台的 HTTP POST 回调数据 [cite: 771]。</li>
+            <li><strong>输出渠道</strong>：企业微信、邮件。</li>
+            <li><strong>消息格式</strong>：
+                <ul>
+                    <li><strong>标题</strong>：<code>[告警级别] 告警名称</code>（例如：[四级] 翻越围栏）</li>
+                    <li><strong>核心字段</strong>：发生时间 (<code>alarmTime</code>)、地点
+                        (<code>spotInfo</code>/<code>device.name</code>)、部门 (<code>deptName</code>)。</li>
+                    <li><strong>操作链接</strong>：跳转至内网落地页，URL需携带 <code>alarmID</code>。</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>模块二：内网告警处置落地页 (Web端)</h3>
+        <p><strong>页面布局参考</strong>：参考UI截图，分为左侧媒体区、右侧信息与操作区。</p>
+
+        <h4>1. 媒体展示区（含高级渲染）<span style="color:red; font-size:0.8em;">[新增重点]</span></h4>
+        <p>前端需使用 Canvas 或 SVG 技术，在原始媒体层上方叠加绘制分析图层。</p>
+
+        <table border="1">
+            <tr>
+                <th>媒体类型</th>
+                <th>渲染需求</th>
+                <th>数据来源 (API字段)</th>
+            </tr>
+            <tr>
+                <td><strong>告警图片</strong></td>
+                <td>
+                    1. <strong>告警红框</strong>：绘制红色矩形框，标出违规目标（如人体）。<br>
+                    2. <strong>电子围栏 (ROI)</strong>：绘制半透明多边形区域（如黄色填充）。<br>
+                    3. <strong>绊线 (TripWire)</strong>：绘制检测线段及方向箭头。
+                </td>
+                <td>
+                    1. [cite_start]<strong>红框</strong>：<code>annotations[].bbox</code> [x, y, w, h] [cite: 763-764]<br>
+                    2. [cite_start]<strong>围栏/绊线</strong>：<code>skill.rois[].points</code> (坐标点集合) 及 <code>kind</code>
+                    (类型) [cite: 759, 804-814]
+                </td>
+            </tr>
+            <tr>
+                <td><strong>事件视频</strong></td>
+                <td>
+                    1. <strong>静态图层叠加</strong>：在视频播放器上层覆盖透明 Canvas。<br>
+                    2. <strong>围栏/绊线</strong>：绘制电子围栏和绊线，保持位置与视频画面对齐。<br>
+                    <span style="font-size:0.9em; color:#666;">*注：视频中无需动态渲染每帧的AI红框，仅需静态显示规则区域（围栏/线）。</span>
+                </td>
+                <td>
+                    同上，使用 <code>skill.rois</code> 数据绘制规则区域。
+                </td>
+            </tr>
+        </table>
+
+        <div class="note">
+            <strong>技术提示：</strong>
+            API返回的坐标通常是像素坐标或归一化坐标，前端渲染时需根据图片/视频的实际分辨率进行比例换算，确保图层位置准确。
+        </div>
+
+        <h4>2. 详细信息区</h4>
+        <ul>
+            <li><strong>基础信息</strong>：摄像头名称、所属组织、预警等级（需映射 Level 1-4）、时间范围。</li>
+            [cite_start]<li><strong>处理进展</strong>：展示 <code>reports</code> 列表，显示自动消警、人工标记等历史记录 [cite: 477]。</li>
+        </ul>
+
+        <h4>3. 处置操作区（闭环核心）</h4>
+        <ul>
+            <li><strong>状态判断</strong>：
+                <ul>
+                    <li>若 <code>status</code> 为 <code>pending</code>：显示“处理（有效）”和“误报（无效）”按钮。</li>
+                    <li>若 <code>status</code> 为 <code>processed</code>：隐藏按钮，仅显示“已处置”状态标签。</li>
+                </ul>
+            </li>
+            <li><strong>操作逻辑</strong>：点击按钮后调用后台接口，同步状态至一见平台，成功后刷新页面状态。</li>
+        </ul>
+
+        <h2>4. 技术接口映射 (API Reference)</h2>
+        <p>请开发团队依据《一见-视觉大模型平台API文档（V4.6.0）》开发。</p>
+
+        <h3>Step 1: 获取渲染数据 (告警详情)</h3>
+        <ul>
+            [cite_start]<li><strong>接口</strong>：<code>GET /v1/alarms/{alarmID}</code> [cite: 468]</li>
+            <li><strong>关键渲染数据解析</strong>：
+                <ul>
+                    <li><code>imageURL</code>: 原始告警底图。</li>
+                    <li><code>videoURL</code>: 原始告警视频。</li>
+                    <li><code>annotations</code>: 目标检测框数组。例如：<code>bbox: [140.375, 230.875, 26.875, 66.375]</code> (x,
+                        y, w, h)。</li>
+                    <li><code>skill.rois</code>: 规则区域数组。
+                        <ul>
+                            <li><code>points</code>: 坐标点列表 [x1, y1, x2, y2...]。</li>
+                            <li><code>kind</code>: <code>roi</code> (多边形) 或 <code>tripWire</code> (绊线)。</li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>Step 2: 状态回写 (处理/误报)</h3>
+        <ul>
+            [cite_start]<li><strong>接口</strong>：<code>PUT /v1/alarms/{uuid}</code> [cite: 724]</li>
+            <li><strong>参数 Body</strong>：
+                <ul>
+                    <li>点击“处理”发送：<code>{ "processType": "efficient" }</code></li>
+                    <li>点击“误报”发送：<code>{ "processType": "invalid" }</code></li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2>5. 非功能性需求</h2>
+        <ul>
+            <li><strong>内网穿透</strong>：平台返回的媒体 URL 若为内网 IP，需在 IT 服务器做反向代理，确保企业微信（外网）可访问图片。</li>
+            <li><strong>数据安全</strong>：内网落地页需验证用户身份，防止未授权访问。</li>
+            <li><strong>兼容性</strong>：落地页需适配 PC 浏览器及企业微信内置浏览器。</li>
+        </ul>
+    </div>
+
+</body>
+
+</html>

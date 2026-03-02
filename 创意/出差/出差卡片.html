@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>南通杭州培训行程单</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: white;
+            width: 300px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            padding: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bg-blue {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .bg-green {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .bg-orange {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .card-body {
+            padding: 20px;
+            flex-grow: 1;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 20px;
+            border-left: 2px solid #e5e7eb;
+        }
+
+        .timeline-item:last-child {
+            margin-bottom: 0;
+            border-left: none;
+            padding-left: 22px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #fff;
+            border: 2px solid #9ca3af;
+        }
+
+        .time {
+            font-weight: bold;
+            color: #374151;
+            font-size: 0.9em;
+        }
+
+        .content {
+            color: #4b5563;
+            font-size: 0.9em;
+            margin-top: 4px;
+        }
+
+        .note {
+            font-size: 0.8em;
+            color: #ef4444;
+            margin-top: 2px;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            border-bottom: 1px dashed #e5e7eb;
+            padding-bottom: 8px;
+            font-size: 0.9em;
+            color: #4b5563;
+        }
+
+        .total-price {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #d97706;
+            margin-top: 15px;
+        }
+
+        .sub-text {
+            text-align: center;
+            font-size: 0.8em;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="card-header bg-blue">
+            <span>🛫 出发前往</span>
+            <span style="font-size:0.8em; opacity:0.9">12.24 周三</span>
+        </div>
+        <div class="card-body">
+            <div class="timeline-item">
+                <div class="time">18:00 | 南通市区</div>
+                <div class="content">🚕 打车前往 <b>南通西站</b></div>
+                <div class="note">预估 ¥60</div>
+            </div>
+            <div class="timeline-item">
+                <div class="time">19:29 | D3063转D2125</div>
+                <div class="content">🚄 高铁前往杭州东</div>
+                <div class="note">⚠️ 虹桥换乘仅19分钟</div>
+            </div>
+            <div class="timeline-item">
+                <div class="time">22:00 | 杭州东站</div>
+                <div class="content">🚕 <b>直接打滴滴</b> 去酒店</div>
+                <div class="note">太晚不坐地铁，预估 ¥40</div>
+            </div>
+            <div class="timeline-item" style="border:none">
+                <div class="time">22:40 | 全季酒店</div>
+                <div class="content">🏨 滨江奥体江南大道店</div>
+                <div class="content">🛏️ 办理入住 (双床+大床)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-green">
+            <span>🏡 返程回家</span>
+            <span style="font-size:0.8em; opacity:0.9">12.26 周五</span>
+        </div>
+        <div class="card-body">
+            <div class="timeline-item">
+                <div class="time">17:50 | 江陵路站</div>
+                <div class="content">🚇 乘坐 <b>地铁1号线</b></div>
+                <div class="note">🛡️ 躲避晚高峰拥堵</div>
+            </div>
+            <div class="timeline-item">
+                <div class="time">19:44 | 杭州东站</div>
+                <div class="content">🚄 乘坐 <b>D2290</b> 返回</div>
+                <div class="content">票价 ¥137/人</div>
+            </div>
+            <div class="timeline-item">
+                <div class="time">22:13 | 南通站</div>
+                <div class="content">🛑 终点是 <b>南通站 (永兴大道)</b></div>
+                <div class="note">注意不是南通西！</div>
+            </div>
+            <div class="timeline-item" style="border:none">
+                <div class="time">22:20 | 各自回家</div>
+                <div class="content">🚕🚕 <b>打两辆车</b></div>
+                <div class="note">预估 ¥60 x 2 = ¥120</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-orange">
+            <span>💰 三人预算</span>
+            <span style="font-size:0.8em; opacity:0.9">不含餐</span>
+        </div>
+        <div class="card-body">
+            <div class="price-row">
+                <span>去程 (车/铁)</span>
+                <span>¥466</span>
+            </div>
+            <div class="price-row">
+                <span>住宿 (2房2晚)</span>
+                <span>¥1,500</span>
+            </div>
+            <div class="price-row">
+                <span>返程 (铁/车)</span>
+                <span>¥546</span>
+            </div>
+            <div class="price-row" style="border:none">
+                <span>市内地铁</span>
+                <span>¥15</span>
+            </div>
+
+            <div style="border-top: 2px solid #f3f4f6; margin-top:10px;"></div>
+
+            <div class="total-price">¥2,527</div>
+            <div class="sub-text">人均约 ¥842</div>
+        </div>
+    </div>
+
+</body>
+
+</html>

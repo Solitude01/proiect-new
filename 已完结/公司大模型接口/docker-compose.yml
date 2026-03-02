@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest # 保持使用这个能拉取的镜像
+    container_name: n8n-python
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # 启用 pre_main hook 以便在启动 n8n 前执行安装命令
+      - N8N_PRE_MAIN_COMMAND="apk add --no-cache python3 py3-pip && pip3 install python-pptx --break-system-packages -i https://pypi.tuna.tsinghua.edu.cn/simple"
+      
+      - N8N_SECURE_COOKIE=false
+      - N8N_HOST=0.0.0.0
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_PYTHON_INTERPRETER=/usr/bin/python3 # 指向安装后的python3
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - GENERIC_TIMEZONE=Asia/Shanghai
+      - TZ=Asia/Shanghai
+      # 传入代理
+      - HTTP_PROXY=http://10.30.44.154:7897
+      - HTTPS_PROXY=http://10.30.44.154:7897
+    volumes:
+      - ./n8n_data:/home/node/.n8n
+    # 彻底移除 command，让容器使用默认且正确的 entrypoint 启动
+    # command: <移除此行及所有内容>
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    volumes:
+      - ./openwebui_data:/app/backend/data
+    environment:
+      - ENABLE_OLLAMA_API=false
+      - WEBUI_NAME=DeepSeek-Agent
+      - HTTP_PROXY=http://10.30.44.154:7897
+      - HTTPS_PROXY=http://10.30.44.154:7897
+      - NO_PROXY=localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,ds.scc.com.cn
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>叠板作业 SOP - A4横向修正版</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: #525659;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            padding: 10px 0;
+            text-align: center;
+            z-index: 999;
+        }
+
+        .btn {
+            background-color: #0984e3;
+            color: white;
+            border: none;
+            padding: 8px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .a4-landscape {
+            background: white;
+            width: 297mm;
+            height: 210mm; 
+            padding: 10mm;
+            box-sizing: border-box;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            margin-top: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 0 0 10px 0;
+            border-bottom: 2px solid #333;
+            padding-bottom: 5px;
+            font-size: 20px;
+        }
+
+        .legend {
+            text-align: center;
+            font-size: 11px;
+            margin-bottom: 10px;
+            padding: 5px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+        }
+
+        .flowchart-container {
+            width: 100%;
+            height: calc(100% - 100px);
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node-text {
+            font-size: 12px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .arrow {
+            stroke: #2d3436;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+
+        .arrow-back {
+            stroke: #d63031;
+            stroke-width: 2;
+            stroke-dasharray: 5,5;
+            fill: none;
+            marker-end: url(#arrowhead-red);
+        }
+
+        .footer-info {
+            position: absolute; 
+            bottom: 5mm; 
+            right: 10mm; 
+            font-size: 10px; 
+            color: #666;
+        }
+
+        @media print {
+            body { background: none; padding: 0; margin: 0; }
+            .toolbar { display: none; }
+            .a4-landscape { margin: 0; box-shadow: none; width: 100%; height: 100%; }
+            @page { size: A4 landscape; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <button class="btn" onclick="window.print()">🖨️ 打印 / 导出 PDF</button>
+    </div>
+
+    <div class="a4-landscape">
+        <h2>智能叠板作业标准 SOP 流程图</h2>
+        
+        <div class="legend">
+            <strong>材料图例：</strong>
+            <span>🔘 钢板(银灰)</span> | <span>🟠 铜箔(橙)</span> | <span>🟢 板件(绿)</span> | <span>⚪ 三合一白膜</span> | <span>🟡 牛皮纸</span>
+        </div>
+
+        <div class="flowchart-container">
+            <svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#2d3436" />
+                    </marker>
+                    <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#d63031" />
+                    </marker>
+                </defs>
+
+                <g transform="translate(50, 40)">
+                    <ellipse cx="50" cy="30" rx="45" ry="25" fill="#a29bfe" stroke="#6c5ce7" stroke-width="2"/>
+                    <text x="50" y="32" class="node-text" fill="#fff">识别开始</text>
+                    
+                    <path d="M 95 30 L 140 30" class="arrow"/>
+                    
+                    <rect x="140" y="5" width="90" height="50" rx="5" fill="#74b9ff" stroke="#0984e3" stroke-width="2"/>
+                    <text x="185" y="32" class="node-text">① 板架到位</text>
+                    
+                    <path d="M 230 30 L 275 30" class="arrow"/>
+                    
+                    <rect x="275" y="5" width="90" height="50" rx="5" fill="#ffeaa7" stroke="#fdcb6e" stroke-width="2"/>
+                    <text x="320" y="32" class="node-text">② 放牛皮纸</text>
+                    
+                    <path d="M 365 30 L 410 30" class="arrow"/>
+                    
+                    <polygon points="455,5 500,30 455,55 410,30" fill="#fab1a0" stroke="#e17055" stroke-width="2"/>
+                    <text x="455" y="32" class="node-text" font-size="10">需白膜?</text>
+                    
+                    <path d="M 500 30 L 545 30" class="arrow"/>
+                    <text x="515" y="25" font-size="10" fill="#00b894">是</text>
+                    <rect x="545" y="5" width="90" height="50" rx="5" fill="#fff" stroke="#0984e3" stroke-width="2"/>
+                    <text x="590" y="32" class="node-text">③ 放白膜</text>
+                    
+                    <path d="M 455 55 L 455 85 L 680 85 L 680 130" class="arrow"/>
+                    <text x="465" y="75" font-size="10" fill="#d63031">否(跳过)</text>
+                    
+                    <path d="M 635 30 L 680 30 L 680 130" class="arrow"/>
+                </g>
+
+                <rect x="50" y="140" width="900" height="280" rx="10" fill="none" stroke="#0984e3" stroke-width="2" stroke-dasharray="8,4"/>
+                <text x="500" y="165" fill="#0984e3" font-size="16" font-weight="bold" text-anchor="middle">🔄 核心叠板循环作业 (直到识别到结束标识)</text>
+
+                <g transform="translate(100, 200)">
+                    <rect x="0" y="0" width="110" height="60" rx="8" fill="#dfe6e9" stroke="#636e72" stroke-width="2"/>
+                    <text x="55" y="22" class="node-text">1. 放钢板</text>
+                    <text x="55" y="42" class="node-text" font-size="10" font-weight="normal">(银灰色)</text>
+                    
+                    <path d="M 110 30 L 160 30" class="arrow"/>
+                    
+                    <rect x="160" y="0" width="110" height="60" rx="8" fill="#ffbe76" stroke="#e67e22" stroke-width="2"/>
+                    <text x="215" y="22" class="node-text">2. 放铜箔</text>
+                    <text x="215" y="42" class="node-text" font-size="10" font-weight="normal">(反面朝上)</text>
+
+                    <path d="M 270 30 L 320 30" class="arrow"/>
+
+                    <rect x="320" y="0" width="110" height="60" rx="8" fill="#55efc4" stroke="#00b894" stroke-width="2"/>
+                    <text x="375" y="22" class="node-text">3. 放板件</text>
+                    <text x="375" y="42" class="node-text" font-size="10" font-weight="normal">(邦定核心)</text>
+
+                    <path d="M 430 30 L 480 30" class="arrow"/>
+
+                    <rect x="480" y="0" width="110" height="60" rx="8" fill="#ffbe76" stroke="#e67e22" stroke-width="2"/>
+                    <text x="535" y="22" class="node-text">4. 放铜箔</text>
+                    <text x="535" y="42" class="node-text" font-size="10" font-weight="normal">(正面朝上)</text>
+
+                    <path d="M 590 30 L 640 30" class="arrow"/>
+
+                    <rect x="640" y="0" width="110" height="60" rx="8" fill="#dfe6e9" stroke="#636e72" stroke-width="2"/>
+                    <text x="695" y="22" class="node-text">5. 放钢板</text>
+                    <text x="695" y="42" class="node-text" font-size="10" font-weight="normal">(银灰色)</text>
+
+                    <path d="M 750 30 L 800 30" class="arrow"/>
+                    <polygon points="845,0 890,30 845,60 800,30" fill="#74b9ff" stroke="#0984e3" stroke-width="2"/>
+                    <text x="845" y="25" class="node-text" font-size="10">识别到</text>
+                    <text x="845" y="38" class="node-text" font-size="10">白膜?</text>
+
+                    <path d="M 845 60 L 845 100 L 55 100 L 55 60" class="arrow-back"/>
+                    <text x="450" y="90" fill="#d63031" font-size="12" font-weight="bold" text-anchor="middle">否：继续下一层叠板 (员工离开/未完成)</text>
+
+                    <path d="M 890 30 L 890 140 L 750 250" class="arrow"/>
+                    <text x="900" y="80" fill="#00b894" font-size="12" font-weight="bold">是：结束</text>
+                </g>
+
+                <g transform="translate(150, 480)">
+                    <rect x="400" y="0" width="110" height="60" rx="5" fill="#fff" stroke="#0984e3" stroke-width="2"/>
+                    <text x="455" y="32" class="node-text">放白色离心膜</text>
+
+                    <path d="M 400 30 L 350 30" class="arrow"/>
+
+                    <rect x="240" y="0" width="110" height="60" rx="5" fill="#ffeaa7" stroke="#fdcb6e" stroke-width="2"/>
+                    <text x="295" y="22" class="node-text">放牛皮纸</text>
+                    <text x="295" y="42" class="node-text" font-size="10" font-weight="normal">(员工签字确认)</text>
+
+                    <path d="M 240 30 L 190 30" class="arrow"/>
+
+                    <ellipse cx="140" cy="30" rx="50" ry="30" fill="#a29bfe" stroke="#6c5ce7" stroke-width="2"/>
+                    <text x="140" y="32" class="node-text" fill="#fff">批次完成 ✅</text>
+                </g>
+
+                <text x="60" y="130" fill="#e74c3c" font-size="11" font-weight="bold">⚠️ 提示：AI 实时监测循环过程，若未放白膜则视作该本作业未完。</text>
+            </svg>
+        </div>
+
+        <div class="footer-info">
+            Deep South Circuit (SCC) - 智能制造推进部 | 版本: V2.1 | 日期: 2026-01-14
+        </div>
+    </div>
+
+</body>
+</html>

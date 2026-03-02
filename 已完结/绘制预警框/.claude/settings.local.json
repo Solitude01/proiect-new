@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"\nimport json\nimport os\n\n# 读取1.html文件\nwith open\\(''1.html'', ''r'', encoding=''utf-8''\\) as f:\n    html_content = f.read\\(\\)\n\n# 检查是否有明显的语法错误\nprint\\(''HTML文件读取成功''\\)\nprint\\(f''文件大小: {len\\(html_content\\)} 字符''\\)\n\")"
+    ]
+  }
+}

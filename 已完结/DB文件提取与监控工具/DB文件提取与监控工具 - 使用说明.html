@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB文件提取与监控工具 - 使用说明</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .intro {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border-left: 5px solid #667eea;
+        }
+
+        .intro h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .intro ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .intro li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .intro li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #e1e8ed;
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.1);
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .section-header:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+        }
+
+        .section-header h3 {
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        .toggle-icon {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .section.active .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .section-content {
+            padding: 0 25px;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        .section.active .section-content {
+            padding: 25px;
+            max-height: 2000px;
+        }
+
+        .step {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step h4 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+        }
+
+        .step p, .step ul {
+            color: #333;
+            line-height: 1.8;
+        }
+
+        .step ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .step li {
+            margin-bottom: 8px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .warning-box h4 {
+            color: #856404;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+        }
+
+        .warning-box ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+
+        .warning-box li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .code {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            border-top: 2px solid #e1e8ed;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.6em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📁 DB文件提取与监控工具</h1>
+            <p>用户使用说明文档</p>
+        </div>
+
+        <div class="content">
+            <div class="intro">
+                <h2>🎯 核心功能</h2>
+                <ul>
+                    <li><strong>手动提取：</strong>从 .db 二进制文件中提取结构化数据（到 .txt）和图片</li>
+                    <li><strong>后台监控：</strong>自动监控文件夹，将新生成的 .txt 文件复制到指定位置</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>📤 功能一：手动提取 .db 文件</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content">
+                    <p style="margin-bottom: 20px; font-size: 1.05em;">当您需要将一个 .db 文件转换为可读的 .txt 和图片时，请使用此功能。</p>
+                    
+                    <div class="step">
+                        <h4>步骤 1：启动程序</h4>
+                        <p>打开 .exe 文件。</p>
+                    </div>
+
+                    <div class="step">
+                        <h4>步骤 2：选择输入文件</h4>
+                        <p>在"手动 .db 文件提取"区域，点击 <span class="highlight">输入 .db 文件</span> 旁边的 <span class="code">...</span> 按钮，选择您要转换的 .db 文件。</p>
+                    </div>
+
+                    <div class="step">
+                        <h4>步骤 3：选择文本输出</h4>
+                        <p>点击 <span class="highlight">输出 .txt 文本路径</span> 旁边的 <span class="code">...</span> 按钮，指定保存位置和文件名（例如 <span class="code">output.txt</span>）。</p>
+                    </div>
+
+                    <div class="step">
+                        <h4>步骤 4：选择图片输出</h4>
+                        <p>点击 <span class="highlight">输出图片目录</span> 旁边的 <span class="code">...</span> 按钮，选择一个文件夹保存提取的图片。</p>
+                    </div>
+
+                    <div class="step">
+                        <h4>步骤 5：开始转换</h4>
+                        <p>点击 <span class="highlight">手动转换选中 .db 文件</span> 按钮。</p>
+                    </div>
+
+                    <div class="step">
+                        <h4>步骤 6：检查结果</h4>
+                        <p>查看底部的"日志"框。如果一切顺利，您会看到：</p>
+                        <ul>
+                            <li><span class="code">[提取] 缺陷图片: ...</span></li>
+                            <li><span class="code">手动数据导出完成！</span></li>
+                        </ul>
+                        <p style="margin-top: 10px;">您的文件和图片现在已经生成在指定路径。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>🔄 功能二：后台自动转移 .txt 文件</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content">
+                    <p style="margin-bottom: 20px; font-size: 1.05em;">本工具的核心功能，监视文件夹并自动复制新的 .txt 文件。</p>
+
+                    <div class="step">
+                        <h4>步骤 1：设置日志（重要！）</h4>
+                        <p>程序默认启用日志记录，<strong>必须指定日志路径</strong>才能启动后台服务。</p>
+                        <ul>
+                            <li>前往 <span class="highlight">日志设置</span> 区域</li>
+                            <li>确保 "启用日志，保存到文件：" 已被勾选（默认设置）</li>
+                            <li>点击 <span class="code">...</span> 按钮，选择位置和文件名（例如 <span class="code">C:\MyLogs\monitor.log</span>）</li>
+                        </ul>
+                    </div>
+
+                    <div class="step">
+                        <h4>步骤 2：设置监控路径</h4>
+                        <p>前往 <span class="highlight">后台 .txt 文件自动转移</span> 区域：</p>
+                        <ul>
+                            <li><strong>源文件夹：</strong>点击 <span class="code">...</span> 选择要监视的文件夹（本地路径如 <span class="code">C:\Data</span> 或共享盘路径如 <span class="code">\\Share\Data_AI\...</span>）</li>
+                            <li><strong>目标文件夹：</strong>点击 <span class="code">...</span> 选择文件复制目标位置（例如本地桌面）</li>
+                            <li><strong>刷新间隔(秒)：</strong>输入检查频率，默认 60 秒（1分钟）</li>
+                        </ul>
+                    </div>
+
+                    <div class="step">
+                        <h4>步骤 3：测试路径（推荐）</h4>
+                        <p>在正式启动前测试路径配置：</p>
+                        <ul>
+                            <li>点击 <span class="highlight">转移测试</span> 按钮</li>
+                            <li>程序将扫描源文件夹中所有 .txt 文件并尝试复制</li>
+                            <li>检查日志框，查看 <span class="code">[监控] 成功复制: ...</span> 或 <span class="code">[监控] 跳过: ...</span> 消息</li>
+                        </ul>
+                    </div>
+
+                    <div class="step">
+                        <h4>步骤 4：启动后台服务</h4>
+                        <ul>
+                            <li>点击 <span class="highlight">启用后台持续运行</span> 按钮</li>
+                            <li>按钮文本变为 "关闭后台持续运行"</li>
+                            <li>程序执行一次全盘扫描，然后按设定间隔检查新文件</li>
+                            <li>日志框显示详细的启动参数和检查状态</li>
+                        </ul>
+                    </div>
+
+                    <div class="step">
+                        <h4>步骤 5：最小化到托盘</h4>
+                        <p>后台服务运行时（按钮显示"关闭..."），点击窗口右上角 <span class="code">X</span>：</p>
+                        <ul>
+                            <li>程序不会退出，而是最小化到系统托盘（屏幕右下角，时钟旁边）</li>
+                            <li>在后台持续运行</li>
+                            <li>双击托盘图标可恢复窗口查看日志</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>⚠️ 注意事项（请务必阅读！）</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="warning-box">
+                        <h4>🚪 如何彻底退出程序？</h4>
+                        <ul>
+                            <li><strong>后台未运行</strong>（按钮显示"启用..."）：直接点击 <span class="code">X</span> 即可退出</li>
+                            <li><strong>后台正在运行</strong>（已最小化到托盘）：在系统托盘右键点击程序图标，选择 "退出程序"</li>
+                        </ul>
+                    </div>
+
+                    <div class="warning-box">
+                        <h4>⚙️ 程序默认状态</h4>
+                        <ul>
+                            <li>为了安全，每次启动时后台监控默认为 <strong>关闭</strong> 状态</li>
+                            <li>需要手动点击"启用后台持续运行"来启动</li>
+                            <li>"启用日志"默认是开启的</li>
+                        </ul>
+                    </div>
+
+                    <div class="warning-box">
+                        <h4>📝 日志路径是必需的</h4>
+                        <ul>
+                            <li>如果"启用日志"被勾选但未指定有效的 .log 文件路径</li>
+                            <li>程序将拒绝启动后台运行，并弹窗提示</li>
+                        </ul>
+                    </div>
+
+                    <div class="warning-box">
+                        <h4>🔐 权限问题</h4>
+                        <ul>
+                            <li>确保 Windows 账户对 <strong>源文件夹</strong>（尤其是公共盘）有 <strong>读取权限</strong></li>
+                            <li>对 <strong>目标文件夹</strong> 和 <strong>日志文件路径</strong> 有 <strong>写入权限</strong></li>
+                            <li>否则日志中会显示"访问被拒绝"错误</li>
+                        </ul>
+                    </div>
+
+                    <div class="warning-box">
+                        <h4>🔍 "转移测试" vs "启用"</h4>
+                        <ul>
+                            <li><strong>转移测试：</strong>扫描所有文件（从1970年开始），不更新"上次检查时间"，可反复点击测试</li>
+                            <li><strong>启用：</strong>第一次点击扫描所有文件，然后更新"上次检查时间"为现在，此后只检查新文件</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>💡 如有疑问，请查阅日志文件获取详细信息</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleSection(header) {
+            const section = header.parentElement;
+            section.classList.toggle('active');
+        }
+
+        // 默认折叠所有章节
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html>

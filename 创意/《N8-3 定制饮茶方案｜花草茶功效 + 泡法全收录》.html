@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>花草茶功效表 · N8-3-专属</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #fefcfb, #f3f7ff);
+      font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 26px;
+      color: #2b4d7a;
+    }
+    p.lead {
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      margin-bottom: 18px;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .card-header {
+      padding: 16px 20px;
+      background: linear-gradient(90deg, #8ec5fc, #e0c3fc);
+      color: #fff;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-content {
+      padding: 18px 22px;
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(-5px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+    ul {
+      margin: 8px 0 8px 18px;
+      padding: 0;
+    }
+    .meta {
+      color: #6b7280;
+      font-size: 13px;
+    }
+    footer {
+      text-align: center;
+      font-size: 13px;
+      color: #888;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🌸《N8-3 定制饮茶方案｜花草茶功效 + 泡法全收录》</h1>
+      <p class="lead">点击下方卡片查看详情，每款茶都有不同的调理重点与饮用提示</p>
+    </header>
+
+    <div class="card" onclick="toggleCard(this)">
+      <div class="card-header">一 · 清热败火茶 <span class="meta">喉咙痛 / 上火</span></div>
+      <div class="card-content">
+        <p><strong>配方：</strong> 菊花3–5朵、金银花5–8根、陈皮1片、枸杞5–8粒。</p>
+        <p><strong>功效：</strong> 清热解毒、润喉、助消炎。</p>
+        <p><strong>泡法：</strong> 90–95°C热水泡5分钟，可续泡2次，饭后饮。</p>
+        <p class="meta">注意：体质寒凉者少量饮；服药后1小时饮较稳妥。</p>
+      </div>
+    </div>
+
+    <div class="card" onclick="toggleCard(this)">
+      <div class="card-header">二 · 舒压理气茶 <span class="meta">情绪紧张 / 气郁</span></div>
+      <div class="card-content">
+        <p><strong>配方：</strong> 玫瑰花3–5朵、陈皮1片、菊花2朵、枸杞6粒。</p>
+        <p><strong>功效：</strong> 疏肝解郁、理气和胃、舒缓心情。</p>
+        <p><strong>泡法：</strong> 85°C热水冲泡3–5分钟，香气最佳。</p>
+        <p class="meta">注意：玫瑰偏温，实火体质少饮；孕期请咨询医生。</p>
+      </div>
+    </div>
+
+    <div class="card" onclick="toggleCard(this)">
+      <div class="card-header">三 · 润目养肝茶 <span class="meta">用眼过度 / 干涩</span></div>
+      <div class="card-content">
+        <p><strong>配方：</strong> 菊花3朵、枸杞10粒、陈皮半片。</p>
+        <p><strong>功效：</strong> 明目养肝、缓解视疲劳、润燥生津。</p>
+        <p><strong>泡法：</strong> 90°C热水泡5分钟，可续泡2次。</p>
+        <p class="meta">注意：枸杞偏补，易上火者减少用量。</p>
+      </div>
+    </div>
+
+    <div class="card" onclick="toggleCard(this)">
+      <div class="card-header">四 · 理气健脾茶 <span class="meta">油腻 / 胀气</span></div>
+      <div class="card-content">
+        <p><strong>配方：</strong> 陈皮1–2片、金银花5根、枸杞5粒。</p>
+        <p><strong>功效：</strong> 理气化湿、助消化、兼顾清热。</p>
+        <p><strong>泡法：</strong> 沸水冲泡闷5分钟，饭后饮。</p>
+        <p class="meta">注意：陈皮性温，口舌生疮时少用。</p>
+      </div>
+    </div>
+
+    <div class="card" onclick="toggleCard(this)">
+      <div class="card-header">五 · 美容养颜茶 <span class="meta">肤色暗沉 / 想调理气色</span></div>
+      <div class="card-content">
+        <p><strong>配方：</strong> 玫瑰花3–5朵、枸杞6粒、菊花2朵。</p>
+        <p><strong>功效：</strong> 活血养颜、滋阴润燥、调节气血。</p>
+        <p><strong>泡法：</strong> 85°C热水泡3分钟，香气柔和。</p>
+        <p class="meta">注意：如有上火表现，减少玫瑰与枸杞用量。</p>
+      </div>
+    </div>
+
+    <footer>
+      🌿 花草茶仅作日常调理参考，若不适或症状持续，请及时就医。
+    </footer>
+  </div>
+
+  <script>
+    function toggleCard(card){
+      const content = card.querySelector('.card-content');
+      const isVisible = content.style.display === 'block';
+      document.querySelectorAll('.card-content').forEach(c => c.style.display='none');
+      if(!isVisible){
+        content.style.display='block';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI项目成果展示 - 智能制造推进部</title>
+
+    <!-- 防闪烁：在 CSS 加载前立即应用保存的主题 -->
+    <script>
+        (function() {
+            const theme = localStorage.getItem('ai-project-theme');
+            if (theme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
+    <!-- 使用系统字体，避免外部依赖 -->
+    <style>
+        .title, .stat-value, .metric-value, .card-metric-value {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            font-weight: 700;
+        }
+    </style>
+
+    <!-- Shared Styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        /* Business Page Specific Styles */
+        .business-container {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            padding: 0;
+        }
+
+        /* Hero Header */
+        .hero-header {
+            position: relative;
+            padding: 4rem 2rem 3rem;
+            text-align: center;
+            background: linear-gradient(180deg,
+                rgba(0, 245, 255, 0.05) 0%,
+                transparent 100%);
+            border-bottom: 1px solid var(--glass-border);
+            overflow: hidden;
+        }
+
+        .hero-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 300px;
+            background: radial-gradient(ellipse at center,
+                rgba(0, 245, 255, 0.15) 0%,
+                transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg,
+                var(--accent-cyan) 0%,
+                var(--accent-blue) 50%,
+                var(--accent-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: 3px;
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(0, 245, 255, 0.3)); }
+            50% { filter: drop-shadow(0 0 40px rgba(0, 245, 255, 0.5)); }
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            margin-bottom: 2rem;
+        }
+
+        .hero-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            padding: 2rem;
+            background: var(--glass-bg);
+            border-bottom: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0 2rem;
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .stat-item:last-child {
+            border-right: none;
+        }
+
+        .stat-number {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 0.5rem;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1.5rem 2rem;
+            background: rgba(17, 24, 39, 0.5);
+            border-bottom: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+        }
+
+        .filter-bar .filter-select {
+            min-width: 160px;
+        }
+
+        .filter-bar .search-wrapper {
+            position: relative;
+            flex: 0 1 300px;
+        }
+
+        .filter-bar .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--text-muted);
+        }
+
+        .filter-bar .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .filter-bar .search-input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        /* Project Grid */
+        .projects-section {
+            padding: 3rem 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        /* Project Card */
+        .project-card {
+            position: relative;
+            background: linear-gradient(145deg,
+                var(--bg-secondary) 0%,
+                var(--bg-tertiary) 100%);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.75rem;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg,
+                var(--accent-cyan),
+                var(--accent-blue),
+                var(--accent-purple));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .project-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                rgba(0, 245, 255, 0.1) 0%,
+                transparent 50%
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .project-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: var(--accent-cyan);
+            box-shadow:
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 40px rgba(0, 245, 255, 0.15);
+        }
+
+        .project-card:hover::before {
+            opacity: 1;
+        }
+
+        .project-card:hover::after {
+            opacity: 1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .card-title {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+            flex: 1;
+        }
+
+        .card-factory {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+            padding: 0.35rem 0.75rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 20px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .card-factory svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .card-goal {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-metrics {
+            display: flex;
+            gap: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .card-metric {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-metric-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .card-metric-value.money {
+            color: var(--warning);
+        }
+
+        .card-metric-value.time {
+            color: var(--accent-purple);
+        }
+
+        .card-metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        /* Empty State */
+        .empty-state-business {
+            text-align: center;
+            padding: 6rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state-business svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 1.5rem;
+            opacity: 0.3;
+            stroke: var(--accent-cyan);
+        }
+
+        .empty-state-business p {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state-business .hint {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* No Data Message */
+        .no-data-message {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .no-data-message p {
+            font-size: 1.1rem;
+        }
+
+        /* Project Count */
+        .project-count {
+            text-align: center;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .project-count span {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .hero-subtitle {
+                font-size: 0.9rem;
+                letter-spacing: 4px;
+            }
+
+            .stats-bar {
+                gap: 1.5rem;
+            }
+
+            .stat-item {
+                padding: 0 1rem;
+            }
+
+            .stat-number {
+                font-size: 1.75rem;
+            }
+
+            .filter-bar {
+                flex-direction: column;
+            }
+
+            .filter-bar .filter-select,
+            .filter-bar .search-wrapper {
+                width: 100%;
+            }
+
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card Animation on Load */
+        .project-card {
+            animation: cardFadeIn 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes cardFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Apply Project Button */
+        .btn-apply {
+            border-color: var(--accent-cyan);
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.1), rgba(59, 130, 246, 0.1));
+        }
+
+        .btn-apply:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.2), rgba(59, 130, 246, 0.2));
+        }
+
+        /* Help Button */
+        .btn-help {
+            border-color: var(--warning);
+        }
+
+        .btn-help:hover {
+            border-color: var(--warning);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+        }
+
+        /* Apply Project Modal */
+        .apply-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1001;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .apply-modal.active {
+            display: flex;
+        }
+
+        .apply-modal-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+        }
+
+        .apply-modal-container {
+            position: relative;
+            background: linear-gradient(145deg, var(--bg-secondary), var(--bg-tertiary));
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                        0 0 60px rgba(0, 245, 255, 0.15);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .apply-modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .apply-modal-close svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-secondary);
+        }
+
+        .apply-modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .apply-modal-close:hover svg {
+            stroke: var(--text-primary);
+        }
+
+        .apply-modal-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .apply-modal-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1rem;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(0, 245, 255, 0.3);
+        }
+
+        .apply-modal-icon svg {
+            width: 32px;
+            height: 32px;
+            stroke: white;
+        }
+
+        .apply-modal-title {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .apply-modal-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .apply-modal-content {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .contact-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .contact-item:first-child {
+            padding-top: 0;
+        }
+
+        .contact-icon {
+            width: 44px;
+            height: 44px;
+            background: rgba(0, 245, 255, 0.1);
+            border: 1px solid rgba(0, 245, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .contact-icon svg {
+            width: 22px;
+            height: 22px;
+            stroke: var(--accent-cyan);
+        }
+
+        .contact-icon.email-icon {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .contact-icon.email-icon svg {
+            stroke: var(--accent-purple);
+        }
+
+        .contact-icon.email-icon:hover {
+            background: rgba(139, 92, 246, 0.2);
+            transform: scale(1.05);
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+
+        .contact-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .contact-value {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .apply-modal-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .apply-modal-actions .btn {
+            flex: 1;
+            justify-content: center;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+        }
+
+        .btn-goto-apply {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border: none;
+            color: white;
+            font-weight: 600;
+        }
+
+        .btn-goto-apply:hover {
+            box-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn-close-modal {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-close-modal:hover {
+            border-color: var(--text-muted);
+        }
+
+        /* Primary Button - 主按钮样式 */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 0.85rem 1.5rem;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Secondary Button - 次按钮样式 */
+        .btn-secondary {
+            border-color: var(--accent-cyan);
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.1), rgba(59, 130, 246, 0.1));
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.2), rgba(59, 130, 246, 0.2));
+        }
+
+        /* Text Button - 文字按钮样式 */
+        .btn-text {
+            border: 1px dashed var(--glass-border);
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .btn-text:hover {
+            border-color: var(--text-muted);
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Hero Nav Button Wrapper - 主按钮容器 */
+        .hero-nav-btn-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        /* Hero Nav Hint - 主按钮下方小字提示 */
+        .hero-nav-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        /* Copyable Contact Value - 可复制文本样式 */
+        .contact-value.copyable {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0.15rem 0.35rem;
+            margin: -0.15rem -0.35rem;
+            border-radius: 4px;
+        }
+
+        .contact-value.copyable:hover {
+            background: rgba(0, 245, 255, 0.1);
+            color: var(--accent-cyan);
+        }
+
+        .contact-value.copyable:active {
+            transform: scale(0.98);
+        }
+
+        /* Copy Toast - 复制成功提示 */
+        .copy-toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0, 245, 255, 0.4);
+            z-index: 9999;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .copy-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 48px;
+            height: 48px;
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+            transform: scale(1.1);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .theme-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--text-primary);
+            transition: all 0.4s ease;
+            position: absolute;
+        }
+
+        /* 夜间模式：显示月亮图标 */
+        .sun-icon {
+            opacity: 0;
+            transform: rotate(-90deg) scale(0.5);
+        }
+
+        .moon-icon {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+
+        /* 白天模式：显示太阳图标 */
+        [data-theme="light"] .sun-icon {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+
+        [data-theme="light"] .moon-icon {
+            opacity: 0;
+            transform: rotate(90deg) scale(0.5);
+        }
+
+        /* ================================
+           AI 聊天气泡自定义样式
+        ================================ */
+        :root {
+            --chat-bubble-size: 150px;
+        }
+
+        /* 主页面气泡样式 */
+        #embed-lite,
+        .appbuilder-bubbleItem {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            width: var(--chat-bubble-size) !important;
+            height: var(--chat-bubble-size) !important;
+            padding: 0 !important;
+            cursor: grab;
+            right: 8px !important;
+            transition: bottom 0.15s ease;
+        }
+
+        .appbuilder-bubbleItem.dragging {
+            cursor: grabbing;
+            transition: none !important;
+        }
+
+        .appbuilder-bubbleImage {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+            border-radius: 50% !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="bg-grid"></div>
+    <div class="bg-particles" id="particles"></div>
+
+    <!-- Main Container -->
+    <div class="business-container">
+        <!-- Hero Header -->
+        <header class="hero-header">
+            <!-- 主题切换按钮 -->
+            <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+            <h1 class="hero-title">智能应用组-图像AI项目成果展示</h1>
+            <p class="hero-subtitle">智能制造推进部</p>
+            <nav class="hero-nav">
+                <div class="hero-nav-btn-wrapper">
+                    <a href="http://10.30.5.89:73/" target="_blank" class="btn btn-nav btn-primary">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                        前往申请项目
+                    </a>
+                    <span class="hero-nav-hint">已开通权限可直接提交</span>
+                </div>
+                <a href="#" class="btn btn-nav btn-secondary" id="btnApplyProject">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    开通权限 / 项目咨询
+                </a>
+                <a href="./PDF/AI项目系统-项目申请-帮助文档.pdf" target="_blank" class="btn btn-nav btn-text" download>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    下载项目申请说明
+                </a>
+            </nav>
+        </header>
+
+        <!-- Statistics Bar -->
+        <section class="stats-bar" id="statsBar">
+            <div class="stat-item">
+                <div class="stat-number" id="statTotal">0</div>
+                <div class="stat-label">项目总数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="statTime">0</div>
+                <div class="stat-label">结余时间(小时/月)</div>
+            </div>
+        </section>
+
+        <!-- Filter Bar -->
+        <section class="filter-bar" id="filterBar">
+            <select class="filter-select" id="filterFactory">
+                <option value="">全部工厂</option>
+            </select>
+            <select class="filter-select" id="filterStatus">
+                <option value="">全部状态</option>
+            </select>
+            <div class="search-wrapper">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" class="search-input" id="searchInput" placeholder="搜索项目名称...">
+            </div>
+        </section>
+
+        <!-- Projects Section -->
+        <section class="projects-section">
+            <div class="projects-grid" id="projectsGrid">
+                <!-- Dynamic project cards will be inserted here -->
+            </div>
+            <div class="project-count" id="projectCount"></div>
+        </section>
+
+        <!-- Empty State -->
+        <section class="empty-state-business" id="emptyState" style="display: none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                <polyline points="13 2 13 9 20 9"></polyline>
+            </svg>
+            <p>暂无项目数据</p>
+            <p class="hint">请先在管理页面上传Excel数据</p>
+            <a href="index.html" class="btn btn-nav" style="margin-top: 1.5rem;">
+                前往管理页面
+            </a>
+        </section>
+    </div>
+
+    <!-- Project Detail Modal -->
+    <div class="detail-modal" id="detailModal">
+        <div class="detail-modal-backdrop"></div>
+        <div class="detail-modal-container">
+            <button class="detail-modal-close" id="detailModalClose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <div class="detail-modal-content" id="detailModalContent">
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal" id="imageModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <img id="modalImage" src="" alt="报警图例">
+        </div>
+    </div>
+
+    <!-- Apply Project Modal -->
+    <div class="apply-modal" id="applyModal">
+        <div class="apply-modal-backdrop"></div>
+        <div class="apply-modal-container">
+            <button class="apply-modal-close" id="applyModalClose">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <div class="apply-modal-header">
+                <div class="apply-modal-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </div>
+                <h2 class="apply-modal-title">开通权限 / 项目咨询</h2>
+                <p class="apply-modal-subtitle">如需开通权限或咨询项目，请联系以下负责人</p>
+            </div>
+            <div class="apply-modal-content">
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="contact-info">
+                        <div class="contact-label">联系人</div>
+                        <div class="contact-value copyable" data-copy="潘秦">潘秦</div>
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
+                    </div>
+                    <div class="contact-info">
+                        <div class="contact-label">联系电话</div>
+                        <div class="contact-value copyable" data-copy="17321586806">17321586806</div>
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <a href="mailto:panqin@scc.com.cn" class="contact-icon email-icon" title="发送邮件">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                    </a>
+                    <div class="contact-info">
+                        <div class="contact-label">电子邮箱</div>
+                        <div class="contact-value copyable" data-copy="panqin@scc.com.cn">panqin@scc.com.cn</div>
+                    </div>
+                </div>
+            </div>
+            <div class="apply-modal-actions">
+                <button class="btn btn-close-modal" id="applyModalCloseBtn" style="flex: 1;">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Copy Toast -->
+    <div class="copy-toast" id="copyToast">已复制到剪贴板</div>
+
+    <!-- Scripts -->
+    <script src="shared.js"></script>
+    <script src="business.js"></script>
+
+    <!-- AI Chat Bubble - 项目智导 -->
+    <script src="https://aiforge.scc.com.cn/ai_apaas/web_embed/embedLiteSDK.js?responseExpires=0"></script>
+    <script>
+        new EmbedLiteSDK({
+            appId: 'ec916c40-97f3-42c1-baa7-4e877151419a',
+            code: 'embedDriSntSdBqEmcaNc9ktU',
+            origin: 'https://aiforge.scc.com.cn'
+        });
+
+        // 垂直拖拽功能（始终吸附右边）
+        (function() {
+            var bubble = null;
+            var isDragging = false;
+            var startY = 0;
+            var startBottom = 0;
+            var bubbleSize = 150;
+
+            function initDrag() {
+                bubble = document.getElementById('embed-lite');
+                if (!bubble) {
+                    setTimeout(initDrag, 200);
+                    return;
+                }
+
+                bubble.addEventListener('mousedown', onMouseDown);
+                bubble.addEventListener('touchstart', onTouchStart, { passive: false });
+            }
+
+            function onMouseDown(e) {
+                if (e.target.closest('.appbuilder-bubbleContent')) return;
+                e.preventDefault();
+                startDrag(e.clientY);
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            }
+
+            function onTouchStart(e) {
+                if (e.target.closest('.appbuilder-bubbleContent')) return;
+                e.preventDefault();
+                startDrag(e.touches[0].clientY);
+                document.addEventListener('touchmove', onTouchMove, { passive: false });
+                document.addEventListener('touchend', onTouchEnd);
+            }
+
+            function startDrag(clientY) {
+                isDragging = true;
+                startY = clientY;
+                var style = window.getComputedStyle(bubble);
+                startBottom = parseInt(style.bottom) || 200;
+                bubble.classList.add('dragging');
+            }
+
+            function onMouseMove(e) {
+                if (!isDragging) return;
+                updatePosition(e.clientY);
+            }
+
+            function onTouchMove(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                updatePosition(e.touches[0].clientY);
+            }
+
+            function updatePosition(clientY) {
+                var deltaY = startY - clientY;
+                var newBottom = startBottom + deltaY;
+                var maxBottom = window.innerHeight - bubbleSize - 10;
+                newBottom = Math.max(10, Math.min(maxBottom, newBottom));
+                bubble.style.bottom = newBottom + 'px';
+            }
+
+            function onMouseUp() {
+                endDrag();
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            function onTouchEnd() {
+                endDrag();
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+            }
+
+            function endDrag() {
+                isDragging = false;
+                if (bubble) bubble.classList.remove('dragging');
+            }
+
+            initDrag();
+        })();
+    </script>
+</body>
+</html>

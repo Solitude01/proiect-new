@@ -1,0 +1,741 @@
+{
+  "name": "PPT转数字人脚本动态更新状态",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "httpMethod": [
+          "POST"
+        ],
+        "path": "4a5aa046-b6df-48f2-91f5-79ec15627052",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*",
+          "binaryPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        -128
+      ],
+      "id": "4e85eed5-48f0-4be6-939c-95c5fb8f8ebf",
+      "name": "Webhook",
+      "webhookId": "4a5aa046-b6df-48f2-91f5-79ec15627052",
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-powerpoint2text.powerpoint2text",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -32
+      ],
+      "id": "811570fc-9e8e-497e-879a-ca4248f8bf9e",
+      "name": "PowerPoint to Text"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "ds-v3",
+          "mode": "id"
+        },
+        "responsesApiEnabled": false,
+        "options": {
+          "frequencyPenalty": 0,
+          "presencePenalty": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        960,
+        400
+      ],
+      "id": "54d2fc22-9150-411f-a1ff-999d1ccd3517",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "nl86EcOnfFl8R9jg",
+          "name": "deepseek"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 假设输入是 items，每个 item 有一个 output 字段\nreturn items.map(item => {\n    return {\n        json: JSON.parse(item.json.output) // 转成 JSON 对象\n    };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        176
+      ],
+      "id": "ad837dc6-a19a-4ad2-9165-365b1ee77390",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2256,
+        496
+      ],
+      "id": "6afa8080-73ee-4050-9198-80cc9f33d432",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2544,
+        80
+      ],
+      "id": "eb1b62bc-e489-4d3d-a8dd-9a995d255f89",
+      "name": "Merge",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// 假设前一个节点输出在 $json.slides\nconst slides = $json.slides;  // Powerpoint2Text 的输出\n\nconst items = [];\n\nfor (const slideNumber in slides) {\n  items.push({\n    json: {\n      slideNumber: parseInt(slideNumber),\n      content: slides[slideNumber]\n    }\n  });\n}\n\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        -32
+      ],
+      "id": "436ba571-ead7-4839-8c70-24eab04107be",
+      "name": "分页",
+      "alwaysOutputData": false,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2896,
+        176
+      ],
+      "id": "3fc476a7-e5d0-41fb-abb9-11630cef44d5",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=你是一位专业的课程内容撰稿人。\n\n【当前任务】：撰写第 {{ $json.slideNumber }} 页的数字人讲稿。\n\n【输入素材】：\n1. 核心主题：{{ $json.coreTheme }}\n2. 关键要点：\n{{ $json.keyPoints.join(\"\\n\") }}\n3. **PPT 原文参考（用于补充细节与数据）**：\n{{ $json.original_content }}\n\n【🔴 导演的转场指令】：\n{{ $json.director_instruction }}\n(语气要求：{{ $json.mood }})\n\n【撰写要求】：\n1. **衔接**：必须严格执行“导演的转场指令”，确保上下文连贯。\n2. **内容**：以“核心主题”为主骨架，从“PPT原文参考”中提取具体案例、数据或描述性语句来丰富内容，**严禁瞎编数据**。\n3. **口语化**：生成适合口播的初稿。",
+        "options": {
+          "systemMessage": "你是一个只负责生成初稿的AI助手。"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        2480,
+        368
+      ],
+      "id": "67f67d6a-03a7-4659-886c-607a9ebaae5b",
+      "name": "1. Writer_初稿生成",
+      "alwaysOutputData": false,
+      "notesInFlow": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=你是一位极其严格的“数字人演讲教练”。你的任务不是改写内容，而是**审视**上一步生成的讲稿，并提出尖锐的修改意见。\n\n【待评审初稿】：\n{{ $json.output }}\n\n请从以下维度进行“反思”和批判：\n1. **口语化程度**：是否有太多书面语（如“综上所述”/“由此可见”）？数字人应该像真人聊天一样说话。\n2. **呼吸感**：句子是否太长？数字人需要换气，长难句会导致语音合成不自然。\n3. **对象感**：是否像在对着空气念经？需要有“你”和“我”的交流感，要像对着一位坐在对面的新员工说话。\n\n输出格式要求：\n请列出 3-5 条具体的修改建议（Critique），必须用纯文本列表形式，不要输出 JSON。",
+        "options": {
+          "systemMessage": "你是一个毒舌但专业的演讲教练。只输出批评意见，不输出修改后的文案。"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        2832,
+        368
+      ],
+      "id": "389e40b1-993e-450d-9329-2240528b35cc",
+      "name": "2. Critic_毒舌教官",
+      "alwaysOutputData": false,
+      "notesInFlow": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=你是一位顶级的演讲稿精修师。\n\n输入信息：\n1. [初稿内容]：\n{{ $('1. Writer_初稿生成').item.json.output }}\n\n2. [修改建议]：\n{{ $json.output }}\n\n任务：\n请根据 [修改建议] 对 [初稿] 进行深度重写。\n\n最终输出要求：\n1. **极度口语化**：使用短句、反问句、感叹句。\n2. **标注停顿**：在需要数字人明显停顿的地方，可以使用逗号或空格来控制节奏。\n3. **最终格式**：只输出最终的演讲稿文本，不要包含“根据建议修改如下”之类的废话。\n\n现在，请输出第 {{ $('1. Writer_初稿生成').item.json.slideNumber }} 页的最终讲稿：",
+        "options": {
+          "systemMessage": "你是一个金牌编辑，负责输出最终完美的口语化脚本。"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        3184,
+        368
+      ],
+      "id": "5b3371a1-097b-4b12-a736-9ba0c3758c1b",
+      "name": "3. Editor_最终精修",
+      "alwaysOutputData": false,
+      "notesInFlow": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "ds-v3",
+          "mode": "id"
+        },
+        "responsesApiEnabled": false,
+        "options": {
+          "frequencyPenalty": 0,
+          "presencePenalty": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2832,
+        608
+      ],
+      "id": "39018f92-94b0-407b-a5b3-d040afc7682b",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "nl86EcOnfFl8R9jg",
+          "name": "deepseek"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={\n  \"name\": \"CoreThemeExtractor\",\n  \"type\": \"LLMChain\",\n  \"parameters\": {\n    \"model\": \"gpt-4\",\n    \"prompt\": {\n      \"type\": \"text\",\n      \"value\": \"你是一位资深企业内训讲师，擅长将 PPT 内容快速提炼成核心主题和讲解要点。\\n\\n请阅读第 {{ $json.slideNumber }} 页 PPT 内容:\\n{{ $json.content }}\\n\\n请按以下格式严格输出 JSON：\\n{\\n  \\\"slideNumber\\\": {{ $json.slideNumber }},\\n  \\\"coreTheme\\\": \\\"本页核心主题（一句话概括）\\\",\\n  \\\"keyPoints\\\": [\\\"关键点1\\\", \\\"关键点2\\\", \\\"关键点3\\\"]\\n}\\n\\n要求：\\n1. 核心主题必须简洁明了，一句话概括本页内容。\\n2. 关键点列出 2-4 条最重要信息，可适度提炼和总结。\\n3. 输出必须严格为 JSON，不要加 Markdown 或多余文本。\"\n    },\n    \"sourceForPrompt\": \"expression\",\n    \"requireSpecificOutputFormat\": true\n  },\n  \"typeVersion\": 1,\n  \"position\": [400, 300]\n}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        880,
+        176
+      ],
+      "id": "6db74278-ed6f-44cd-b313-686e6b48b8e2",
+      "name": "提炼核心-格式化输出",
+      "alwaysOutputData": false,
+      "notesInFlow": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// 【修改点】这里改为读取 \"Code in JavaScript2\" 的数据\n// 确保获取到的是已经 Parse 好的 JSON 对象\nconst allSlides = $('Code in JavaScript2').all();\n\nlet syllabusText = \"以下是本课程的完整 PPT 大纲：\\n\";\n\nallSlides.forEach(item => {\n  // 增加防御性判断，防止个别页面数据为空\n  const json = item.json || {};\n  if (json.slideNumber) {\n      syllabusText += `[第 ${json.slideNumber} 页] 主题：${json.coreTheme}\\n      要点：${(json.keyPoints || []).join(', ')}\\n`;\n  }\n});\n\nreturn [{\n  json: {\n    syllabus: syllabusText,\n    totalSlides: allSlides.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        176
+      ],
+      "id": "362633e8-5959-4336-a558-b6ddc99c5d35",
+      "name": "1. Code_聚合大纲"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=你是一位经验极其丰富的演讲总策划（导演）。\n你拥有全局视角，负责设计整个演讲的起承转合。\n\n{{ $json.syllabus }}\n\n任务：\n请分析上述大纲的逻辑流，为每一页 PPT 生成一个【转场与逻辑指南】。\n\n要求：\n1. **关注衔接**：告诉撰稿人，这一页的开头如何承接上一页的内容，结尾如何引出下一页的内容。\n2. **定义语气**：指出这一页应该用什么情绪（如：严肃强调、轻松举例、发人深省）。\n\n请严格按照以下 JSON 格式输出一个数组（不要Markdown，只要纯 JSON）：\n[\n  {\n    \"slideNumber\": 1,\n    \"transition_instruction\": \"这是开场，要用...吸引注意力，引出主题...\",\n    \"mood\": \"激昂\"\n  },\n  {\n    \"slideNumber\": 2,\n    \"transition_instruction\": \"开头要承接上一页的...，结尾通过提问引出下一页的案例...\",\n    \"mood\": \"理性\"\n  }\n]",
+        "options": {
+          "systemMessage": "你是一个逻辑严密的导演。只输出 JSON 数组，不要任何废话。"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1680,
+        400
+      ],
+      "id": "8fd4a223-01b8-49b9-93d3-cfdf92369af2",
+      "name": "2. Agent_导演策划",
+      "alwaysOutputData": false,
+      "notesInFlow": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. 获取导演生成的转场指南 (来自上一步 Input)\n// 增加防御性判断\nif (!items.length || !items[0].json.output) {\n    throw new Error(\"导演节点没有输出内容，请检查 Agent_导演策划 是否正常运行\");\n}\n\nlet directorOutputString = items[0].json.output;\n// 清理 Markdown 标记\ndirectorOutputString = directorOutputString.replace(/```json/g, '').replace(/```/g, '');\n\nlet directorGuides = [];\ntry {\n  directorGuides = JSON.parse(directorOutputString);\n} catch (e) {\n  const match = directorOutputString.match(/\\[.*\\]/s);\n  if (match) {\n      directorGuides = JSON.parse(match[0]);\n  } else {\n      throw new Error(\"无法解析导演输出的 JSON\");\n  }\n}\n\n// 2. 【关键】获取原始的 PPT 详细文本 (回溯读取 '分页' 节点)\n// n8n 允许我们在 Code 节点读取任意前置节点的数据\nconst originalRawSlides = $('分页').all();\n\n// 3. 获取提炼后的核心主题 (回溯读取 'Code in JavaScript2' 节点)\nconst summarizedSlides = $('Code in JavaScript2').all();\n\n// 4. 【三合一】合并数据\nconst mergedItems = summarizedSlides.map(summaryItem => {\n  const slideNum = summaryItem.json.slideNumber;\n  \n  // A. 找导演指南\n  const guide = directorGuides.find(g => g.slideNumber === slideNum) || {};\n  \n  // B. 找回丢失的原始 PPT 内容\n  // 假设分页顺序和提炼顺序是一致的 (通常 n8n 会保持顺序)\n  // 更保险的方式是根据 slideNumber 查找，但在 '分页' 节点输出里可能需要确认是否有 slideNumber 字段\n  // 如果 '分页' 节点输出里有 slideNumber，用 find；如果没有，由于是并行流，通常索引 index 是一致的\n  const originalSlide = originalRawSlides.find(item => item.json.slideNumber === slideNum) || originalRawSlides[summaryItem.index];\n  const rawContent = originalSlide ? originalSlide.json.content : \"未找到原文内容\";\n\n  return {\n    json: {\n      // 基础信息\n      slideNumber: slideNum,\n      \n      // 1. 原始详情 (供 Writer 参考细节)\n      original_content: rawContent, \n      \n      // 2. 核心结构 (供 Writer 把握重点)\n      coreTheme: summaryItem.json.coreTheme,\n      keyPoints: summaryItem.json.keyPoints,\n      \n      // 3. 导演指令 (供 Writer 进行转场)\n      director_instruction: guide.transition_instruction || \"本页无特殊转场要求，请自然衔接。\",\n      mood: guide.mood || \"自然\"\n    }\n  };\n});\n\nreturn mergedItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        400
+      ],
+      "id": "ebb9f280-ed73-464c-9be7-530e60c28264",
+      "name": "3. Code_合并指南"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "ds-v3",
+          "mode": "id"
+        },
+        "responsesApiEnabled": false,
+        "options": {
+          "frequencyPenalty": 0,
+          "presencePenalty": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1760,
+        624
+      ],
+      "id": "d15611c8-b7e8-4edf-80e0-15c9c40a0815",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "nl86EcOnfFl8R9jg",
+          "name": "deepseek"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"queued\",\n  \"message\": \"任务已接收，后台处理中...\",\n  \"task_id\": \"{{ $json.query.task_id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        208,
+        -224
+      ],
+      "id": "20e84fbf-a91d-4b80-9c87-82eef2821617",
+      "name": "立即响应前端"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.30.43.199:8090/api/update_status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  // 1. 获取 Webhook 节点的数据\n  // 注意：main.py 发送的是 POST JSON，所以数据通常在 body 中\n  const webhookData = $('Webhook').first().json;\n  \n  // 2. 健壮地获取 task_id\n  // 优先查找 body 中的 task_id (main.py 的发送方式)\n  // 其次查找 query 中的 task_id (防止以后你改用 GET 请求)\n  const taskId = (webhookData.body && webhookData.body.task_id) || \n                 (webhookData.query && webhookData.query.task_id) ||\n                 (webhookData.task_id); // 有些版本的 n8n 会直接解析在根目录\n\n  // 3. 调试日志 (可选，如果 n8n 支持 console.log)\n  // console.log(\"Extracted Task ID:\", taskId);\n\n  if (!taskId) {\n      // 如果真的取不到，为了不让流程报错挂起，可以返回一个假的 ID 或者抛出明确错误\n      // 这里抛出错误会让 n8n 停止执行，方便你排查\n      throw new Error(\"无法从 Webhook 获取 task_id，请检查 trigger 数据结构\");\n  }\n\n  // 4. 返回给 HTTP Request 节点发送的数据\n  return {\n    \"task_id\": taskId, \n    \"status\": \"paginated\", // <--- 注意：不同的汇报节点要改这里的 status 字段 (如: syllabus_ready, director_finished)\n    \"data\": {\n      \"total_slides\": $('分页').all().length // <--- 注意：这里根据不同节点传不同数据\n    }\n  };\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        944,
+        -128
+      ],
+      "id": "1fc29c4d-b2ee-4afb-91eb-b13a5accc93a",
+      "name": "汇报-分页完成(修正版)",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.30.43.199:8090/api/update_status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  // 1. 获取 Webhook 数据\n  const webhookData = $('Webhook').first().json;\n  \n  // 2. 健壮获取 task_id (优先 Body, 其次 Query)\n  const taskId = (webhookData.body && webhookData.body.task_id) || \n                 (webhookData.query && webhookData.query.task_id) || \n                 webhookData.task_id;\n\n  return {\n    \"task_id\": taskId,\n    \"status\": \"syllabus_ready\",\n    \"data\": {\n      \"syllabus\": $json.syllabus\n    }\n  };\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1744,
+        96
+      ],
+      "id": "8452386d-7d1e-4d55-84af-beda685c7808",
+      "name": "汇报-大纲完成"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.30.43.199:8090/api/update_status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  // 1. 获取 Webhook 数据\n  const webhookData = $('Webhook').first().json;\n  \n  // 2. 健壮获取 task_id\n  const taskId = (webhookData.body && webhookData.body.task_id) || \n                 (webhookData.query && webhookData.query.task_id) || \n                 webhookData.task_id;\n\n  return {\n    \"task_id\": taskId,\n    \"status\": \"director_finished\",\n    \"msg\": \"导演策划已完成，开始生成逐页脚本...\"\n  };\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2256,
+        304
+      ],
+      "id": "f4f76782-e904-41e6-96b9-17160da0bea0",
+      "name": "汇报-策划完成1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.30.43.199:8090/api/update_status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  // --- A. 获取 Task ID ---\n  const webhookData = $('Webhook').first().json;\n  const taskId = (webhookData.body && webhookData.body.task_id) || \n                 (webhookData.query && webhookData.query.task_id) || \n                 webhookData.task_id;\n\n  // --- B. 获取页码 (从源头拿，保证不为 undefined) ---\n  // 回溯到循环开始的地方获取 slideNumber\n  const sourceData = $('3. Code_合并指南').item.json;\n  const slideNumber = sourceData.slideNumber;\n\n  // --- C. 获取内容 (从当前拿，保证是精修后的) ---\n  // $json.output 代表上一个节点(Editor)输出的最终文本\n  const finalScript = $json.output; \n\n  // --- D. 组装数据 ---\n  const contentKey = `slide_${slideNumber}_script`;\n\n  return {\n    \"task_id\": taskId,\n    \"status\": \"page_generated\",\n    \"data\": {\n      \"current_processing_slide\": slideNumber,\n      [contentKey]: finalScript // <--- 这里存的一定是精修后的内容！\n    }\n  };\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3536,
+        496
+      ],
+      "id": "accb7680-7307-4c23-88dc-b3487b35f3da",
+      "name": "汇报-单页进度1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.30.43.199:8090/api/update_status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  // 1. 获取 Webhook 数据\n  const webhookData = $('Webhook').first().json;\n  \n  // 2. 健壮获取 task_id\n  const taskId = (webhookData.body && webhookData.body.task_id) || \n                 (webhookData.query && webhookData.query.task_id) || \n                 webhookData.task_id;\n\n  return {\n    \"task_id\": taskId,\n    \"status\": \"completed\",\n    // 3. 【修改】不要发送 final_result 覆盖之前的数据\n    // 因为数据已经在循环中保存进数据库了，这里只标记结束即可\n    \"data\": {\n       \"finished_at\": new Date().toISOString(),\n       \"msg\": \"所有页面脚本生成完毕\"\n    }\n  };\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2896,
+        -32
+      ],
+      "id": "25f4d14c-a342-4f3c-9028-a06c6da381b7",
+      "name": "汇报-全部完成1"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.body.file_path }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        208,
+        -32
+      ],
+      "id": "673a6944-83bc-4050-87b5-b48059cdfe4b",
+      "name": "Read/Write Files from Disk1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "立即响应前端",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PowerPoint to Text": {
+      "main": [
+        [
+          {
+            "node": "分页",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "提炼核心-格式化输出",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "1. Code_聚合大纲",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "1. Writer_初稿生成",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "分页": {
+      "main": [
+        [
+          {
+            "node": "提炼核心-格式化输出",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "汇报-分页完成(修正版)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "汇报-全部完成1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "1. Writer_初稿生成": {
+      "main": [
+        [
+          {
+            "node": "2. Critic_毒舌教官",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Critic_毒舌教官": {
+      "main": [
+        [
+          {
+            "node": "3. Editor_最终精修",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Editor_最终精修": {
+      "main": [
+        [
+          {
+            "node": "汇报-单页进度1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "1. Writer_初稿生成",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "2. Critic_毒舌教官",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "3. Editor_最终精修",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提炼核心-格式化输出": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Code_聚合大纲": {
+      "main": [
+        [
+          {
+            "node": "2. Agent_导演策划",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "汇报-大纲完成",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Agent_导演策划": {
+      "main": [
+        [
+          {
+            "node": "3. Code_合并指南",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Code_合并指南": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "汇报-策划完成1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "2. Agent_导演策划",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "汇报-单页进度1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        [
+          {
+            "node": "PowerPoint to Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "5b0cc801-342d-48db-b524-3279264c100c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b6e3e67acb272585c6a2d135289e37878fdf38c41cff22bf56b4bb8208937c25"
+  },
+  "id": "cZecpsPwRk7NJMj4",
+  "tags": []
+}

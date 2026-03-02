@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI能力画像助手</title>
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Inter字体 -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* 自定义加载动画 */
+        .spinner {
+            border-top-color: #3498db;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 表格单元格样式 */
+        th,
+        td {
+            @apply px-4 py-3 text-left text-sm whitespace-nowrap;
+            /* 防止内容自动换行导致太挤，建议横向滚动 */
+        }
+
+        th {
+            @apply font-semibold bg-gray-100 sticky top-0 z-10;
+            /* 表头固定 */
+        }
+
+        td {
+            @apply border-b border-gray-200 align-top whitespace-normal;
+            /* 内容允许换行 */
+            min-width: 150px;
+            /* 设置最小宽度 */
+        }
+
+        /* 特定列宽调整 */
+        .col-min-w {
+            min-width: 120px;
+        }
+
+        .col-md-w {
+            min-width: 180px;
+        }
+
+        .col-lg-w {
+            min-width: 250px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4 md:p-8">
+
+    <div class="w-full max-w-[95%] bg-white rounded-xl shadow-2xl p-6 md:p-10 flex flex-col h-[90vh]">
+
+        <!-- 标题和描述 -->
+        <div class="text-center mb-6 flex-none">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">AI能力画像文档整理助手 (专业版)</h1>
+            <p class="text-gray-600">粘贴6列项目数据，AI将自动生成标准化的能力画像字段 (G-K列)。</p>
+        </div>
+
+        <!-- 1. 输入区域 -->
+        <div class="mb-6 flex-none">
+            <label for="inputData" class="block text-sm font-medium text-gray-700 mb-2">粘贴表格数据 (A:项目名称, B:工厂, C:目标,
+                D:收益, E:OK图描述, F:NG图描述)</label>
+            <textarea id="inputData" rows="6"
+                class="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                placeholder="示例:
+项目A	工厂B	目标C	收益D	OK图E	NG图F
+项目X	工厂Y	目标Z	收益W	OK图V	NG图U
+..."></textarea>
+        </div>
+
+        <!-- 2. 控制按钮 -->
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6 flex-none">
+            <button id="processButton"
+                class="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 ease-in-out flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 001.414 1.414L9 11.414V14a1 1 0 102 0v-2.586l.293.293a1 1 0 001.414-1.414l-3-3z"
+                        clip-rule="evenodd" />
+                </svg>
+                开始逐行处理
+            </button>
+            <button id="copyButton"
+                class="w-full sm:w-auto px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 ease-in-out flex items-center justify-center gap-2"
+                style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                复制完整结果 (TSV)
+            </button>
+        </div>
+
+        <!-- 3. 状态和消息提示 -->
+        <div id="statusMessage" class="text-center mb-4 h-6 flex-none text-sm font-medium">
+            <!-- 状态信息将在这里显示 -->
+        </div>
+
+        <!-- 4. 输出表格 (可滚动) -->
+        <div class="flex-1 overflow-auto rounded-lg border border-gray-200 shadow-sm bg-gray-50 relative">
+            <table class="divide-y divide-gray-200" id="resultTable">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <!-- 输入列 -->
+                        <th class="col-min-w text-gray-500">A: 项目名称</th>
+                        <th class="col-min-w text-gray-500">B: 工厂名称</th>
+                        <th class="col-min-w text-gray-500">C: 项目目标</th>
+                        <th class="col-min-w text-gray-500">D: 收益描述</th>
+                        <th class="col-min-w text-gray-500">E: OK图片描述</th>
+                        <th class="col-min-w text-gray-500">F: NG图片描述</th>
+                        <!-- AI 输出列 -->
+                        <th class="col-md-w text-blue-700 bg-blue-50 border-l border-blue-100">G: 应用场景简述</th>
+                        <th class="col-md-w text-blue-700 bg-blue-50">H: 处理对象 (输入)</th>
+                        <th class="col-lg-w text-blue-700 bg-blue-50">I: 核心功能</th>
+                        <th class="col-md-w text-blue-700 bg-blue-50">J: 输出形式/接口</th>
+                        <th class="col-min-w text-blue-700 bg-blue-50">K: 部署方式</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="resultBody">
+                    <!-- 结果将在这里动态插入 -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 隐藏的文本区域，用于复制 -->
+        <textarea id="copyHelper" class="absolute -left-full"></textarea>
+
+    </div>
+
+    <script type="module">
+        // 获取DOM元素
+        const inputDataEl = document.getElementById('inputData');
+        const processButton = document.getElementById('processButton');
+        const copyButton = document.getElementById('copyButton');
+        const statusMessageEl = document.getElementById('statusMessage');
+        const resultBodyEl = document.getElementById('resultBody');
+        const copyHelperEl = document.getElementById('copyHelper');
+
+        // AI处理逻辑
+        processButton.addEventListener('click', async () => {
+            const inputText = inputDataEl.value.trim();
+            if (!inputText) {
+                showStatus('请输入数据后再试。', 'error');
+                return;
+            }
+
+            // 解析输入数据 (按行分割，再按Tab或逗号分割)
+            // 支持 Excel 直接粘贴 (Tab分隔) 或 CSV (逗号分隔)
+            const rows = inputText.split('\n')
+                .filter(row => row.trim() !== '')
+                .map(row => {
+                    // 优先尝试 Tab 分割，因为 Excel 粘贴是 Tab
+                    if (row.includes('\t')) return row.split('\t');
+                    return row.split(','); // 否则尝试逗号
+                });
+
+            // 验证输入格式，至少要有前几列，建议6列齐全，但允许部分缺失
+            if (rows.some(row => row.length < 3)) {
+                showStatus('警告：检测到部分行数据列数过少，可能导致分析不准确。建议提供完整的 A-F 列数据。', 'loading');
+                // 不return，继续尝试处理
+            }
+
+            // 禁用按钮，清空旧数据
+            setLoading(true);
+            resultBodyEl.innerHTML = '';
+            copyButton.style.display = 'none';
+            let processedCount = 0;
+
+            // 逐行处理
+            for (const row of rows) {
+                // 解构输入数据，处理可能的 undefined
+                const projectName = row[0] || '';
+                const factory = row[1] || '';
+                const goal = row[2] || '';
+                const benefit = row[3] || '';
+                const okDesc = row[4] || '';
+                const ngDesc = row[5] || '';
+
+                // 更新状态
+                showStatus(`正在分析第 ${processedCount + 1} / ${rows.length} 行: ${projectName}...`, 'loading');
+
+                try {
+                    // 调用Gemini API
+                    const aiResult = await callGeminiAPI(projectName, factory, goal, benefit, okDesc, ngDesc);
+
+                    // 创建并插入新行
+                    const newRow = createResultRow(projectName, factory, goal, benefit, okDesc, ngDesc, aiResult);
+                    resultBodyEl.appendChild(newRow);
+
+                    processedCount++;
+
+                    // 滚动到底部
+                    const container = document.querySelector('.overflow-auto');
+                    container.scrollTop = container.scrollHeight;
+
+                } catch (error) {
+                    console.error('API call failed:', error);
+                    showStatus(`处理 "${projectName}" 时出错: ${error.message}`, 'error');
+                    // 即使出错也继续处理下一行
+                    const errorRow = createErrorRow(projectName, factory, goal, benefit, okDesc, ngDesc, error.message);
+                    resultBodyEl.appendChild(errorRow);
+                }
+            }
+
+            // 处理完成
+            setLoading(false);
+            showStatus(`处理完成！共 ${processedCount} / ${rows.length} 行成功。`, 'success');
+            if (processedCount > 0) {
+                copyButton.style.display = 'flex';
+            }
+        });
+
+        // 复制按钮逻辑
+        copyButton.addEventListener('click', () => {
+            let tsvContent = "A: 项目名称\tB: 工厂名称\tC: 项目目标\tD: 收益描述\tE: OK图片描述\tF: NG图片描述\tG: 应用场景简述\tH: 处理对象 (输入)\tI: 核心功能\tJ: 输出形式/接口\tK: 部署方式\n";
+
+            const rows = resultBodyEl.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                // 确保我们获取到了所有列（输入+输出）
+                if (cells.length >= 11) {
+                    const rowData = Array.from(cells).map(cell => {
+                        // 特殊处理核心功能列（可能是列表）
+                        if (cell.querySelector('ul')) {
+                            const items = Array.from(cell.querySelectorAll('li')).map(li => li.textContent);
+                            return `"${items.join('; ')}"`;
+                        }
+                        // 处理换行和引号，适配Excel格式
+                        return `"${cell.textContent.trim().replace(/"/g, '""')}"`;
+                    });
+                    tsvContent += rowData.join('\t') + '\n';
+                }
+            });
+
+            copyHelperEl.value = tsvContent;
+            copyHelperEl.select();
+
+            try {
+                document.execCommand('copy');
+                showStatus('完整数据已复制到剪贴板，可直接粘贴回Excel!', 'success');
+            } catch (err) {
+                console.error('复制失败: ', err);
+                showStatus('复制失败。请检查浏览器权限。', 'error');
+            }
+        });
+
+
+        // -----------------------------
+        // Gemini API 调用函数
+        // -----------------------------
+
+        /**
+         * 调用Gemini API分析项目
+         */
+        async function callGeminiAPI(projectName, factory, goal, benefit, okDesc, ngDesc) {
+            // 定义AI的角色和任务
+            const systemPrompt = `你是一名专业的AI能力文档整理助手。
+你的任务是根据提供的项目基础信息（项目名称、工厂、目标、收益、图片描述），严格按照“图像AI能力画像”的客观、中立、描述性风格输出分析结果。
+
+输入信息包含：
+- 项目名称、工厂名称、项目目标
+- 收益描述（辅助判断价值点）
+- OK图片描述（良品特征）
+- NG图片描述（不良品特征，用于推断检测功能）
+
+请生成以下5个字段：
+1. "applicationScenario" (G列): 用一句话总结该项目的实际应用场景，突出业务背景但避免主观价值评估（如“太棒了”等词汇）。
+2. "processingObject" (H列): 说明该AI项目接收的图像或视频来源，例如“工业相机拍摄的PCB板静态图像”。
+3. "coreFunctions" (I列): 基于目标和NG/OK图片描述，拆解出具体功能点（如“划痕检测”、“异物识别”、“存在性验证”等）。必须是数组。
+4. "outputFormat" (J列): 说明系统输出的形式，包括数据格式、接口协议（如TCP/Modbus）、联动设备（如PLC停机）等。
+5. "deploymentMethod" (K列): 描述部署形态（如工控机、服务器、端侧设备）和硬件依赖。如无明确信息，返回“未明确”。
+
+请严格返回JSON格式。`;
+
+            // 定义API的JSON Schema
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    "applicationScenario": { "type": "STRING" },
+                    "processingObject": { "type": "STRING" },
+                    "coreFunctions": {
+                        "type": "ARRAY",
+                        "items": { "type": "STRING" }
+                    },
+                    "outputFormat": { "type": "STRING" },
+                    "deploymentMethod": { "type": "STRING" }
+                },
+                required: ["applicationScenario", "processingObject", "coreFunctions", "outputFormat", "deploymentMethod"]
+            };
+
+            // 构建用户查询
+            const userQuery = `分析以下项目：
+- 项目名称: ${projectName}
+- 工厂名称: ${factory}
+- 项目目标: ${goal}
+- 收益描述: ${benefit}
+- OK图片描述: ${okDesc}
+- NG图片描述: ${ngDesc}`;
+
+            // ---- API 请求 ----
+            const apiKey = ""; // 在Canvas环境中会自动提供
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                    temperature: 0.1
+                }
+            };
+
+            // 重试逻辑
+            let response;
+            let retries = 3;
+            let delay = 1000;
+
+            while (retries > 0) {
+                try {
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        break;
+                    } else if (response.status === 429) {
+                        throw new Error(`Rate limited. Retrying in ${delay / 1000}s...`);
+                    } else {
+                        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                    }
+
+                } catch (error) {
+                    console.warn(error.message);
+                    retries--;
+                    if (retries === 0) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+
+            const result = await response.json();
+
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0].text) {
+                const jsonText = result.candidates[0].content.parts[0].text;
+                return JSON.parse(jsonText);
+            } else {
+                console.error("Invalid API response structure:", result);
+                throw new Error("未从AI获取到有效的内容结构。");
+            }
+        }
+
+        // -----------------------------
+        // UI 辅助函数
+        // -----------------------------
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                processButton.disabled = true;
+                processButton.innerHTML = `
+                    <div class="spinner w-5 h-5 border-2 border-white border-solid rounded-full"></div>
+                    处理中...
+                `;
+            } else {
+                processButton.disabled = false;
+                processButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 001.414 1.414L9 11.414V14a1 1 0 102 0v-2.586l.293.293a1 1 0 001.414-1.414l-3-3z" clip-rule="evenodd" />
+                    </svg>
+                    开始逐行处理
+                `;
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            statusMessageEl.textContent = message;
+            statusMessageEl.classList.remove('text-red-600', 'text-green-600', 'text-gray-600', 'text-blue-600');
+            switch (type) {
+                case 'error': statusMessageEl.classList.add('text-red-600'); break;
+                case 'success': statusMessageEl.classList.add('text-green-600'); break;
+                case 'loading': statusMessageEl.classList.add('text-blue-600'); break;
+                default: statusMessageEl.classList.add('text-gray-600');
+            }
+        }
+
+        function createResultRow(a, b, c, d, e, f, aiResult) {
+            const tr = document.createElement('tr');
+            tr.classList.add('hover:bg-gray-50');
+
+            const functionsList = aiResult.coreFunctions.length > 0
+                ? `<ul class="list-disc list-inside">${aiResult.coreFunctions.map(func => `<li>${escapeHTML(func)}</li>`).join('')}</ul>`
+                : '<span>未明确</span>';
+
+            tr.innerHTML = `
+                <!-- 输入列展示 -->
+                <td class="text-gray-600">${escapeHTML(a)}</td>
+                <td class="text-gray-600">${escapeHTML(b)}</td>
+                <td class="text-gray-600">${escapeHTML(c)}</td>
+                <td class="text-gray-600 text-xs">${escapeHTML(d)}</td>
+                <td class="text-gray-600 text-xs">${escapeHTML(e)}</td>
+                <td class="text-gray-600 text-xs">${escapeHTML(f)}</td>
+                
+                <!-- 输出列展示 -->
+                <td class="bg-blue-50 bg-opacity-30 border-l border-blue-100 font-medium text-gray-800">${escapeHTML(aiResult.applicationScenario)}</td>
+                <td class="bg-blue-50 bg-opacity-30">${escapeHTML(aiResult.processingObject)}</td>
+                <td class="bg-blue-50 bg-opacity-30" id="core-functions">${functionsList}</td>
+                <td class="bg-blue-50 bg-opacity-30">${escapeHTML(aiResult.outputFormat)}</td>
+                <td class="bg-blue-50 bg-opacity-30">${escapeHTML(aiResult.deploymentMethod)}</td>
+            `;
+            return tr;
+        }
+
+        function createErrorRow(a, b, c, d, e, f, errorMsg) {
+            const tr = document.createElement('tr');
+            tr.classList.add('bg-red-50', 'text-red-700');
+            tr.innerHTML = `
+                <td>${escapeHTML(a)}</td>
+                <td>${escapeHTML(b)}</td>
+                <td>${escapeHTML(c)}</td>
+                <td>${escapeHTML(d)}</td>
+                <td>${escapeHTML(e)}</td>
+                <td>${escapeHTML(f)}</td>
+                <td colspan="5" class="text-center font-medium border-l border-red-200">处理失败: ${escapeHTML(errorMsg)}</td>
+            `;
+            return tr;
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.toString().replace(/[&<>"']/g, function (match) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[match];
+            });
+        }
+
+    </script>
+</body>
+
+</html>
