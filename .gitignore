@@ -57,3 +57,9 @@ auto-py-to-exe/
 
 # 忽略 .dotnet
 **/.dotnet/
+
+# 在 .gitignore 末尾追加
+**/build/
+**/dist/
+*.spec
+**/log/*.txt
