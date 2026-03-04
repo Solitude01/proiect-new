@@ -1,0 +1,1 @@
+curl --digest -u admin:wdzn6688 "http://10.30.5.112:80/ISAPI/ContentMgmt/download?playbackURI=rtsp://10.30.5.112:554/Streaming/tracks/101?starttime=20260302T160620Z%26endtime=20260302T160640Z" -o ch1_20260302T160620Z_20260302T160640Z.mp4

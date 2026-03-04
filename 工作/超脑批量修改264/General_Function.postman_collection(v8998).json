@@ -1,0 +1,1942 @@
+{
+	"info": {
+		"_postman_id": "19c1cbad-7fa5-44f9-ad6d-a4960d3ca8ca",
+		"name": "0-General_Function",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "9079855",
+		"_collection_link": "https://universal-spaceship-476997.postman.co/workspace/SVN%25E6%258F%2590%25E4%25BA%25A4~2795301d-6398-48f6-9940-dc2b7f15bfa6/collection/9079855-19c1cbad-7fa5-44f9-ad6d-a4960d3ca8ca?action=share&source=collection_link&creator=9079855"
+	},
+	"item": [
+		{
+			"name": "设备通用",
+			"item": [
+				{
+					"name": "获取设备信息",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{ip}}:{{port}}/ISAPI/System/deviceInfo",
+							"protocol": "http",
+							"host": [
+								"{{ip}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"ISAPI",
+								"System",
+								"deviceInfo"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "获取设备校时管理参数",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{ip}}:{{port}}/ISAPI/System/time",
+							"protocol": "http",
+							"host": [
+								"{{ip}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"ISAPI",
+								"System",
+								"time"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "配置设备校时管理参数",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r\n<Time version=\"2.0\" xmlns=\"http://www.isapi.org/ver20/XMLSchema\">\r\n    <timeMode>manual</timeMode>\r\n    <localTime>2024-06-05T15:42:10+08:00</localTime>\r\n    <timeZone>CST-8:00:00</timeZone>\r\n</Time>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{ip}}:{{port}}/ISAPI/System/time",
+							"protocol": "http",
+							"host": [
+								"{{ip}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"ISAPI",
+								"System",
+								"time"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "视频通道资源管理",
+			"item": [
+				{
+					"name": "IP数字通道(非模拟通道，硬盘录像机等后端设备支持)",
+					"item": [
+						{
+							"name": "获取所有数字通道接入参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/InputProxy/channels",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"ContentMgmt",
+										"InputProxy",
+										"channels"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "创建数字通道",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<InputProxyChannel xmlns=\"http://www.isapi.org/ver20/XMLSchema\" version=\"2.0\">\r\n    <id>0</id>\r\n    <quickAdd>false</quickAdd>\r\n    <sourceInputPortDescriptor>\r\n        <proxyProtocol>HIKVISION</proxyProtocol>\r\n        <getStream>true</getStream>\r\n        <addressingFormatType>ipaddress</addressingFormatType>\r\n        <ipAddress>10.19.36.22</ipAddress>\r\n        <managePortNo/>\r\n        <srcInputPort>1</srcInputPort>\r\n        <userName>admin</userName>\r\n        <password>abcd1234</password>\r\n        <streamType>auto</streamType>\r\n    </sourceInputPortDescriptor>\r\n    <certificateValidationEnabled>false</certificateValidationEnabled>\r\n    <defaultAdminPortEnabled>true</defaultAdminPortEnabled>\r\n</InputProxyChannel>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/InputProxy/channels",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"ContentMgmt",
+										"InputProxy",
+										"channels"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置所有数字通道接入参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r\n<InputProxyChannelList version=\"2.0\" xmlns=\"http://www.isapi.org/ver20/XMLSchema\" size=\"6\">\r\n    <InputProxyChannel>\r\n        <id>1</id>\r\n        <sourceInputPortDescriptor>\r\n            <proxyProtocol>HIKVISION</proxyProtocol>\r\n            <addressingFormatType>ipaddress</addressingFormatType>\r\n            <ipAddress>10.19.36.13</ipAddress>\r\n            <managePortNo>8000</managePortNo>\r\n            <srcInputPort>1</srcInputPort>\r\n            <userName>admin</userName>\r\n            <password>abcd1234</password>\r\n            <streamType>auto</streamType>\r\n            <deviceID></deviceID>\r\n            <getStream>true</getStream>\r\n        </sourceInputPortDescriptor>\r\n        <certificateValidationEnabled>false</certificateValidationEnabled>\r\n        <defaultAdminPortEnabled>true</defaultAdminPortEnabled>\r\n        <enableAnr>false</enableAnr>\r\n        <enableTiming>true</enableTiming>\r\n    </InputProxyChannel>\r\n    <InputProxyChannel>\r\n        <id>2</id>\r\n        <sourceInputPortDescriptor>\r\n            <proxyProtocol>HIKVISION</proxyProtocol>\r\n            <addressingFormatType>ipaddress</addressingFormatType>\r\n            <ipAddress>10.19.36.22</ipAddress>\r\n            <managePortNo>8000</managePortNo>\r\n            <srcInputPort>1</srcInputPort>\r\n            <userName>admin</userName>\r\n            <password>abcd1234</password>\r\n            <streamType>auto</streamType>\r\n            <deviceID></deviceID>\r\n            <getStream>true</getStream>\r\n        </sourceInputPortDescriptor>\r\n        <certificateValidationEnabled>false</certificateValidationEnabled>\r\n        <defaultAdminPortEnabled>true</defaultAdminPortEnabled>\r\n        <enableAnr>false</enableAnr>\r\n        <enableTiming>true</enableTiming>\r\n    </InputProxyChannel>\r\n</InputProxyChannelList>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/InputProxy/channels",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"ContentMgmt",
+										"InputProxy",
+										"channels"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取单个数字通道接入参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/InputProxy/channels/1",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"ContentMgmt",
+										"InputProxy",
+										"channels",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置单个数字通道接入参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r\n<InputProxyChannel version=\"2.0\" xmlns=\"http://www.isapi.org/ver20/XMLSchema\">\r\n    <id>1</id>\r\n    <sourceInputPortDescriptor>\r\n        <proxyProtocol>HIKVISION</proxyProtocol>\r\n        <addressingFormatType>ipaddress</addressingFormatType>\r\n        <ipAddress>10.19.36.13</ipAddress>\r\n        <managePortNo>8000</managePortNo>\r\n        <srcInputPort>1</srcInputPort>\r\n        <userName>admin</userName>\r\n        <password>abcd1234</password>\r\n        <streamType>auto</streamType>\r\n        <deviceID></deviceID>\r\n        <getStream>true</getStream>\r\n    </sourceInputPortDescriptor>\r\n    <certificateValidationEnabled>false</certificateValidationEnabled>\r\n    <defaultAdminPortEnabled>true</defaultAdminPortEnabled>\r\n    <enableAnr>false</enableAnr>\r\n    <enableTiming>true</enableTiming>\r\n</InputProxyChannel>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/InputProxy/channels/1",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"ContentMgmt",
+										"InputProxy",
+										"channels",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "删除单个数字通道参数",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/InputProxy/channels/1",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"ContentMgmt",
+										"InputProxy",
+										"channels",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取所有数字通道状态",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/InputProxy/channels/status",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"ContentMgmt",
+										"InputProxy",
+										"channels",
+										"status"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "云台控制",
+			"item": [
+				{
+					"name": "云台基本控制",
+					"item": [
+						{
+							"name": "获取指定云台通道参数能力",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/capabilities",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"capabilities"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "手动控制指定通道云台转动",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<PTZData xmlns=\"http://www.isapi.org/ver20/XMLSchema\" version=\"2.0\">\r\n  <pan>50</pan>\r\n  <tilt>0</tilt>\r\n  <zoom>0</zoom>\r\n</PTZData>\r\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/continuous",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"continuous"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道视频聚焦",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<FocusData xmlns=\"http://www.isapi.org/ver20/XMLSchema\" version=\"2.0\">\r\n  <focus>50</focus>\r\n</FocusData>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/System/Video/inputs/channels/1/focus",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"System",
+										"Video",
+										"inputs",
+										"channels",
+										"1",
+										"focus"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道镜头光圈参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<IrisData xmlns=\"http://www.isapi.org/ver20/XMLSchema\" version=\"2.0\">\r\n  <iris>50</iris>\r\n</IrisData>\r\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/System/Video/inputs/channels/1/iris",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"System",
+										"Video",
+										"inputs",
+										"channels",
+										"1",
+										"iris"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "预置点",
+					"item": [
+						{
+							"name": "获取全部预置点参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/presets",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"presets"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置单一预置点参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<PTZPreset xmlns=\"http://www.isapi.org/ver20/XMLSchema\" version=\"2.0\">\r\n  <enabled>true</enabled>\r\n  <id>1</id>\r\n  <presetName>预置点 1</presetName>\r\n</PTZPreset>\r\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/presets/1",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"presets",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置单一预置点控制",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/presets/1/goto",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"presets",
+										"1",
+										"goto"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "删除单一预置点参数",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/presets/1",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"presets",
+										"1"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "PTZ/3D定位",
+					"item": [
+						{
+							"name": "获取指定通道云台绝对PTZ运动信息",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/status",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"status"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道云台绝对运动参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<PTZData xmlns=\"http://www.isapi.org/ver20/XMLSchema\" version=\"2.0\">\r\n  <AbsoluteHigh>\r\n    <elevation>202</elevation>\r\n    <azimuth>1472</azimuth>\r\n    <absoluteZoom>20</absoluteZoom>\r\n  </AbsoluteHigh>\r\n</PTZData>\r\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/absolute",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"absolute"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道云台3D定位参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<Position3D xmlns=\"http://www.isapi.org/ver20/XMLSchema\" version=\"2.0\">\r\n  <StartPoint>\r\n    <positionX>50</positionX>\r\n    <positionY>200</positionY>\r\n  </StartPoint>\r\n  <EndPoint>\r\n    <positionX>200</positionX>\r\n    <positionY>50</positionY>\r\n  </EndPoint>\r\n</Position3D>\r\n",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/position3D",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"position3D"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "巡航/扫描/守望",
+					"item": [
+						{
+							"name": "获取指定通道巡航路径管理能力",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patrols/capabilities",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patrols",
+										"capabilities"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道所有巡航路径参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patrols",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patrols"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道单个巡航路径参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patrols/1",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patrols",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道单个巡航路径参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<PTZPatrol version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <enabled>true</enabled>\r\n    <id>1</id>\r\n    <patrolName>1</patrolName>\r\n    <PatrolSequenceList>\r\n        <PatrolSequence>\r\n            <presetID>1</presetID>\r\n            <seqSpeed>30</seqSpeed>\r\n            <delay>15</delay>\r\n        </PatrolSequence>\r\n        <PatrolSequence>\r\n            <presetID>2</presetID>\r\n            <seqSpeed>30</seqSpeed>\r\n            <delay>15</delay>\r\n        </PatrolSequence>\r\n    </PatrolSequenceList>\r\n</PTZPatrol>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patrols/1",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patrols",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "开启指定通道单个巡航路径巡航",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patrols/1/start",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patrols",
+										"1",
+										"start"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "关闭指定通道单个巡航路径巡航",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patrols/1/stop",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patrols",
+										"1",
+										"stop"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "删除指定通道单个巡航路径参数",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patrols/1",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patrols",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道全部花样扫描路径参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patterns",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patterns"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "开始指定通道单一扫描路径记录",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patterns/1/recordstart",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patterns",
+										"1",
+										"recordstart"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "停止指定通道单一扫描路径记录",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patterns/1/recordstop",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patterns",
+										"1",
+										"recordstop"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "开始指定通道单一扫描路径运动",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patterns/1/start",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patterns",
+										"1",
+										"start"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "停止指定通道单一扫描路径运动",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patterns/1/stop",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patterns",
+										"1",
+										"stop"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "删除指定通道单一花样扫描路径参数",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/patterns/1",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"patterns",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道云台守望控制参数能力",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/parkaction/capabilities",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"parkaction",
+										"capabilities"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道云台守望控制参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/parkaction",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"parkaction"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道云台守望控制参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<ParkAction version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <enabled>true</enabled>\r\n    <Parktime>60</Parktime>\r\n    <Action>\r\n        <ActionType>preset</ActionType>\r\n        <ActionNum>1</ActionNum>\r\n    </Action>\r\n</ParkAction>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/PTZCtrl/channels/1/parkaction",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"PTZCtrl",
+										"channels",
+										"1",
+										"parkaction"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "字符叠加",
+			"item": [
+				{
+					"name": "前端设备(摄像头等)",
+					"item": [
+						{
+							"name": "获取指定通道字符叠加参数能力",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/System/Video/inputs/channels/1/overlays/capabilities",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"System",
+										"Video",
+										"inputs",
+										"channels",
+										"1",
+										"overlays",
+										"capabilities"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道字符叠加参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/System/Video/inputs/channels/1/overlays",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"System",
+										"Video",
+										"inputs",
+										"channels",
+										"1",
+										"overlays"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道字符叠加参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<VideoOverlay version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <normalizedScreenSize>\r\n        <normalizedScreenWidth>704</normalizedScreenWidth>\r\n        <normalizedScreenHeight>576</normalizedScreenHeight>\r\n    </normalizedScreenSize>\r\n    <attribute>\r\n        <transparent>false</transparent>\r\n        <flashing>false</flashing>\r\n    </attribute>\r\n    <TextOverlayList size=\"4\">\r\n        <TextOverlay>\r\n            <id>1</id>\r\n            <enabled>true</enabled>\r\n            <positionX>0</positionX>\r\n            <positionY>256</positionY>\r\n            <displayText>测试字符叠加1</displayText>\r\n            <directAngle></directAngle>\r\n            <isPersistentText>true</isPersistentText>\r\n        </TextOverlay>\r\n        <TextOverlay>\r\n            <id>2</id>\r\n            <enabled>true</enabled>\r\n            <positionX>3</positionX>\r\n            <positionY>208</positionY>\r\n            <displayText>测试字符叠加2</displayText>\r\n            <directAngle></directAngle>\r\n            <isPersistentText>true</isPersistentText>\r\n        </TextOverlay>\r\n    </TextOverlayList>\r\n    <DateTimeOverlay>\r\n        <enabled>true</enabled>\r\n        <positionX>0</positionX>\r\n        <positionY>544</positionY>\r\n        <dateStyle>CHR-YYYY-MM-DD</dateStyle>\r\n        <timeStyle>24hour</timeStyle>\r\n        <displayWeek>true</displayWeek>\r\n    </DateTimeOverlay>\r\n    <channelNameOverlay>\r\n        <enabled>true</enabled>\r\n        <positionX>612</positionX>\r\n        <positionY>64</positionY>\r\n        <name></name>\r\n    </channelNameOverlay>\r\n    <fontSize>adaptive</fontSize>\r\n    <frontColorMode>auto</frontColorMode>\r\n    <frontColor>000000</frontColor>\r\n    <alignment>customize</alignment>\r\n    <boundary>1</boundary>\r\n    <upDownboundary>0</upDownboundary>\r\n    <leftRightboundary>0</leftRightboundary>\r\n</VideoOverlay>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/System/Video/inputs/channels/1/overlays",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"System",
+										"Video",
+										"inputs",
+										"channels",
+										"1",
+										"overlays"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "后端设备(硬盘录像机等)",
+					"item": [
+						{
+							"name": "获取指定数字通道叠加参数能力",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/InputProxy/channels/1/video/overlays/capabilities",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"ContentMgmt",
+										"InputProxy",
+										"channels",
+										"1",
+										"video",
+										"overlays",
+										"capabilities"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定数字通道叠加参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/InputProxy/channels/1/video/overlays",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"ContentMgmt",
+										"InputProxy",
+										"channels",
+										"1",
+										"video",
+										"overlays"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定数字通道叠加参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r\n<VideoOverlay version=\"2.0\" xmlns=\"http://www.isapi.org/ver20/XMLSchema\">\r\n    <normalizedScreenSize>\r\n        <normalizedScreenWidth>704</normalizedScreenWidth>\r\n        <normalizedScreenHeight>576</normalizedScreenHeight>\r\n    </normalizedScreenSize>\r\n    <attribute>\r\n        <transparent>false</transparent>\r\n        <flashing>false</flashing>\r\n    </attribute>\r\n    <TextOverlayList size=\"7\">\r\n        <TextOverlay>\r\n            <id>1</id>\r\n            <enabled>true</enabled>\r\n            <positionX>0.000000</positionX>\r\n            <positionY>256.000000</positionY>\r\n            <displayText>测试字符叠加1</displayText>\r\n        </TextOverlay>\r\n        <TextOverlay>\r\n            <id>2</id>\r\n            <enabled>true</enabled>\r\n            <positionX>0.000000</positionX>\r\n            <positionY>208.000000</positionY>\r\n            <displayText>测试字符叠加2</displayText>\r\n        </TextOverlay>\r\n    </TextOverlayList>\r\n    <DateTimeOverlay>\r\n        <enabled>true</enabled>\r\n        <positionX>0</positionX>\r\n        <positionY>560</positionY>\r\n        <dateStyle>CHR-YYYY-MM-DD</dateStyle>\r\n        <timeStyle>24hour</timeStyle>\r\n        <displayWeek>true</displayWeek>\r\n    </DateTimeOverlay>\r\n    <channelNameOverlay>\r\n        <enabled>false</enabled>\r\n        <positionX>512</positionX>\r\n        <positionY>96</positionY>\r\n    </channelNameOverlay>\r\n</VideoOverlay>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/InputProxy/channels/1/video/overlays",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"ContentMgmt",
+										"InputProxy",
+										"channels",
+										"1",
+										"video",
+										"overlays"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "视音频&图像参数",
+			"item": [
+				{
+					"name": "视音频",
+					"item": [
+						{
+							"name": "获取指定通道编码参数能力",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Streaming/channels/101/capabilities",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Streaming",
+										"channels",
+										"101",
+										"capabilities"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道编码参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Streaming/channels/101",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Streaming",
+										"channels",
+										"101"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道编码参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<StreamingChannel version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <id>101</id>\r\n    <channelName>Camera 01</channelName>\r\n    <enabled>true</enabled>\r\n    <Transport>\r\n        <maxPacketSize>1000</maxPacketSize>\r\n        <ControlProtocolList>\r\n            <ControlProtocol>\r\n                <streamingTransport>RTSP</streamingTransport>\r\n            </ControlProtocol>\r\n            <ControlProtocol>\r\n                <streamingTransport>HTTP</streamingTransport>\r\n            </ControlProtocol>\r\n            <ControlProtocol>\r\n                <streamingTransport>SHTTP</streamingTransport>\r\n            </ControlProtocol>\r\n            <ControlProtocol>\r\n                <streamingTransport>SRTP</streamingTransport>\r\n            </ControlProtocol>\r\n        </ControlProtocolList>\r\n        <Unicast>\r\n            <enabled>true</enabled>\r\n            <rtpTransportType>RTP/TCP</rtpTransportType>\r\n        </Unicast>\r\n        <Multicast>\r\n            <enabled>true</enabled>\r\n            <destIPAddress>0.0.0.0</destIPAddress>\r\n            <videoDestPortNo>8860</videoDestPortNo>\r\n            <audioDestPortNo>8862</audioDestPortNo>\r\n        </Multicast>\r\n        <Security>\r\n            <enabled>true</enabled>\r\n            <certificateType>digest</certificateType>\r\n            <SecurityAlgorithm>\r\n                <algorithmType>MD5</algorithmType>\r\n            </SecurityAlgorithm>\r\n        </Security>\r\n        <SRTPMulticast>\r\n            <SRTPVideoDestPortNo>18862</SRTPVideoDestPortNo>\r\n            <SRTPAudioDestPortNo>18860</SRTPAudioDestPortNo>\r\n        </SRTPMulticast>\r\n    </Transport>\r\n    <Video>\r\n        <enabled>true</enabled>\r\n        <videoInputChannelID>1</videoInputChannelID>\r\n        <videoCodecType>H.264</videoCodecType>\r\n        <videoScanType>progressive</videoScanType>\r\n        <videoResolutionWidth>1920</videoResolutionWidth>\r\n        <videoResolutionHeight>1080</videoResolutionHeight>\r\n        <videoQualityControlType>CBR</videoQualityControlType>\r\n        <constantBitRate>4096</constantBitRate>\r\n        <fixedQuality>60</fixedQuality>\r\n        <maxFrameRate>2500</maxFrameRate>\r\n        <keyFrameInterval>2000</keyFrameInterval>\r\n        <snapShotImageType>JPEG</snapShotImageType>\r\n        <H264Profile>Main</H264Profile>\r\n        <GovLength>50</GovLength>\r\n        <SVC>\r\n            <enabled>false</enabled>\r\n        </SVC>\r\n        <PacketType>PS</PacketType>\r\n        <PacketType>RTP</PacketType>\r\n        <smoothing>50</smoothing>\r\n        <H265Profile>Main</H265Profile>\r\n        <SmartCodec>\r\n            <enabled>false</enabled>\r\n        </SmartCodec>\r\n    </Video>\r\n    <Audio>\r\n        <enabled>true</enabled>\r\n        <audioInputChannelID>1</audioInputChannelID>\r\n        <audioCompressionType>G.711alaw</audioCompressionType>\r\n    </Audio>\r\n</StreamingChannel>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Streaming/channels/101",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Streaming",
+										"channels",
+										"101"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "图像调节",
+					"item": [
+						{
+							"name": "获取通道图像参数能力",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/capabilities",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"capabilities"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道图像调节（自动）参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/color",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"color"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道图像调节（自动）参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<Color version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <brightnessLevel>50</brightnessLevel>\r\n    <contrastLevel>50</contrastLevel>\r\n    <saturationLevel>50</saturationLevel>\r\n    <grayScale version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n        <grayScaleMode>outdoor</grayScaleMode>\r\n    </grayScale>\r\n</Color>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/color",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"color"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道图像锐度控制（自动）参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/sharpness",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"sharpness"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道图像锐度控制（自动）参数 Copy",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<Sharpness version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <SharpnessLevel>50</SharpnessLevel>\r\n</Sharpness>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/sharpness",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"sharpness"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道图像曝光时间参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/shutter",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"shutter"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道图像曝光时间参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<Shutter version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <ShutterLevel>1/6</ShutterLevel>\r\n</Shutter>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/shutter",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"shutter"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道IrcutFilter参数(日夜转换)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/ircutFilter",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"ircutFilter"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道IrcutFilter参数(日夜转换)",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<IrcutFilter version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <IrcutFilterType>auto</IrcutFilterType>\r\n    <nightToDayFilterLevel>3</nightToDayFilterLevel>\r\n    <nightToDayFilterTime>5</nightToDayFilterTime>\r\n    <EventTrigger>\r\n        <eventType>IO</eventType>\r\n        <IrcutFilterAction>day</IrcutFilterAction>\r\n    </EventTrigger>\r\n</IrcutFilter>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/ircutFilter",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"ircutFilter"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道图像背光补偿区域",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/BLC",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"BLC"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道图像背光补偿区域",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<BLC version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <enabled>false</enabled>\r\n    <BLCRegionList>\r\n        <BLCRegion>\r\n            <id>1</id>\r\n            <RegionCoordinatesList>\r\n                <RegionCoordinates>\r\n                    <positionX>0</positionX>\r\n                    <positionY>576</positionY>\r\n                </RegionCoordinates>\r\n                <RegionCoordinates>\r\n                    <positionX>0</positionX>\r\n                    <positionY>576</positionY>\r\n                </RegionCoordinates>\r\n                <RegionCoordinates>\r\n                    <positionX>0</positionX>\r\n                    <positionY>576</positionY>\r\n                </RegionCoordinates>\r\n                <RegionCoordinates>\r\n                    <positionX>0</positionX>\r\n                    <positionY>576</positionY>\r\n                </RegionCoordinates>\r\n            </RegionCoordinatesList>\r\n        </BLCRegion>\r\n    </BLCRegionList>\r\n</BLC>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/BLC",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"BLC"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道图像宽动态（自动）参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/WDR",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"WDR"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道图像宽动态（自动）参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<WDR version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <mode>close</mode>\r\n    <WDRLevel>50</WDRLevel>\r\n</WDR>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/WDR",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"WDR"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道白平衡（自动）参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/whiteBalance",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"whiteBalance"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道白平衡（自动）参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<WhiteBalance version=\"2.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n    <WhiteBalanceStyle>auto1</WhiteBalanceStyle>\r\n    <WhiteBalanceRed>50</WhiteBalanceRed>\r\n    <WhiteBalanceBlue>50</WhiteBalanceBlue>\r\n</WhiteBalance>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/whiteBalance",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"whiteBalance"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "获取指定通道镜像参数",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/imageFlip",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"imageFlip"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "配置指定通道镜像参数",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<ImageFlip xmlns=\"http://www.isapi.org/ver20/XMLSchema\" version=\"2.0\">\r\n  <enabled>true</enabled>\r\n  <ImageFlipStyle>CENTER</ImageFlipStyle>\r\n</ImageFlip>",
+									"options": {
+										"raw": {
+											"language": "xml"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Image/channels/1/imageFlip",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Image",
+										"channels",
+										"1",
+										"imageFlip"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "抓图",
+					"item": [
+						{
+							"name": "获取指定通道手动抓图结果信息",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{ip}}:{{port}}/ISAPI/Streaming/channels/101/picture",
+									"protocol": "http",
+									"host": [
+										"{{ip}}"
+									],
+									"port": "{{port}}",
+									"path": [
+										"ISAPI",
+										"Streaming",
+										"channels",
+										"101",
+										"picture"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "存储",
+			"item": [
+				{
+					"name": "获取硬盘空间管理全部配置",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/Storage/hdd",
+							"protocol": "http",
+							"host": [
+								"{{ip}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"ISAPI",
+								"ContentMgmt",
+								"Storage",
+								"hdd"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "获取指定通道录像计划配置能力",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/record/tracks/101/capabilities",
+							"protocol": "http",
+							"host": [
+								"{{ip}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"ISAPI",
+								"ContentMgmt",
+								"record",
+								"tracks",
+								"101",
+								"capabilities"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "获取指定通道录像计划参数",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/record/tracks/101",
+							"protocol": "http",
+							"host": [
+								"{{ip}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"ISAPI",
+								"ContentMgmt",
+								"record",
+								"tracks",
+								"101"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "配置指定通道录像计划参数",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\r\n<Track version=\"2.0\" xmlns=\"http://www.isapi.org/ver20/XMLSchema\">\r\n    <id>101</id>\r\n    <Channel>101</Channel>\r\n    <Enable>false</Enable>\r\n    <Description>\r\ntrackType=standard,contentType=video,codecType=H.264-BP,resolution=1920x1080,framerate=25.0 fps,bitrate=4096 kbps</Description>\r\n    <TrackGUID>{00000000-0000-0000-0000-000000000000}</TrackGUID>\r\n    <Size>1</Size>\r\n    <Duration min=\"0\" max=\"750\">P0DT0H</Duration>\r\n    <DefaultRecordingMode>CMR</DefaultRecordingMode>\r\n    <SrcDescriptor>\r\n        <SrcGUID>{00000000-0000-0000-0000-000000000000}</SrcGUID>\r\n        <SrcChannel>1</SrcChannel>\r\n        <StreamHint></StreamHint>\r\n        <SrcDriver></SrcDriver>\r\n        <SrcType></SrcType>\r\n        <SrcUrl>rtsp://localhost/PSIA/Streaming/channels/101</SrcUrl>\r\n        <SrcUrlMethods></SrcUrlMethods>\r\n        <SrcLogin></SrcLogin>\r\n    </SrcDescriptor>\r\n    <TrackSchedule>\r\n        <ScheduleBlockList>\r\n            <ScheduleBlock>\r\n                <ScheduleBlockGUID>{00000000-0000-0000-0000-000000000000}</ScheduleBlockGUID>\r\n                <ScheduleBlockType>www.hikvision.com/racm/schedule/ver10</ScheduleBlockType>\r\n                <ScheduleAction>\r\n                    <id>1</id>\r\n                    <ScheduleActionStartTime>\r\n                        <DayOfWeek>Monday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionStartTime>\r\n                    <ScheduleActionEndTime>\r\n                        <DayOfWeek>Tuesday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionEndTime>\r\n                    <ScheduleDSTEnable>false</ScheduleDSTEnable>\r\n                    <Description>nothing</Description>\r\n                    <Actions>\r\n                        <Record>true</Record>\r\n                        <Log>false</Log>\r\n                        <SaveImg>false</SaveImg>\r\n                        <ActionRecordingMode>CMR</ActionRecordingMode>\r\n                    </Actions>\r\n                </ScheduleAction>\r\n                <ScheduleAction>\r\n                    <id>2</id>\r\n                    <ScheduleActionStartTime>\r\n                        <DayOfWeek>Tuesday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionStartTime>\r\n                    <ScheduleActionEndTime>\r\n                        <DayOfWeek>Wednesday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionEndTime>\r\n                    <ScheduleDSTEnable>false</ScheduleDSTEnable>\r\n                    <Description>nothing</Description>\r\n                    <Actions>\r\n                        <Record>true</Record>\r\n                        <Log>false</Log>\r\n                        <SaveImg>false</SaveImg>\r\n                        <ActionRecordingMode>CMR</ActionRecordingMode>\r\n                    </Actions>\r\n                </ScheduleAction>\r\n                <ScheduleAction>\r\n                    <id>3</id>\r\n                    <ScheduleActionStartTime>\r\n                        <DayOfWeek>Wednesday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionStartTime>\r\n                    <ScheduleActionEndTime>\r\n                        <DayOfWeek>Thursday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionEndTime>\r\n                    <ScheduleDSTEnable>false</ScheduleDSTEnable>\r\n                    <Description>nothing</Description>\r\n                    <Actions>\r\n                        <Record>true</Record>\r\n                        <Log>false</Log>\r\n                        <SaveImg>false</SaveImg>\r\n                        <ActionRecordingMode>CMR</ActionRecordingMode>\r\n                    </Actions>\r\n                </ScheduleAction>\r\n                <ScheduleAction>\r\n                    <id>4</id>\r\n                    <ScheduleActionStartTime>\r\n                        <DayOfWeek>Thursday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionStartTime>\r\n                    <ScheduleActionEndTime>\r\n                        <DayOfWeek>Friday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionEndTime>\r\n                    <ScheduleDSTEnable>false</ScheduleDSTEnable>\r\n                    <Description>nothing</Description>\r\n                    <Actions>\r\n                        <Record>true</Record>\r\n                        <Log>false</Log>\r\n                        <SaveImg>false</SaveImg>\r\n                        <ActionRecordingMode>CMR</ActionRecordingMode>\r\n                    </Actions>\r\n                </ScheduleAction>\r\n                <ScheduleAction>\r\n                    <id>5</id>\r\n                    <ScheduleActionStartTime>\r\n                        <DayOfWeek>Friday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionStartTime>\r\n                    <ScheduleActionEndTime>\r\n                        <DayOfWeek>Saturday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionEndTime>\r\n                    <ScheduleDSTEnable>false</ScheduleDSTEnable>\r\n                    <Description>nothing</Description>\r\n                    <Actions>\r\n                        <Record>true</Record>\r\n                        <Log>false</Log>\r\n                        <SaveImg>false</SaveImg>\r\n                        <ActionRecordingMode>CMR</ActionRecordingMode>\r\n                    </Actions>\r\n                </ScheduleAction>\r\n                <ScheduleAction>\r\n                    <id>6</id>\r\n                    <ScheduleActionStartTime>\r\n                        <DayOfWeek>Saturday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionStartTime>\r\n                    <ScheduleActionEndTime>\r\n                        <DayOfWeek>Sunday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionEndTime>\r\n                    <ScheduleDSTEnable>false</ScheduleDSTEnable>\r\n                    <Description>nothing</Description>\r\n                    <Actions>\r\n                        <Record>true</Record>\r\n                        <Log>false</Log>\r\n                        <SaveImg>false</SaveImg>\r\n                        <ActionRecordingMode>CMR</ActionRecordingMode>\r\n                    </Actions>\r\n                </ScheduleAction>\r\n                <ScheduleAction>\r\n                    <id>7</id>\r\n                    <ScheduleActionStartTime>\r\n                        <DayOfWeek>Sunday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionStartTime>\r\n                    <ScheduleActionEndTime>\r\n                        <DayOfWeek>Monday</DayOfWeek>\r\n                        <TimeOfDay>00:00:00</TimeOfDay>\r\n                    </ScheduleActionEndTime>\r\n                    <ScheduleDSTEnable>false</ScheduleDSTEnable>\r\n                    <Description>nothing</Description>\r\n                    <Actions>\r\n                        <Record>true</Record>\r\n                        <Log>false</Log>\r\n                        <SaveImg>false</SaveImg>\r\n                        <ActionRecordingMode>CMR</ActionRecordingMode>\r\n                    </Actions>\r\n                </ScheduleAction>\r\n            </ScheduleBlock>\r\n        </ScheduleBlockList>\r\n    </TrackSchedule>\r\n    <CustomExtensionList>\r\n        <CustomExtension>\r\n            <CustomExtensionName>www.hikvision.com/RaCM/trackExt/ver10</CustomExtensionName>\r\n            <enableSchedule>true</enableSchedule>\r\n            <SaveAudio>true</SaveAudio>\r\n            <PreRecordTimeSeconds>5</PreRecordTimeSeconds>\r\n            <PostRecordTimeSeconds>5</PostRecordTimeSeconds>\r\n            <HolidaySchedule>\r\n                <ScheduleBlock>\r\n                    <ScheduleBlockGUID>{00000000-0000-0000-0000-000000000000}</ScheduleBlockGUID>\r\n                    <ScheduleBlockType>www.hikvision.com/racm/schedule/ver10</ScheduleBlockType>\r\n                </ScheduleBlock>\r\n            </HolidaySchedule>\r\n        </CustomExtension>\r\n    </CustomExtensionList>\r\n    <delayTime>0</delayTime>\r\n</Track>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://{{ip}}:{{port}}/ISAPI/ContentMgmt/record/tracks/101",
+							"protocol": "http",
+							"host": [
+								"{{ip}}"
+							],
+							"port": "{{port}}",
+							"path": [
+								"ISAPI",
+								"ContentMgmt",
+								"record",
+								"tracks",
+								"101"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "digest",
+		"digest": [
+			{
+				"key": "password",
+				"value": "hik12345",
+				"type": "string"
+			},
+			{
+				"key": "username",
+				"value": "admin",
+				"type": "string"
+			},
+			{
+				"key": "algorithm",
+				"value": "MD5",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
