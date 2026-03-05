@@ -1,0 +1,219 @@
+Windows PowerShell
+版权所有 (C) 2014 Microsoft Corporation。保留所有权利。
+
+PS D:\dist> .\diagnose_task_en.ps1 > C:\bad_diagnose.txt
+========== Task Scheduler Diagnostic Report ==========
+
+[1] Task Scheduler Service Status:
+  Status: Running
+  StartType: Automatic
+
+[2] Task Existence Check:
+  Task Exists: NO
+
+[3] System Time Info:
+  Current Time: 03/04/2026 19:37:12
+Get-TimeZone : 无法将“Get-TimeZone”项识别为 cmdlet、函数、脚本文件或可运行程序的名称。请检查名称的拼写，如果包括路径
+，请确保路径正确，然后再试一次。
+所在位置 D:\dist\diagnose_task_en.ps1:30 字符: 28
++ Write-Host "  TimeZone: $((Get-TimeZone).DisplayName)"
++                            ~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (Get-TimeZone:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+  TimeZone:
+
+[6] Critical File Check:
+  Config (D:\dist\config.json): EXISTS
+  Cleanup (D:\dist\cleanup.ps1): EXISTS
+  Launcher (C:\ky_cleanup_launcher.ps1): EXISTS
+
+[7] Recent Task Events (last 1 hour):
+  No events in last hour (history may be disabled)
+
+========== Diagnostic Complete ==========
+
+If [7] shows no events, enable task history:
+wevtutil sl Microsoft-Windows-TaskScheduler/Operational /e:true
+PS D:\dist>  Get-ScheduledTask -TaskName "坤云平台定时清理" | Get-ScheduledTaskInfo
+
+
+LastRunTime        : 2026/3/4 19:35:35
+LastTaskResult     : 0
+NextRunTime        : 2026/3/4 19:40:40
+NumberOfMissedRuns : 0
+TaskName           : 坤云平台定时清理
+TaskPath           : \
+PSComputerName     :
+
+
+
+PS D:\dist> Export-ScheduledTask -TaskName "坤云平台定时清理" | Out-File "C:\bad_task.xml"
+PS D:\dist> .\install.ps1 -Uninstall
+[信息] 开始卸载任务...
+[成功] 任务已成功卸载: 坤云平台定时清理
+[成功] 启动脚本已清理: C:\ky_cleanup_launcher.ps1
+PS D:\dist> .\install.ps1 -IntervalMinutes 5
+[信息] ==========================================
+[信息] 坤云平台定时清理任务安装程序
+[信息] ==========================================
+[成功] 清理脚本: D:\dist\cleanup.ps1
+[成功] 配置文件: D:\dist\config.json
+[信息] ------------------------------------------
+[信息] 任务配置:
+[信息]   任务名称: 坤云平台定时清理
+[信息]   执行间隔:
+[信息]   脚本路径: D:\dist\cleanup.ps1
+[信息]   配置文件: D:\dist\config.json
+[信息] ------------------------------------------
+[成功] 启动脚本已生成: C:\ky_cleanup_launcher.ps1
+[信息] 正在注册计划任务...
+[信息] 执行间隔: 5 分钟
+[成功] 定时触发器已创建: 5 分钟
+[成功] 已添加开机启动触发器（延迟2分钟执行）
+[成功] 安装后验证通过：任务已注册
+[信息]
+[信息] 注册的任务详情:
+[信息]
+[信息]   文件夹: \
+[信息]   主机名:                             NTZHYQ01
+[信息]   任务名:                             \坤云平台定时清理
+[信息]   下次运行时间:                       2026/3/4 19:40:00
+[信息]   模式:                               就绪
+[信息]   登录状态:                           交互方式/后台方式
+[信息]   上次运行时间:                       N/A
+[信息]   上次结果:                           1
+[信息]   创建者:                             N/A
+[信息]   要运行的任务:                       powershell.exe -ExecutionPolicy Bypass -NoProfile -File "C:\ky_cleanup_laun
+cher.ps1"
+[信息]   起始于:                             D:\dist
+[信息]   注释:                               坤云平台定时清理任务 - 每 5 分钟 执行一次
+[信息]   计划任务状态:                       已启用
+[信息]   空闲时间:                           已禁用
+[信息]   电源管理:
+[信息]   作为用户运行:                       SYSTEM
+[信息]   删除没有计划的任务:                 已禁用
+[信息]   如果运行了 X 小时 X 分钟，停止任务: 01:00:00
+[信息]   计划:                               计划数据在此格式中不可用。
+[信息]   计划类型:                           系统启动时
+[信息]   开始时间:                           N/A
+[信息]   开始日期:                           N/A
+[信息]   结束日期:                           N/A
+[信息]   天:                                 N/A
+[信息]   月:                                 N/A
+[信息]   重复: 每:                           N/A
+[信息]   重复: 截止: 时间:                   N/A
+[信息]   重复: 截止: 持续时间:               N/A
+[信息]   重复: 如果还在运行，停止:           N/A
+[信息]
+[信息]   主机名:                             NTZHYQ01
+[信息]   任务名:                             \坤云平台定时清理
+[信息]   下次运行时间:                       2026/3/4 19:40:00
+[信息]   模式:                               就绪
+[信息]   登录状态:                           交互方式/后台方式
+[信息]   上次运行时间:                       N/A
+[信息]   上次结果:                           1
+[信息]   创建者:                             N/A
+[信息]   要运行的任务:                       powershell.exe -ExecutionPolicy Bypass -NoProfile -File "C:\ky_cleanup_laun
+cher.ps1"
+[信息]   起始于:                             D:\dist
+[信息]   注释:                               坤云平台定时清理任务 - 每 5 分钟 执行一次
+[信息]   计划任务状态:                       已启用
+[信息]   空闲时间:                           已禁用
+[信息]   电源管理:
+[信息]   作为用户运行:                       SYSTEM
+[信息]   删除没有计划的任务:                 已禁用
+[信息]   如果运行了 X 小时 X 分钟，停止任务: 01:00:00
+[信息]   计划:                               计划数据在此格式中不可用。
+[信息]   计划类型:                           一次性, 分钟
+[信息]   开始时间:                           0:00:00
+[信息]   开始日期:                           2026/3/4
+[信息]   结束日期:                           N/A
+[信息]   天:                                 N/A
+[信息]   月:                                 N/A
+[信息]   重复: 每:                           0 小时， 5 分钟
+[信息]   重复: 截止: 时间:                   无
+[信息]   重复: 截止: 持续时间:               已禁用
+[信息]   重复: 如果还在运行，停止:           已禁用
+[成功] ==========================================
+[成功] 任务安装成功！
+[成功] ==========================================
+[信息]
+[信息] 任务详情:
+[信息]   • 任务名称: 坤云平台定时清理
+[信息]   • 执行频率: 5 分钟
+[信息]   • 运行账户: SYSTEM
+[信息]   • 启动脚本: C:\ky_cleanup_launcher.ps1
+[信息]
+是否立即运行一次任务测试？(Y/N): N
+PS D:\dist>  .\get_task_info.ps1
+========== Collecting Task Info ==========
+Task not found - exported to: C:\task_info_ntzhyq01.txt
+========== Done ==========
+Please copy these files and send for analysis:
+  - C:\task_config_ntzhyq01.xml
+  - C:\task_info_ntzhyq01.txt
+PS D:\dist>
+
+task_config.xml:
+
+
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>坤云平台定时清理任务 - 每 5 分钟 执行一次</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <BootTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT2M</Delay>
+    </BootTrigger>
+    <TimeTrigger>
+      <Repetition>
+        <Interval>PT5M</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+      <StartBoundary>2026-03-04T00:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+    </TimeTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+      <LogonType>InteractiveToken</LogonType>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>powershell.exe</Command>
+      <Arguments>-ExecutionPolicy Bypass -NoProfile -File "C:\ky_cleanup_launcher.ps1"</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+
+
+
+
+
+
+task_info_ntzhyq01.txt: Task not found

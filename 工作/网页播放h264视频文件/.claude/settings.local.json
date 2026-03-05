@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start:*)",
+      "Bash(ffprobe:*)",
+      "Bash(ffmpeg:*)"
+    ]
+  }
+}

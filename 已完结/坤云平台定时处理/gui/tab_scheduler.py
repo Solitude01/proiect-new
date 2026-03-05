@@ -9,7 +9,7 @@ import json
 import ctypes
 from .utils import (
     get_install_script, get_cleanup_script, get_config_path,
-    run_ps_command, run_as_admin_command,
+    run_ps_command, run_as_admin_command, ScriptRunner,
 )
 
 
@@ -53,6 +53,7 @@ class SchedulerTab(ttk.Frame):
     def __init__(self, parent, status_var, **kwargs):
         super().__init__(parent, **kwargs)
         self.status_var = status_var
+        self.runner = None
         self._create_widgets()
         self.after(500, self.refresh)
 
@@ -83,7 +84,7 @@ class SchedulerTab(ttk.Frame):
         row1.pack(fill=tk.X, pady=4)
 
         ttk.Button(row1, text="刷新状态", command=self.refresh).pack(side=tk.LEFT, padx=4)
-        ttk.Button(row1, text="立即触发一次 (需管理员)", command=self._trigger).pack(side=tk.LEFT, padx=4)
+        ttk.Button(row1, text="立即执行一次", command=self._trigger).pack(side=tk.LEFT, padx=4)
         ttk.Button(row1, text="停止运行中的任务 (需管理员)", command=self._stop_task).pack(side=tk.LEFT, padx=4)
 
         row2 = ttk.Frame(btn_frame)
@@ -163,17 +164,39 @@ class SchedulerTab(ttk.Frame):
                 self._log(f"查询输出: {output}")
 
     def _trigger(self):
-        """通过 UAC 提权立即触发一次执行"""
-        self._log(f"正在触发任务: {TASK_NAME} (需要管理员权限)")
-        ps_code = f"Start-ScheduledTask -TaskName '{TASK_NAME}'\n"
-        ok = _run_elevated_script(ps_code, visible=False)
-        if ok:
-            self._log("已发送触发请求")
-            self.status_var.set("计划任务已触发")
-        else:
-            self._log("触发失败: UAC 被拒绝或权限不足")
-            self.status_var.set("触发任务失败")
-        self.after(3000, self.refresh)
+        """直接运行清理脚本，实时显示输出（不经过计划任务）"""
+        script = get_cleanup_script()
+        config = get_config_path()
+
+        if not os.path.isfile(script):
+            self._log(f"[ERROR] 脚本不存在: {script}")
+            return
+
+        if self.runner and self.runner.running:
+            self._log("[WARN] 上一次执行尚未完成")
+            return
+
+        self._log("--- 直接运行清理脚本 ---")
+        self._log(f"脚本: {script}")
+        self._log(f"配置: {config}")
+        self.status_var.set("正在执行清理脚本...")
+
+        self.runner = ScriptRunner()
+        self.runner.start(script, config)
+        self._poll_trigger()
+
+    def _poll_trigger(self):
+        """轮询脚本输出，实时显示到日志区"""
+        lines = self.runner.poll_output()
+        for line in lines:
+            if line is None:
+                rc = self.runner.return_code
+                self._log(f"--- 执行完成 (返回码: {rc}) ---")
+                self.status_var.set(f"触发执行完成 (返回码: {rc})")
+                self.after(2000, self.refresh)
+                return
+            self._log(line)
+        self.after(100, self._poll_trigger)
 
     def _stop_task(self):
         """通过 UAC 提权停止运行中的任务"""

@@ -11,10 +11,14 @@ param(
     [string]$ScriptPath = "$PSScriptRoot\cleanup.ps1",
     [string]$ConfigPath = "$PSScriptRoot\config.json",
     [int]$IntervalHours = 2,
+    [int]$IntervalMinutes = 0,  # 如果设置此参数，优先使用分钟（用于快速测试）
     [switch]$Uninstall
 )
 
-$ErrorActionPreference = "Stop"
+# 不设置 $ErrorActionPreference = "Stop"
+# 原因：Windows Server 2012 R2 的 PowerShell 5.x 会把 schtasks.exe 的 stderr
+# 当成终止错误抛出，即使用了 2>&1 重定向也拦不住
+# 改为手动检查每步操作的返回值
 
 # ====================================================================
 # 输出函数
@@ -46,14 +50,21 @@ function Uninstall-Task {
     Write-Info "开始卸载任务..."
 
     try {
-        $existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-
-        if ($existingTask) {
-            Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+        # 2>&1 合并 stderr 到 stdout，避免 $ErrorActionPreference=Stop 把 schtasks 的 stderr 当终止错误
+        $null = schtasks.exe /query /tn $TaskName 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $null = schtasks.exe /delete /tn $TaskName /f 2>&1
             Write-Success "任务已成功卸载: $TaskName"
         }
         else {
             Write-Warning "任务不存在: $TaskName"
+        }
+
+        # 清理启动脚本
+        $launcherPath = "C:\ky_cleanup_launcher.ps1"
+        if (Test-Path $launcherPath) {
+            Remove-Item -Path $launcherPath -Force -ErrorAction SilentlyContinue
+            Write-Success "启动脚本已清理: $launcherPath"
         }
     }
     catch {
@@ -85,98 +96,155 @@ function Install-Task {
     Write-Success "配置文件: $ConfigPath"
 
     # 删除已存在的任务
-    $existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    if ($existingTask) {
+    $null = schtasks.exe /query /tn $TaskName 2>&1
+    if ($LASTEXITCODE -eq 0) {
         Write-Warning "任务已存在，将删除旧任务"
-        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+        $null = schtasks.exe /delete /tn $TaskName /f 2>&1
         Write-Success "旧任务已删除"
     }
 
     Write-Info "------------------------------------------"
     Write-Info "任务配置:"
     Write-Info "  任务名称: $TaskName"
-    Write-Info "  执行间隔: 每 $IntervalHours 小时"
+    Write-Info "  执行间隔: $intervalDisplay"
     Write-Info "  脚本路径: $ScriptPath"
     Write-Info "  配置文件: $ConfigPath"
     Write-Info "------------------------------------------"
 
-    # 创建任务操作
-    $action = New-ScheduledTaskAction `
-        -Execute "powershell.exe" `
-        -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File `"$ScriptPath`" -ConfigPath `"$ConfigPath`"" `
-        -WorkingDirectory (Split-Path $ScriptPath -Parent)
+    # 构建启动脚本：写到 ASCII 路径，中文路径只在文件内容中（UTF-8-BOM）
+    $launcherPath = "C:\ky_cleanup_launcher.ps1"
+    $launcherContent = @"
+# 坤云平台定时清理启动脚本（由安装程序自动生成）
+# 此文件必须在 ASCII 路径下，避免 SYSTEM 账户中文路径编码问题
+& '$ScriptPath' -ConfigPath '$ConfigPath'
+"@
+    Set-Content -Path $launcherPath -Value $launcherContent -Encoding UTF8 -Force
+    Write-Success "启动脚本已生成: $launcherPath"
 
-    # 创建触发器1: 系统启动时（延迟2分钟）
-    $trigger1 = New-ScheduledTaskTrigger -AtStartup
-    try { $trigger1.Delay = "PT2M" } catch { Write-Warning "当前系统不支持启动延迟属性，已跳过" }
+    # 使用 XML 注册任务（最可靠的方式，跨 Windows Server 版本兼容）
+    # 踩坑记录: New-ScheduledTaskTrigger 的 -Repetition 参数在旧版 Server 上会静默失效
+    # XML 是 Task Scheduler 2.0 原生格式，所有版本行为一致
 
-    # 创建触发器2: 每2小时重复执行（无限期）
-    $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval (New-TimeSpan -Hours $IntervalHours) -RepetitionDuration (New-TimeSpan -Days 9999)
-
-    # 创建任务设置
-    $settings = New-ScheduledTaskSettingsSet `
-        -AllowStartIfOnBatteries `
-        -DontStopIfGoingOnBatteries `
-        -StartWhenAvailable `
-        -RunOnlyIfNetworkAvailable:$false `
-        -ExecutionTimeLimit (New-TimeSpan -Hours 1) `
-        -RestartCount 3 `
-        -RestartInterval (New-TimeSpan -Minutes 1)
-
-    # 创建任务主体（使用SYSTEM账户运行）
-    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-
-    try {
-        # 注册任务
-        Register-ScheduledTask `
-            -TaskName $TaskName `
-            -Action $action `
-            -Trigger @($trigger1, $trigger2) `
-            -Settings $settings `
-            -Principal $principal `
-            -Description "坤云平台自动清理图片、视频和日志文件，释放磁盘空间。每${IntervalHours}小时执行一次。" `
-            -Force
-
-        Write-Success "=========================================="
-        Write-Success "任务安装成功！"
-        Write-Success "=========================================="
-        Write-Info ""
-        Write-Info "任务详情:"
-        Write-Info "  • 任务名称: $TaskName"
-        Write-Info "  • 执行频率: 每 $IntervalHours 小时"
-        Write-Info "  • 开机启动: 是（延迟2分钟）"
-        Write-Info "  • 运行账户: SYSTEM"
-        Write-Info ""
-        Write-Info "管理命令:"
-        Write-Info "  • 手动运行: Start-ScheduledTask -TaskName '$TaskName'"
-        Write-Info "  • 停止运行: Stop-ScheduledTask -TaskName '$TaskName'"
-        Write-Info "  • 查看状态: Get-ScheduledTask -TaskName '$TaskName' | Get-ScheduledTaskInfo"
-        Write-Info "  • 查看日志: 打开任务计划程序查看历史记录"
-        Write-Info "  • 卸载任务: .\install.ps1 -Uninstall"
-        Write-Info ""
-
-        # 询问是否立即运行
-        $response = Read-Host "是否立即运行一次任务测试？(Y/N)"
-        if ($response -eq 'Y' -or $response -eq 'y') {
-            Write-Info "正在启动任务..."
-            Start-ScheduledTask -TaskName $TaskName
-            Write-Success "任务已启动，请查看日志文件了解执行情况"
-
-            # 显示配置文件中的日志路径
-            try {
-                $config = Get-Content -Path $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
-                $logPath = $config.settings.logFilePath
-                Write-Info "日志文件位置: $logPath"
-            }
-            catch {
-                Write-Warning "无法读取日志路径配置"
-            }
-        }
+    # 如果指定了 IntervalMinutes 参数，优先使用（用于快速测试）
+    if ($IntervalMinutes -gt 0) {
+        $intervalMinutes = $IntervalMinutes
+        $intervalDisplay = "$IntervalMinutes 分钟"
+        $intervalDesc = "每 $IntervalMinutes 分钟"
     }
-    catch {
-        Write-Error "任务注册失败: $_"
-        Write-Error $_.ScriptStackTrace
+    else {
+        $intervalMinutes = $IntervalHours * 60
+        $intervalDisplay = "$IntervalHours 小时"
+        $intervalDesc = "每 $IntervalHours 小时"
+    }
+
+    Write-Info "正在注册计划任务..."
+    Write-Info "执行间隔: $intervalDisplay"
+
+    # 生成任务 XML（包含开机启动触发器 + 定时重复触发器）
+    # 使用 schtasks.exe /xml 方式注册，兼容性最好
+    # 修复：使用 -File 模式代替 -Command 模式，避免 &amp; XML实体解码问题
+    $startBoundary = (Get-Date -Format "yyyy-MM-dd") + "T00:00:00"
+    $taskXml = @"
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>坤云平台定时清理任务 - $intervalDesc 执行一次</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <BootTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT2M</Delay>
+    </BootTrigger>
+    <TimeTrigger>
+      <Repetition>
+        <Interval>PT${intervalMinutes}M</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+      <StartBoundary>$startBoundary</StartBoundary>
+      <Enabled>true</Enabled>
+    </TimeTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>powershell.exe</Command>
+      <Arguments>-ExecutionPolicy Bypass -NoProfile -File "$launcherPath"</Arguments>
+      <WorkingDirectory>$PSScriptRoot</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>
+"@
+
+    # 将 XML 写入临时文件（避免命令行编码问题）
+    $xmlPath = "C:\ky_cleanup_task.xml"
+    Set-Content -Path $xmlPath -Value $taskXml -Encoding Unicode -Force
+
+    # 使用 schtasks.exe 导入 XML 创建任务
+    $result = schtasks.exe /create /tn $TaskName /xml $xmlPath /f 2>&1
+    Remove-Item -Path $xmlPath -Force -ErrorAction SilentlyContinue
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "任务注册失败: $result"
         exit 1
+    }
+    Write-Success "定时触发器已创建: $intervalDisplay"
+    Write-Success "已添加开机启动触发器（延迟2分钟执行）"
+
+    # 安装后验证
+    $null = schtasks.exe /query /tn $TaskName 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "安装后验证失败：任务不存在"
+        exit 1
+    }
+    Write-Success "安装后验证通过：任务已注册"
+
+    # 显示任务详情
+    Write-Info ""
+    Write-Info "注册的任务详情:"
+    $taskInfo = schtasks.exe /query /tn $TaskName /v /fo list 2>&1
+    $taskInfo | ForEach-Object { Write-Info "  $_" }
+
+    Write-Success "=========================================="
+    Write-Success "任务安装成功！"
+    Write-Success "=========================================="
+    Write-Info ""
+    Write-Info "任务详情:"
+    Write-Info "  • 任务名称: $TaskName"
+    Write-Info "  • 执行频率: $intervalDisplay"
+    Write-Info "  • 运行账户: SYSTEM"
+    Write-Info "  • 启动脚本: $launcherPath"
+    Write-Info ""
+
+    # 询问是否立即运行
+    $response = Read-Host "是否立即运行一次任务测试？(Y/N)"
+    if ($response -eq 'Y' -or $response -eq 'y') {
+        Write-Info "正在启动任务..."
+        $null = schtasks.exe /run /tn $TaskName 2>&1
+        Write-Success "任务已启动"
     }
 }
 

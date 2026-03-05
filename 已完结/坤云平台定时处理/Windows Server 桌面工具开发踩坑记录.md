@@ -67,10 +67,10 @@ json.decoder.JSONDecodeError: Unexpected UTF-8 BOM
 
 | 方式 | 特点 |
 |------|------|
-| `-File script.ps1` | 路径含中文时容易出问题，参数传递更严格 |
-| `-Command '& "script.ps1"'` | 更灵活，可以在脚本前插入初始化命令 |
+| `-File script.ps1` | `$PSScriptRoot` 正确，但路径含中文时编码易出问题 |
+| `-Command '& "script.ps1"'` | 更灵活，但 `$PSScriptRoot` 为空 |
 
-推荐用 `-Command`，即使编码设置在无窗口下不生效，至少路径传递更可靠：
+普通 subprocess 调用推荐 `-Command`，路径传递更可靠：
 
 ```python
 args = [
@@ -81,6 +81,34 @@ args = [
     f'& "{script_path}" -ConfigPath "{config_path}"',
 ]
 ```
+
+### 计划任务也必须用 `-Command`（大坑）
+
+SYSTEM 账户 + `-File` + 中文路径会导致**脚本静默不执行**：PowerShell 进程启动并退出码 0，但脚本根本没跑，不报错、不写日志。任务计划程序显示"上次结果: 0 (成功)"，但实际什么都没做。
+
+**原因：** SYSTEM 账户没有用户 profile，其代码页/编码环境与普通用户不同，`-File` 参数中的中文路径经过 Task Scheduler → powershell.exe 命令行传递时编码损坏。
+
+**解决：** 计划任务的 Action 也改用 `-Command` 模式：
+
+```powershell
+# 错误（SYSTEM + 中文路径 = 静默失败）
+$arg = '-File "D:\坤云定时删除任务\cleanup.ps1" -ConfigPath "D:\坤云定时删除任务\config.json"'
+
+# 正确
+$arg = "-Command `"& 'D:\坤云定时删除任务\cleanup.ps1' -ConfigPath 'D:\坤云定时删除任务\config.json'`""
+```
+
+### `-Command` 模式下 `$PSScriptRoot` 为空（大坑）
+
+用 `-Command` 调用脚本时，脚本内部的 `$PSScriptRoot` 是**空字符串**。如果脚本的默认参数依赖 `$PSScriptRoot`：
+
+```powershell
+param(
+    [string]$ScriptPath = "$PSScriptRoot\cleanup.ps1"  # -Command 下变成 "\cleanup.ps1"
+)
+```
+
+**解决：** 调用时显式传入所有路径参数，不依赖 `$PSScriptRoot` 默认值。
 
 ### 隐藏窗口
 
@@ -94,9 +122,89 @@ creationflags=subprocess.CREATE_NO_WINDOW
 
 PowerShell 脚本失败时返回码可能是很大的数字（如 `4294770688` = `0xFFFF0000`），不要只判断 `== 0`。
 
+### stderr 合并
+
+`run_ps_command` 要用 `stderr=subprocess.STDOUT` 合并错误输出，否则 PowerShell 的报错信息会丢失，调试时看到空的错误提示：
+
+```python
+result = subprocess.run(
+    ["powershell.exe", "-NoProfile", "-Command", cmd],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,  # 不要用 capture_output=True
+    creationflags=subprocess.CREATE_NO_WINDOW,
+)
+```
+
 ---
 
-## 3. tkinter 实时日志显示
+## 3. UAC 提权 + 中文路径（第二大坑）
+
+### 问题现象
+
+`ShellExecuteW("runas")` 提权运行 PowerShell 脚本，中文路径无论用 `-File` 还是 `-Command` 都会编码损坏，脚本找不到文件、静默失败。
+
+### 踩过的弯路
+
+| 尝试 | 结果 |
+|------|------|
+| `-File "D:\中文路径\install.ps1"` | 路径乱码，脚本找不到 |
+| `-Command "& 'D:\中文路径\install.ps1'"` | 同样乱码 |
+| `-Command` + 显式传所有路径参数 | 路径还是乱码，参数全部损坏 |
+
+根本原因：中文路径经过 `ShellExecuteW → UAC Consent.exe → powershell.exe` 的命令行传递链路，编码会被破坏。
+
+### 最终方案：临时包装脚本
+
+将命令写入 Temp 目录的临时 `.ps1` 文件，中文路径只出现在文件内容中，不经过命令行：
+
+```python
+import tempfile, ctypes, threading, os
+
+def _run_elevated_script(ps_code, visible=True):
+    # 1. 写临时 .ps1 到 Temp 目录（ASCII 路径）
+    fd, wrapper = tempfile.mkstemp(suffix=".ps1", prefix="task_")
+    with os.fdopen(fd, "w", encoding="utf-8-sig") as f:
+        f.write(ps_code)
+
+    # 2. 用 -File 执行临时文件（路径纯 ASCII，不会乱码）
+    params = f'-ExecutionPolicy Bypass -NoProfile -File "{wrapper}"'
+    ret = ctypes.windll.shell32.ShellExecuteW(
+        None, "runas", "powershell.exe", params,
+        None, 1 if visible else 0
+    )
+    ok = ret > 32
+
+    # 3. 延迟清理临时文件
+    def cleanup():
+        import time; time.sleep(60)
+        try: os.remove(wrapper)
+        except: pass
+    threading.Thread(target=cleanup, daemon=True).start()
+    return ok
+```
+
+调用示例：
+
+```python
+ps_code = (
+    f'& "{install_script}" '
+    f'-ScriptPath "{cleanup_script}" '
+    f'-ConfigPath "{config_path}" '
+    f'-IntervalHours {interval}\n'
+    f'Read-Host "按回车键关闭此窗口"\n'
+)
+_run_elevated_script(ps_code)
+```
+
+**关键点：**
+- 临时文件路径如 `C:\Users\ADMINI~1\AppData\Local\Temp\task_xxx.ps1`（纯 ASCII）
+- 文件内容用 **UTF-8-BOM** 编码，PowerShell 正确读取中文路径
+- 末尾加 `Read-Host` 防止窗口一闪而过，出错时能看到错误信息
+- GUI 本身不需要管理员权限，仅在需要时按需 UAC 提权
+
+---
+
+## 4. tkinter 实时日志显示
 
 ### 核心模式：Thread + Queue + after 轮询
 
@@ -115,7 +223,7 @@ GUI 线程不能阻塞，所以 subprocess 必须在子线程运行，通过 Que
 
 ---
 
-## 4. PyInstaller 打包
+## 5. PyInstaller 打包
 
 ### 路径解析
 
@@ -161,29 +269,74 @@ pip install pyinstaller
 
 ---
 
-## 5. UAC 提权
+## 6. Windows Server 兼容性
 
-GUI 本身不需要管理员权限，只在安装/卸载计划任务时按需提权：
+### ScheduledTask API 差异（大坑）
 
-```python
-import ctypes
+不同 Windows Server 版本的 `ScheduledTasks` PowerShell 模块存在严重差异：
 
-ret = ctypes.windll.shell32.ShellExecuteW(
-    None,                    # 父窗口
-    "runas",                 # 动词：请求提权
-    "powershell.exe",        # 程序
-    f'-File "{script}"',     # 参数
-    None,                    # 工作目录
-    1                        # SW_SHOWNORMAL
-)
-# 返回值 > 32 表示成功，≤ 32 表示失败（用户拒绝/其他错误）
+**问题1：触发器属性不支持**
+```powershell
+$trigger = New-ScheduledTaskTrigger -AtStartup
+$trigger.Delay = "PT2M"  # Windows Server 2012 R2 报错：找不到属性 "Delay"
 ```
+
+**问题2：-Once 重复触发器静默失效（最严重的坑）**
+```powershell
+# 在旧版 Windows Server 上，这行不报错，但触发器实际无效！
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date `
+    -RepetitionInterval (New-TimeSpan -Hours 2) `
+    -RepetitionDuration (New-TimeSpan -Days 9999)
+```
+表现为：任务注册"成功"、状态显示 Ready、上次结果 0（成功），但**一晚上一次都没自动执行**，没有任何清理日志生成。因为 `-RepetitionDuration (New-TimeSpan -Days 9999)` 在旧版上可能生成无效配置，触发器被静默忽略。
+
+**最终方案：** 用 **XML 注册任务**，绕过 PowerShell cmdlet 的版本差异。XML 是 Task Scheduler 2.0 的原生格式，所有 Windows Server 版本行为一致：
+
+```powershell
+$taskXml = @"
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <Triggers>
+    <BootTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT2M</Delay>
+    </BootTrigger>
+    <TimeTrigger>
+      <Repetition>
+        <Interval>PT2H</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+      <StartBoundary>2020-01-01T00:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+    </TimeTrigger>
+  </Triggers>
+  ...
+</Task>
+"@
+Register-ScheduledTask -Xml $taskXml -TaskName $TaskName -User "SYSTEM" -Force
+```
+
+**关键点：**
+- `<Repetition>` 不设 `<Duration>` = 无限期重复（等效于 indefinitely）
+- `<StartBoundary>` 设过去的固定日期，确保触发器立即生效
+- `<StopAtDurationEnd>false</StopAtDurationEnd>` 确保不会自动停止
+- 不再依赖 `New-ScheduledTaskTrigger` 的参数兼容性
+
+### 需要管理员权限的操作
+
+| 操作 | 是否需要管理员 |
+|------|:---:|
+| `Get-ScheduledTask` 查询状态 | 否 |
+| `Start-ScheduledTask` 触发 | 是 |
+| `Stop-ScheduledTask` 停止 | 是 |
+| `Register-ScheduledTask` 安装 | 是 |
+| `Unregister-ScheduledTask` 卸载 | 是 |
 
 不要让整个 GUI 以管理员运行，否则拖拽文件等功能会受 UIPI 限制。
 
 ---
 
-## 6. 项目结构建议
+## 7. 项目结构建议
 
 ```
 项目根目录/
@@ -207,10 +360,15 @@ ret = ctypes.windll.shell32.ShellExecuteW(
 
 - [ ] subprocess 读输出用**原始字节 + 自动解码**（UTF-8 → GBK fallback）
 - [ ] 读 JSON 文件用 `utf-8-sig` 编码
-- [ ] PowerShell 调用用 `-Command` 而非 `-File`
+- [ ] subprocess 普通调用用 `-Command`，显式传入所有路径参数
 - [ ] subprocess 加 `CREATE_NO_WINDOW` 避免弹窗
+- [ ] subprocess 用 `stderr=STDOUT` 合并错误输出，别丢了报错信息
+- [ ] UAC 提权通过**临时包装脚本**传递中文路径，不要直接写在命令行参数里
+- [ ] UAC 提权窗口末尾加 `Read-Host`，出错时能看到信息不会一闪而过
+- [ ] `-Command` 模式下 `$PSScriptRoot` 为空，必须显式传路径
 - [ ] PyInstaller 路径用 `sys.executable` 而非 `__file__`
 - [ ] 需要用户编辑的文件放 exe 旁边，不要打包进 exe
 - [ ] 在干净 venv 中打包
-- [ ] UAC 提权用 `ShellExecuteW` 按需提权，不要整体提权
+- [ ] 不要整体提权，仅在需要时按需 UAC 提权
 - [ ] 长任务放子线程，Queue + after 轮询更新 GUI
+- [ ] **ScheduledTask 用 XML 注册**，不要用 `New-ScheduledTaskTrigger` 的重复参数（旧版 Server 静默失效）

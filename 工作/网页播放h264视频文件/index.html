@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H264 视频播放器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #fff;
+            margin-bottom: 20px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* 文件选择区域 */
+        .file-input-wrapper {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .file-input-label {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* 拖拽区域 */
+        .drop-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.dragover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            color: #fff;
+        }
+
+        .drop-zone p {
+            font-size: 16px;
+        }
+
+        /* 视频播放器 */
+        .player-wrapper {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .player-wrapper.active {
+            display: block;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            max-height: 70vh;
+            display: block;
+        }
+
+        /* 自定义控制栏 */
+        .controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            padding: 20px 15px 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .player-wrapper:hover .controls {
+            opacity: 1;
+        }
+
+        /* 进度条 */
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+            width: 0%;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .progress-container:hover .progress-bar::after {
+            opacity: 1;
+        }
+
+        /* 控制按钮区域 */
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .controls-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* 时间显示 */
+        .time-display {
+            color: #fff;
+            font-size: 14px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* 音量控制 */
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .volume-slider {
+            width: 80px;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* 视频信息 */
+        .video-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            display: none;
+        }
+
+        .video-info.active {
+            display: block;
+        }
+
+        .video-info h3 {
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .info-item {
+            display: flex;
+            gap: 8px;
+        }
+
+        .info-label {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .info-value {
+            color: #fff;
+        }
+
+        /* 提示信息 */
+        .tip {
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 3px solid #667eea;
+            border-radius: 4px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+        }
+
+        /* 加载提示 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 16px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        /* 错误提示 */
+        .error-message {
+            margin-top: 15px;
+            padding: 15px 20px;
+            background: rgba(255, 71, 87, 0.15);
+            border-left: 4px solid #ff4757;
+            border-radius: 8px;
+            color: #ff6b81;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .error-message h4 {
+            margin-bottom: 8px;
+            color: #ff4757;
+        }
+
+        .error-message code {
+            background: rgba(255, 71, 87, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .volume-slider {
+                width: 50px;
+            }
+
+            .controls {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🎬 H264 视频播放器</h1>
+
+    <div class="container">
+        <!-- 文件选择 -->
+        <div class="file-input-wrapper">
+            <label for="fileInput" class="file-input-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                选择视频文件
+            </label>
+            <input type="file" id="fileInput" accept=".mp4,.m4v,.mov,.mkv,.avi,.h264">
+            <span style="color: rgba(255,255,255,0.5); font-size: 14px;">支持格式：MP4, MOV, MKV, AVI 等 H264 编码视频</span>
+        </div>
+
+        <!-- 拖拽区域 -->
+        <div class="drop-zone" id="dropZone">
+            <p>📁 拖拽视频文件到此处播放</p>
+        </div>
+
+        <!-- 视频播放器 -->
+        <div class="player-wrapper" id="playerWrapper">
+            <video id="videoPlayer" preload="metadata"></video>
+            <div class="loading" id="loading">加载中...</div>
+            <div class="controls">
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="controls-row">
+                    <div class="controls-left">
+                        <button class="control-btn" id="playPauseBtn">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
+                        <span class="time-display">
+                            <span id="currentTime">0:00</span> / <span id="duration">0:00</span>
+                        </span>
+                    </div>
+                    <div class="volume-container">
+                        <button class="control-btn" id="muteBtn">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                            </svg>
+                        </button>
+                        <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
+                    </div>
+                    <button class="control-btn" id="fullscreenBtn">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 视频信息 -->
+        <div class="video-info" id="videoInfo">
+            <h3>视频信息</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">文件名:</span>
+                    <span class="info-value" id="infoFileName">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">分辨率:</span>
+                    <span class="info-value" id="infoResolution">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">时长:</span>
+                    <span class="info-value" id="infoDuration">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">编码格式:</span>
+                    <span class="info-value">H.264 (原生支持)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 错误提示 -->
+        <div class="error-message" id="errorMessage">
+            <h4>⚠️ 视频格式不支持</h4>
+            <p id="errorText"></p>
+            <p style="margin-top: 10px;">
+                <strong>解决方案：</strong><br>
+                使用 ffmpeg 转换格式：<br>
+                <code>ffmpeg -i input.mp4 -c:v copy -c:a copy output_browser.mp4</code>
+            </p>
+        </div>
+
+        <div class="tip">
+            💡 提示：浏览器需要标准 MP4 容器（avc1）中的 H264 视频。MPEG-PS 或原始 H264 流格式需要转换后才能播放。
+        </div>
+    </div>
+
+    <script>
+        // 获取元素
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const playerWrapper = document.getElementById('playerWrapper');
+        const video = document.getElementById('videoPlayer');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+        const videoInfo = document.getElementById('videoInfo');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+
+        // 格式化时间
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // 加载视频文件
+        function loadVideo(file) {
+            if (!file) return;
+
+            // 重置错误状态
+            errorMessage.classList.remove('active');
+
+            const url = URL.createObjectURL(file);
+            video.src = url;
+            playerWrapper.classList.add('active');
+            videoInfo.classList.add('active');
+            dropZone.style.display = 'none';
+
+            // 更新文件名
+            document.getElementById('infoFileName').textContent = file.name;
+
+            // 显示加载状态
+            loading.classList.add('active');
+
+            // 视频加载完成后更新信息
+            video.onloadedmetadata = function() {
+                loading.classList.remove('active');
+                durationEl.textContent = formatTime(video.duration);
+                document.getElementById('infoDuration').textContent = formatTime(video.duration);
+                document.getElementById('infoResolution').textContent = `${video.videoWidth} × ${video.videoHeight}`;
+                video.play();
+                updatePlayButton();
+            };
+
+            // 错误处理
+            video.onerror = function() {
+                loading.classList.remove('active');
+                const error = video.error;
+                let errorMsg = '未知错误';
+
+                if (error) {
+                    switch(error.code) {
+                        case 1:
+                            errorMsg = '视频加载被中断';
+                            break;
+                        case 2:
+                            errorMsg = '网络错误';
+                            break;
+                        case 3:
+                            errorMsg = '视频解码失败（格式不支持）';
+                            break;
+                        case 4:
+                            errorMsg = '视频格式不支持或文件损坏';
+                            break;
+                    }
+                }
+
+                errorText.textContent = `无法播放 "${file.name}"：${errorMsg}`;
+                errorMessage.classList.add('active');
+                console.error('视频错误:', error);
+            };
+
+            // 自动播放
+            video.play().catch(err => {
+                console.log('自动播放被阻止:', err);
+                if (err.name === 'NotSupportedError') {
+                    errorText.textContent = `无法播放 "${file.name}"：视频格式不支持（可能是 MPEG-PS 或原始 H264 流）`;
+                    errorMessage.classList.add('active');
+                    loading.classList.remove('active');
+                }
+            });
+        }
+
+        // 文件选择
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) loadVideo(file);
+        });
+
+        // 拖拽功能
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('video/')) {
+                loadVideo(file);
+            } else {
+                alert('请选择有效的视频文件');
+            }
+        });
+
+        // 播放/暂停
+        function togglePlay() {
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+            updatePlayButton();
+        }
+
+        function updatePlayButton() {
+            playPauseBtn.innerHTML = video.paused
+                ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+        }
+
+        playPauseBtn.addEventListener('click', togglePlay);
+        video.addEventListener('click', togglePlay);
+
+        // 静音
+        muteBtn.addEventListener('click', () => {
+            video.muted = !video.muted;
+            muteBtn.innerHTML = video.muted
+                ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
+            volumeSlider.value = video.muted ? 0 : video.volume;
+        });
+
+        // 音量控制
+        volumeSlider.addEventListener('input', (e) => {
+            video.volume = e.target.value;
+            video.muted = e.target.value === 0;
+        });
+
+        // 进度条
+        video.addEventListener('timeupdate', () => {
+            const progress = (video.currentTime / video.duration) * 100;
+            progressBar.style.width = `${progress}%`;
+            currentTimeEl.textContent = formatTime(video.currentTime);
+        });
+
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            video.currentTime = pos * video.duration;
+        });
+
+        // 全屏
+        fullscreenBtn.addEventListener('click', () => {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                playerWrapper.requestFullscreen();
+            }
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    togglePlay();
+                    break;
+                case 'ArrowLeft':
+                    video.currentTime -= 5;
+                    break;
+                case 'ArrowRight':
+                    video.currentTime += 5;
+                    break;
+                case 'ArrowUp':
+                    video.volume = Math.min(1, video.volume + 0.1);
+                    volumeSlider.value = video.volume;
+                    break;
+                case 'ArrowDown':
+                    video.volume = Math.max(0, video.volume - 0.1);
+                    volumeSlider.value = video.volume;
+                    break;
+                case 'f':
+                case 'F':
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else {
+                        playerWrapper.requestFullscreen();
+                    }
+                    break;
+                case 'm':
+                case 'M':
+                    muteBtn.click();
+                    break;
+            }
+        });
+
+        // 视频结束
+        video.addEventListener('ended', () => {
+            updatePlayButton();
+        });
+
+        // 检测 H264 支持
+        function checkH264Support() {
+            const video = document.createElement('video');
+            const canPlay = video.canPlayType('video/mp4; codecs="avc1.42E01E"');
+            if (canPlay === '') {
+                console.warn('浏览器可能不支持 H264 编码');
+            } else {
+                console.log('H264 支持状态:', canPlay);
+            }
+        }
+
+        checkH264Support();
+    </script>
+</body>
+</html>

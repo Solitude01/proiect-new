@@ -9,7 +9,11 @@
       "Bash(powershell -Command \"[System.IO.File]::ReadAllText\\(''cleanup.ps1''\\) | Out-File -FilePath ''cleanup.ps1'' -Encoding UTF8\")",
       "Bash(python:*)",
       "Bash(.build_venv/Scripts/pip install:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(where python:*)",
+      "Bash(pip show:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(schtasks:*)"
     ]
   }
 }
