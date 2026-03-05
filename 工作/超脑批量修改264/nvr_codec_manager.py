@@ -3,16 +3,18 @@
 """
 超脑设备编码格式批量修改工具
 功能：加载 Deepmind.json，自动发现通道，检查编码格式，批量修改为 H.264
+新增功能：显示监控点名称、搜索、导出监控点、单个设备扫描
 """
 
 import json
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
+from tkinter import ttk, scrolledtext, messagebox, filedialog
 import threading
 import requests
 from requests.auth import HTTPDigestAuth
 import xml.etree.ElementTree as ET
 from datetime import datetime
+import csv
 
 
 class NvrDevice:
@@ -43,6 +45,7 @@ class NvrCodecManager:
         self.root.minsize(1200, 700)
 
         self.devices = []  # 设备列表
+        self.search_text = ""  # 搜索文本
         self.setup_ui()
         self.load_devices()
 
@@ -85,6 +88,28 @@ class NvrCodecManager:
 
         ttk.Button(toolbar, text="🔄 刷新设备", command=self.load_devices).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="🔍 扫描所有设备", command=self.check_codecs).pack(side=tk.LEFT, padx=5)
+        
+        # 单个设备扫描区域
+        ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
+        ttk.Label(toolbar, text="扫描指定设备:").pack(side=tk.LEFT, padx=(5, 0))
+        
+        # 设备选择下拉框
+        self.device_combo = ttk.Combobox(toolbar, width=20, state="readonly")
+        self.device_combo.pack(side=tk.LEFT, padx=5)
+        self.device_combo.bind("<<ComboboxSelected>>", self.on_device_selected)
+        
+        ttk.Button(toolbar, text="🔍 扫描该设备", command=self.scan_selected_device).pack(side=tk.LEFT, padx=5)
+        
+        # 搜索和导出区域
+        ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
+        ttk.Label(toolbar, text="搜索:").pack(side=tk.LEFT, padx=(5, 0))
+        
+        self.search_entry = ttk.Entry(toolbar, width=25)
+        self.search_entry.pack(side=tk.LEFT, padx=5)
+        self.search_entry.bind("<KeyRelease>", self.on_search)
+        
+        ttk.Button(toolbar, text="📥 导出监控点", command=self.export_channels).pack(side=tk.LEFT, padx=5)
+        
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=10, fill=tk.Y)
         ttk.Button(toolbar, text="✓ 全选H.265", command=self.select_all_h265).pack(side=tk.LEFT, padx=5)
         ttk.Button(toolbar, text="✗ 取消全选", command=self.deselect_all).pack(side=tk.LEFT, padx=5)
@@ -162,6 +187,7 @@ class NvrCodecManager:
         self.device_check_vars = {}  # device -> var
         self.channel_check_vars = {}  # (device, channel_id) -> var
         self.channel_labels = {}  # (device, channel_id) -> label
+        self.channel_frames = {}  # (device, channel_id) -> frame 用于搜索隐藏/显示
 
     def _on_mousewheel(self, event):
         """处理鼠标滚轮"""
@@ -177,6 +203,112 @@ class NvrCodecManager:
     def clear_log(self):
         """清空日志"""
         self.log_text.delete(1.0, tk.END)
+
+    def update_device_combo(self):
+        """更新设备选择下拉框"""
+        device_list = [f"{d.ip} (Deepmind: {d.deepmind_id})" for d in self.devices]
+        self.device_combo['values'] = device_list
+        if device_list:
+            self.device_combo.set("选择设备...")
+
+    def on_device_selected(self, event=None):
+        """设备选择事件"""
+        pass
+
+    def scan_selected_device(self):
+        """扫描选中的单个设备"""
+        selection = self.device_combo.get()
+        if selection == "选择设备..." or not selection:
+            messagebox.showinfo("提示", "请先选择一个设备")
+            return
+        
+        # 查找对应的设备
+        selected_ip = selection.split(" ")[0]
+        for device in self.devices:
+            if device.ip == selected_ip:
+                self.check_single_device(device)
+                return
+
+    def on_search(self, event=None):
+        """搜索事件"""
+        self.search_text = self.search_entry.get().lower().strip()
+        self.filter_channels()
+
+    def filter_channels(self):
+        """根据搜索文本过滤通道显示"""
+        search = self.search_text
+        
+        for (device, channel_id), frame in self.channel_frames.items():
+            if not frame:
+                continue
+                
+            # 查找通道信息
+            channel = None
+            for ch in device.channels:
+                if ch['id'] == channel_id:
+                    channel = ch
+                    break
+            
+            if not channel:
+                continue
+            
+            # 检查是否匹配搜索条件
+            if not search:
+                frame.pack(fill=tk.X, pady=2)
+            else:
+                # 按监控点名称、通道ID、IP地址搜索
+                name_match = search in channel.get('name', '').lower()
+                id_match = search in str(channel_id).lower()
+                ip_match = search in device.ip.lower()
+                
+                if name_match or id_match or ip_match:
+                    frame.pack(fill=tk.X, pady=2)
+                else:
+                    frame.pack_forget()
+
+    def export_channels(self):
+        """导出所有监控点信息"""
+        if not any(d.channels for d in self.devices):
+            messagebox.showinfo("提示", "没有可导出的监控点数据，请先扫描设备")
+            return
+        
+        # 选择保存路径
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV文件", "*.csv"), ("所有文件", "*.*")],
+            initialfile=f"监控点列表_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        )
+        
+        if not file_path:
+            return
+        
+        try:
+            with open(file_path, 'w', newline='', encoding='utf-8-sig') as f:
+                writer = csv.writer(f)
+                # 写入表头
+                writer.writerow(['序号', '设备IP', 'Deepmind ID', '通道ID', '监控点名称', 
+                               '码流ID', '当前编码', '状态'])
+                
+                row_num = 1
+                for device in self.devices:
+                    for ch in device.channels:
+                        writer.writerow([
+                            row_num,
+                            device.ip,
+                            device.deepmind_id,
+                            ch['id'],
+                            ch.get('name', '未知'),
+                            ch['stream_id'],
+                            ch.get('codec', '未知'),
+                            device.status
+                        ])
+                        row_num += 1
+            
+            self.log(f"✓ 成功导出 {row_num - 1} 个监控点到: {file_path}")
+            messagebox.showinfo("成功", f"已导出 {row_num - 1} 个监控点到:\n{file_path}")
+        except Exception as e:
+            messagebox.showerror("错误", f"导出失败: {e}")
+            self.log(f"✗ 导出失败: {e}")
 
     def load_devices(self):
         """从 Deepmind.json 加载设备列表"""
@@ -197,6 +329,7 @@ class NvrCodecManager:
                 self.devices.append(device)
 
             self.refresh_device_list()
+            self.update_device_combo()
             self.log(f"✓ 成功加载 {len(self.devices)} 台设备")
 
         except Exception as e:
@@ -213,6 +346,7 @@ class NvrCodecManager:
         self.device_check_vars = {}
         self.channel_check_vars = {}
         self.channel_labels = {}
+        self.channel_frames = {}
 
         # 为每个设备创建卡片
         for i, device in enumerate(self.devices):
@@ -283,14 +417,19 @@ class NvrCodecManager:
         for ch in device.channels:
             ch_frame = ttk.Frame(channels_frame)
             ch_frame.pack(fill=tk.X, pady=2)
+            self.channel_frames[(device, ch['id'])] = ch_frame
 
             # 通道复选框
             ch_var = tk.BooleanVar(value=ch.get('codec') == 'H.265')
             self.channel_check_vars[(device, ch['id'])] = ch_var
 
+            # 显示通道ID、监控点名称
+            channel_name = ch.get('name', '未知')
+            display_text = f"通道 {ch['id']} - {channel_name} (码流 {ch['stream_id']})"
+            
             ch_check = ttk.Checkbutton(
                 ch_frame,
-                text=f"通道 {ch['id']} (码流 {ch['stream_id']})",
+                text=display_text,
                 variable=ch_var,
                 command=lambda: self.update_stats()
             )
@@ -427,10 +566,13 @@ class NvrCodecManager:
                 for channel in root.iter():
                     if channel.tag.endswith('InputProxyChannel'):
                         channel_id = None
+                        channel_name = "未知"
+                        
                         for child in channel.iter():
                             if child.tag.endswith('id'):
                                 channel_id = child.text
-                                break
+                            elif child.tag.endswith('name'):
+                                channel_name = child.text or "未知"
 
                         if channel_id:
                             stream_id = f"{channel_id}01"  # 主码流
@@ -438,7 +580,7 @@ class NvrCodecManager:
                                 'id': channel_id,
                                 'stream_id': stream_id,
                                 'codec': '未知',
-                                'name': f'通道{channel_id}',
+                                'name': channel_name,
                                 'enabled': True
                             })
 
@@ -491,10 +633,10 @@ class NvrCodecManager:
                     ch['codec'] = codec or "未知"
                     ch['xml_config'] = config_xml
                     status = "✓" if ch['codec'] == 'H.264' else "✗"
-                    self.log(f"    {status} 通道{ch['id']}: {ch['codec']}")
+                    self.log(f"    {status} 通道{ch['id']}({ch['name']}): {ch['codec']}")
                 else:
                     ch['codec'] = "获取失败"
-                    self.log(f"    ✗ 通道{ch['id']}: 获取配置失败")
+                    self.log(f"    ✗ 通道{ch['id']}({ch['name']}): 获取配置失败")
 
             # 刷新显示
             self.root.after(0, lambda: self.refresh_after_scan(device))
@@ -530,10 +672,10 @@ class NvrCodecManager:
                         ch['codec'] = codec or "未知"
                         ch['xml_config'] = config_xml
                         status = "✓" if ch['codec'] == 'H.264' else "✗"
-                        self.log(f"    {status} 通道{ch['id']}: {ch['codec']}")
+                        self.log(f"    {status} 通道{ch['id']}({ch['name']}): {ch['codec']}")
                     else:
                         ch['codec'] = "获取失败"
-                        self.log(f"    ✗ 通道{ch['id']}: 获取配置失败")
+                        self.log(f"    ✗ 通道{ch['id']}({ch['name']}): 获取配置失败")
 
                 processed += 1
                 self.update_progress(processed, total)
@@ -620,7 +762,7 @@ class NvrCodecManager:
             success_count = 0
 
             for i, (device, ch) in enumerate(to_modify):
-                self.log(f"[{i+1}/{total}] {device.ip} 通道{ch['id']}...")
+                self.log(f"[{i+1}/{total}] {device.ip} 通道{ch['id']}({ch['name']})...")
 
                 success, msg = self.modify_channel_codec(device, ch)
                 if success:

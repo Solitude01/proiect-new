@@ -1,4 +1,77 @@
 [
+
+  {
+    "Deepmind": "1",
+    "IP": "10.153.100.240",
+    "Password": "Admin12345",
+    "HttpPort": 80,
+    "RtspPort": 554,
+    "Scheme": "http"
+  },
+  {
+    "Deepmind": "2",
+    "IP": "10.152.100.104",
+    "Password": "scc12345",
+    "HttpPort": 80,
+    "RtspPort": 554,
+    "Scheme": "http"
+  },
+  {
+    "Deepmind": "3",
+    "IP": "10.30.6.176",
+    "Password": "wdzn8888",
+    "HttpPort": 80,
+    "RtspPort": 554,
+    "Scheme": "http"
+  },
+  {
+    "Deepmind": "4",
+    "IP": "10.152.100.102",
+    "Password": "scc12345",
+    "HttpPort": 80,
+    "RtspPort": 554,
+    "Scheme": "http"
+  },
+  {
+    "Deepmind": "5",
+    "IP": "10.152.100.103",
+    "Password": "scc12345",
+    "HttpPort": 80,
+    "RtspPort": 554,
+    "Scheme": "http"
+  },
+  {
+    "Deepmind": "6",
+    "IP": "10.30.6.175",
+    "Password": "ntscc@1108",
+    "HttpPort": 80,
+    "RtspPort": 554,
+    "Scheme": "http"
+  },
+  {
+    "Deepmind": "7",
+    "IP": "10.30.5.173",
+    "Password": "Admin12345",
+    "HttpPort": 80,
+    "RtspPort": 554,
+    "Scheme": "http"
+  },
+  {
+    "Deepmind": "8",
+    "IP": "10.30.5.174",
+    "Password": "Admin12345",
+    "HttpPort": 80,
+    "RtspPort": 554,
+    "Scheme": "http"
+  },
+  {
+    "Deepmind": "9",
+    "IP": "10.30.5.185",
+    "Password": "wdzn6688",
+    "HttpPort": 80,
+    "RtspPort": 554,
+    "Scheme": "http"
+  },
     {
         "Deepmind": "10",
         "IP": "10.30.5.186",
@@ -88,3 +161,4 @@
         "Scheme": "http"
     }
 ]
+
