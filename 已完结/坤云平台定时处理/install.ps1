@@ -113,10 +113,23 @@ function Install-Task {
 
     # 构建启动脚本：写到 ASCII 路径，中文路径只在文件内容中（UTF-8-BOM）
     $launcherPath = "C:\ky_cleanup_launcher.ps1"
+
+    # 踩坑记录: SYSTEM 账户 + -File + 中文路径 = 静默失败
+    # 虽然 launcherPath 是 ASCII 路径，但为了保险起见，我们将所有参数都写死在 launcher 中
+    # 避免任何通过命令行传递中文参数的情况
     $launcherContent = @"
-# 坤云平台定时清理启动脚本（由安装程序自动生成）
-# 此文件必须在 ASCII 路径下，避免 SYSTEM 账户中文路径编码问题
-& '$ScriptPath' -ConfigPath '$ConfigPath'
+# KunYun Cleanup Launcher Script (Auto-generated)
+# This script avoids Chinese path issues by hardcoding all paths
+`$ErrorActionPreference = "Stop"
+
+# Execute cleanup script with config
+try {
+    & '$ScriptPath' -ConfigPath '$ConfigPath'
+} catch {
+    `$msg = "ERROR: `$_"
+    Add-Content -Path "C:\ky_cleanup_error.log" -Value "`$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') - `$msg"
+    throw
+}
 "@
     Set-Content -Path $launcherPath -Value $launcherContent -Encoding UTF8 -Force
     Write-Success "启动脚本已生成: $launcherPath"
@@ -192,8 +205,8 @@ function Install-Task {
   <Actions Context="Author">
     <Exec>
       <Command>powershell.exe</Command>
-      <Arguments>-ExecutionPolicy Bypass -NoProfile -File "$launcherPath"</Arguments>
-      <WorkingDirectory>$PSScriptRoot</WorkingDirectory>
+      <Arguments>-ExecutionPolicy Bypass -NoProfile -Command "&amp; '$launcherPath'"</Arguments>
+      <WorkingDirectory>C:\</WorkingDirectory>
     </Exec>
   </Actions>
 </Task>

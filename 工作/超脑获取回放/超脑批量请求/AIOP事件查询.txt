@@ -1,0 +1,88 @@
+curl 'http://10.30.5.112/ISAPI/Intelligent/AIOpenPlatform/AIIntelligentSearch?format=json' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: zh-CN,zh;q=0.9' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Type: application/json' \
+  -b 'updatePlugin=true; WebSession_7ed80b36db=98dabe51cccc220a792cb22e766b702e5802806a0693992e0288fd233bab44e4' \
+  -H 'Origin: http://10.30.5.112' \
+  -H 'Referer: http://10.30.5.112/doc/index.html' \
+  -H 'SessionTag: 029ec6684b2d5110aaab5fff720b5953fc19a340759e2eb46ee6fce8c512679a' \
+  -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' \
+  --data-raw '{"SearchCondition":{"searchID":"A5C93DFB-8EB1-4D09-9B87-EC4A2047B18B","searchResultPosition":0,"maxResults":30,"startTime":"2026-03-05T00:00:00+08:00","endTime":"2026-03-05T23:59:59+08:00","engine":[],"taskType":"videoTask","minConfidence":0,"secondVerifyAlarmEnabled":false,"AIOPDataUrlEnabled":true,"channelID":[1],"secondVerifyAlarmType":"succ"}}' \
+  --insecure ;
+curl 'http://10.30.5.112/ISAPI/Security/sessionHeartbeat?JumpChildDev=true' \
+  -X 'PUT' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: zh-CN,zh;q=0.9' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Length: 0' \
+  -b 'updatePlugin=true; WebSession_7ed80b36db=98dabe51cccc220a792cb22e766b702e5802806a0693992e0288fd233bab44e4' \
+  -H 'Origin: http://10.30.5.112' \
+  -H 'Referer: http://10.30.5.112/doc/index.html' \
+  -H 'SessionTag: 029ec6684b2d5110aaab5fff720b5953fc19a340759e2eb46ee6fce8c512679a' \
+  -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' \
+  --insecure
+
+
+
+
+  curl 'http://10.30.5.112/ISAPI/Intelligent/AIOpenPlatform/AIIntelligentSearch?format=json' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: zh-CN,zh;q=0.9' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Type: application/json' \
+  -b 'updatePlugin=true; WebSession_7ed80b36db=98dabe51cccc220a792cb22e766b702e5802806a0693992e0288fd233bab44e4' \
+  -H 'Origin: http://10.30.5.112' \
+  -H 'Referer: http://10.30.5.112/doc/index.html' \
+  -H 'SessionTag: 029ec6684b2d5110aaab5fff720b5953fc19a340759e2eb46ee6fce8c512679a' \
+  -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' \
+  --data-raw '{"SearchCondition":{"searchID":"A5C93DFB-8EB1-4D09-9B87-EC4A2047B18B","searchResultPosition":0,"maxResults":30,"startTime":"2026-03-05T00:00:00+08:00","endTime":"2026-03-05T23:59:59+08:00","engine":[],"taskType":"videoTask","minConfidence":0,"secondVerifyAlarmEnabled":false,"AIOPDataUrlEnabled":true,"channelID":[1],"secondVerifyAlarmType":"succ"}}' \
+  --insecure ;
+curl 'http://10.30.5.112/ISAPI/Security/sessionHeartbeat?JumpChildDev=true' \
+  -X 'PUT' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: zh-CN,zh;q=0.9' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Length: 0' \
+  -b 'updatePlugin=true; WebSession_7ed80b36db=98dabe51cccc220a792cb22e766b702e5802806a0693992e0288fd233bab44e4' \
+  -H 'Origin: http://10.30.5.112' \
+  -H 'Referer: http://10.30.5.112/doc/index.html' \
+  -H 'SessionTag: 029ec6684b2d5110aaab5fff720b5953fc19a340759e2eb46ee6fce8c512679a' \
+  -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' \
+  --insecure ;
+curl 'http://10.30.5.112/ISAPI/Security/sessionHeartbeat?JumpChildDev=true' \
+  -X 'PUT' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: zh-CN,zh;q=0.9' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Length: 0' \
+  -b 'updatePlugin=true; WebSession_7ed80b36db=98dabe51cccc220a792cb22e766b702e5802806a0693992e0288fd233bab44e4' \
+  -H 'Origin: http://10.30.5.112' \
+  -H 'Referer: http://10.30.5.112/doc/index.html' \
+  -H 'SessionTag: 029ec6684b2d5110aaab5fff720b5953fc19a340759e2eb46ee6fce8c512679a' \
+  -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' \
+  --insecure ;
+curl 'http://10.30.5.112/ISAPI/Security/sessionHeartbeat?JumpChildDev=true' \
+  -X 'PUT' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: zh-CN,zh;q=0.9' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Length: 0' \
+  -b 'updatePlugin=true; WebSession_7ed80b36db=98dabe51cccc220a792cb22e766b702e5802806a0693992e0288fd233bab44e4' \
+  -H 'Origin: http://10.30.5.112' \
+  -H 'Referer: http://10.30.5.112/doc/index.html' \
+  -H 'SessionTag: 029ec6684b2d5110aaab5fff720b5953fc19a340759e2eb46ee6fce8c512679a' \
+  -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' \
+  --insecure ;
+curl 'http://10.30.5.112/ISAPI/Security/sessionHeartbeat?JumpChildDev=true' \
+  -X 'PUT' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: zh-CN,zh;q=0.9' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Length: 0' \
+  -b 'updatePlugin=true; WebSession_7ed80b36db=98dabe51cccc220a792cb22e766b702e5802806a0693992e0288fd233bab44e4' \
+  -H 'Origin: http://10.30.5.112' \
+  -H 'Referer: http://10.30.5.112/doc/index.html' \
+  -H 'SessionTag: 029ec6684b2d5110aaab5fff720b5953fc19a340759e2eb46ee6fce8c512679a' \
+  -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' \
+  --insecure

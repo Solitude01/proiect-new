@@ -1,0 +1,131 @@
+Read 1 file (ctrl+o to expand)
+
+● 找到问题了！fix_task_now.ps1 第 77-80 行的引号转义在 Windows Server 2012 R2 上不兼容。
+
+  使用 install.ps1 的 XML 方式（最可靠），手动执行以下命令：
+
+  $TaskName = "坤云平台定时清理"
+  $ScriptPath = "D:\dist\cleanup.ps1"
+  $ConfigPath = "D:\dist\config.json"
+  $LauncherPath = "C:\ky_cleanup_launcher.ps1"
+
+  # 1. 创建 launcher 脚本
+  $launcherContent = @"
+  `$ErrorActionPreference = "Stop"
+  try {
+      & '$ScriptPath' -ConfigPath '$ConfigPath'
+  } catch {
+      Add-Content -Path "C:\ky_cleanup_error.log" -Value "`$(Get-Date) - `$_"
+      throw
+  }
+  "@
+  Set-Content -Path $LauncherPath -Value $launcherContent -Encoding UTF8 -Force
+  Write-Host "Launcher 已创建" -ForegroundColor Green
+
+  # 2. 删除旧任务
+  schtasks.exe /delete /tn $TaskName /f 2>$null
+
+  # 3. 使用 XML 创建任务（避免引号问题）
+  $intervalMinutes = 120  # 2小时
+  $startBoundary = (Get-Date -Format "yyyy-MM-dd") + "T00:00:00"
+
+  $taskXml = @"
+  <?xml version="1.0" encoding="UTF-16"?>
+  <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+    <RegistrationInfo>
+      <Description>坤云平台定时清理任务 - 每2小时执行一次</Description>
+    </RegistrationInfo>
+    <Triggers>
+      <BootTrigger>
+        <Enabled>true</Enabled>
+        <Delay>PT2M</Delay>
+      </BootTrigger>
+      <TimeTrigger>
+        <Repetition>
+          <Interval>PT${intervalMinutes}M</Interval>
+          <StopAtDurationEnd>false</StopAtDurationEnd>
+        </Repetition>
+        <StartBoundary>$startBoundary</StartBoundary>
+        <Enabled>true</Enabled>
+      </TimeTrigger>
+    </Triggers>
+    <Principals>
+      <Principal id="Author">
+        <UserId>S-1-5-18</UserId>
+        <RunLevel>HighestAvailable</RunLevel>
+      </Principal>
+    </Principals>
+    <Settings>
+      <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+      <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+      <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+      <AllowHardTerminate>true</AllowHardTerminate>
+      <StartWhenAvailable>true</StartWhenAvailable>
+      <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+      <IdleSettings>
+        <StopOnIdleEnd>false</StopOnIdleEnd>
+        <RestartOnIdle>false</RestartOnIdle>
+      </IdleSettings>
+      <AllowStartOnDemand>true</AllowStartOnDemand>
+      <Enabled>true</Enabled>
+      <Hidden>false</Hidden>
+      <RunOnlyIfIdle>false</RunOnlyIfIdle>
+      <WakeToRun>false</WakeToRun>
+      <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
+      <Priority>7</Priority>
+    </Settings>
+    <Actions Context="Author">
+      <Exec>
+        <Command>powershell.exe</Command>
+        <Arguments>-ExecutionPolicy Bypass -NoProfile -Command "&amp; '$LauncherPath'"</Arguments>
+        <WorkingDirectory>C:\</WorkingDirectory>
+      </Exec>
+    </Actions>
+  </Task>
+  "@
+
+  $xmlPath = "C:\ky_cleanup_task.xml"
+  Set-Content -Path $xmlPath -Value $taskXml -Encoding Unicode -Force
+
+  # 4. 导入 XML 创建任务
+  $result = schtasks.exe /create /tn $TaskName /xml $xmlPath /f 2>&1
+  Remove-Item -Path $xmlPath -Force
+
+  if ($LASTEXITCODE -eq 0) {
+      Write-Host "任务创建成功！" -ForegroundColor Green
+      Get-ScheduledTask -TaskName $TaskName | Get-ScheduledTaskInfo
+  } else {
+      Write-Host "创建失败: $result" -ForegroundColor Red
+  }
+
+  ---
+  或者更简单：直接用 GUI 工具
+
+  1. 运行 坤云清理管理工具.exe
+  2. 切换到「计划任务」标签页
+  3. 设置触发间隔为 2 小时
+  4. 点击「安装计划任务」按钮
+  5. 在弹出的 UAC 窗口中确认
+
+  GUI 工具使用的也是 XML 方式，不会有引号转义问题。
+
+  ---
+  验证安装结果
+
+  # 查看任务状态
+  Get-ScheduledTask -TaskName "坤云平台定时清理" | Get-ScheduledTaskInfo
+
+  # 手动触发测试
+  Start-ScheduledTask -TaskName "坤云平台定时清理"
+
+  # 等待1分钟后检查日志
+  Get-ChildItem "D:\dist\logs" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+  推荐用 GUI 工具 的方式最简单可靠。需要我解释 XML 方式的原理吗？
+
+✻ Brewed for 55s
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+> 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ plan mode on (meta+m to cycle)

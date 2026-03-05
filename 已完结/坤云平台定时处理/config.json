@@ -1,84 +1,28 @@
 ﻿{
   "description": "坤云平台定时清理配置文件",
-  "platform": "无锡坤云",
+  "platform": "南通坤云",
   "cleanupTasks": [
     {
-      "name": "图片清理",
+      "name": "图片清理任务",
+      "description": "图片清理任务：保持目录大小不超过700GB",
       "enabled": true,
-      "path": "F:\\坤云\\webLocal\\monitorUpload",
+      "path": "G:\\NewWeb\\monitorUpload",
       "fileExtensions": [
         ".jpg",
         ".jpeg",
         ".png",
         ".bmp",
-        ".gif"
+        ".gif",
+        ".webp",
+        ".tiff"
       ],
       "cleanupMode": "bySize",
       "retentionDays": null,
-      "maxSizeGB": 166,
-      "description": "图片清理：保持目录大小不超过166GB"
-    },
-    {
-      "name": "视频清理",
-      "enabled": true,
-      "path": "D:\\home\\ruoyi\\uploadPath\\video",
-      "fileExtensions": [
-        ".mp4",
-        ".avi",
-        ".mov",
-        ".mkv",
-        ".flv"
-      ],
-      "cleanupMode": "bySize",
-      "retentionDays": null,
-      "maxSizeGB": 80,
-      "description": "视频清理：保持目录大小不超过80GB"
-    },
-    {
-      "name": "AI项目视频清理",
-      "enabled": true,
-      "path": "D:\\home\\ruoyi\\uploadPath\\aiProject",
-      "fileExtensions": [
-        ".mp4",
-        ".avi",
-        ".mov",
-        ".mkv",
-        ".flv"
-      ],
-      "cleanupMode": "bySize",
-      "retentionDays": null,
-      "maxSizeGB": 80,
-      "description": "AI项目视频清理：保持目录大小不超过80GB"
-    },
-    {
-      "name": "日志清理-E盘",
-      "enabled": true,
-      "path": "E:\\home\\client\\logs",
-      "fileExtensions": [
-        ".log",
-        ".txt"
-      ],
-      "cleanupMode": "byDays",
-      "retentionDays": 60,
-      "maxSizeGB": null,
-      "description": "日志清理：删除超过60天的日志文件"
-    },
-    {
-      "name": "日志清理-C盘",
-      "enabled": true,
-      "path": "C:\\home\\client\\logs",
-      "fileExtensions": [
-        ".log",
-        ".txt"
-      ],
-      "cleanupMode": "byDays",
-      "retentionDays": 60,
-      "maxSizeGB": null,
-      "description": "日志清理：删除超过60天的日志文件"
+      "maxSizeGB": 700.0
     }
   ],
   "settings": {
-    "logDir": "C:\\坤云平台定时处理\\logs",
+    "logDir": "D:\\坤云定时删除任务\\坤云平台定时处理\\logs",
     "logRetentionDays": 30,
     "dryRun": false,
     "description": "每次运行生成独立日志文件(cleanup_YYYYMMDD_HHmmss.log)，自动清理超过logRetentionDays天的旧日志"

@@ -13,7 +13,8 @@
       "Bash(where python:*)",
       "Bash(pip show:*)",
       "Bash(powershell.exe:*)",
-      "Bash(schtasks:*)"
+      "Bash(schtasks:*)",
+      "Bash(powershell:*)"
     ]
   }
 }
