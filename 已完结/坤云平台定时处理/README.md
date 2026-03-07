@@ -1,148 +1,151 @@
 # 坤云平台定时清理系统
 
-自动清理坤云平台的图片、视频和日志文件，防止磁盘空间被占满。
+> 自动清理坤云平台的图片、视频和日志文件，防止磁盘空间被占满。
+> 
+> **适用于：Windows Server 2012 R2 / PowerShell 4.0**
 
-## 运维速查
+---
 
-> 以下命令在服务器上以管理员 PowerShell 执行。
+## ⚠️ 重要说明
 
-**查看定时任务是否正常**
+**当前服务器环境存在严重兼容性问题**（Windows Server 2012 R2 + PowerShell 4.0）：
+- 所有 PowerShell 脚本创建定时任务的方式都会失败
+- `schtasks.exe` 命令行工具存在引号/路径解析 Bug
+- 唯一可靠方式：**使用 CMD 批处理创建任务**
 
+---
+
+## 🚀 快速开始（已配置完成）
+
+当前任务状态：
+- **任务名称**: `KY`
+- **执行频率**: 每 2 小时
+- **执行命令**: `D:\dist\run_ky.cmd`
+- **运行账户**: SYSTEM
+- **日志目录**: `D:\dist\logs`
+
+### 检查任务状态
 ```powershell
-Get-ScheduledTask -TaskName "坤云平台定时清理" | Format-Table TaskName, State
+Get-ScheduledTask -TaskName "KY" | Get-ScheduledTaskInfo
 ```
 
-输出 `State` 为 **Ready** 表示任务已注册且处于正常待触发状态。
-
-**查看上次运行时间和结果**
-
+### 查看最近日志
 ```powershell
-Get-ScheduledTask -TaskName "坤云平台定时清理" | Get-ScheduledTaskInfo
+Get-ChildItem "D:\dist\logs\cleanup_*.log" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 | Get-Content -Tail 20
 ```
 
-关注 `LastRunTime`（上次执行时间）和 `LastTaskResult`（`0` 表示成功）。
-
-**查看最新一条运行日志**
-
+### 手动触发任务
 ```powershell
-Get-ChildItem "C:\坤云平台定时处理\logs\cleanup_*.log" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 | Get-Content
+Start-ScheduledTask -TaskName "KY"
 ```
 
-**手动触发一次执行**
+---
 
-```powershell
-Start-ScheduledTask -TaskName "坤云平台定时清理"
+## 📋 如果任务需要重建
+
+在服务器上执行以下 CMD 命令：
+
+```cmd
+schtasks.exe /delete /tn "KY" /f
+schtasks.exe /create /tn "KY" /tr "D:\dist\run_ky.cmd" /sc hourly /mo 2 /ru SYSTEM /f
 ```
 
-## 当前配置概览
+---
 
-| 任务名 | 路径 | 模式 | 阈值 | 文件类型 |
-|--------|------|------|------|----------|
-| 图片清理 | `F:\坤云\webLocal\monitorUpload` | bySize | 166 GB | .jpg .jpeg .png .bmp .gif |
-| 视频清理 | `D:\home\ruoyi\uploadPath\video` | bySize | 80 GB | .mp4 .avi .mov .mkv .flv |
-| AI项目视频清理 | `D:\home\ruoyi\uploadPath\aiProject` | bySize | 80 GB | .mp4 .avi .mov .mkv .flv |
-| 日志清理-E盘 | `E:\home\client\logs` | byDays | 60 天 | .log .txt |
-| 日志清理-C盘 | `C:\home\client\logs` | byDays | 60 天 | .log .txt |
+## 🔧 配置文件
 
-- 定时触发：每 **2 小时**执行一次，开机延迟 2 分钟也会触发
-- 运行账户：SYSTEM
-- 日志目录：`C:\坤云平台定时处理\logs`（保留 30 天）
-- 模拟模式：`dryRun` 当前为 `false`（实际删除）
-
-## 文件结构
-
-```
-坤云平台定时处理/
-├── config.json      # 配置文件（清理任务、阈值、开关）
-├── cleanup.ps1      # 主清理脚本
-├── install.ps1      # 安装/卸载定时任务
-└── README.md        # 本文档
-```
-
-## 快速开始
-
-### 1. 配置清理规则
-
-编辑 `config.json`，在 `cleanupTasks` 数组中添加或修改任务。
-
-### 2. 测试运行
-
-将 `config.json` 中 `settings.dryRun` 设为 `true`，然后执行：
-
-```powershell
-.\cleanup.ps1
+`config.json`：
+```json
+{
+  "cleanupTasks": [
+    {
+      "name": "图片清理任务",
+      "enabled": true,
+      "path": "G:\\NewWeb\\monitorUpload",
+      "fileExtensions": [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".tiff"],
+      "cleanupMode": "bySize",
+      "maxSizeGB": 700.0
+    }
+  ],
+  "settings": {
+    "logDir": "D:\\dist\\logs",
+    "logRetentionDays": 30,
+    "dryRun": false
+  }
+}
 ```
 
-查看控制台输出和日志，确认预期删除的文件列表无误后，再将 `dryRun` 改回 `false`。
+---
 
-### 3. 安装定时任务
+## 🐛 已知问题与踩坑记录
 
-```powershell
-# 以管理员身份运行
-.\install.ps1
-```
+### 1. Windows Server 2012 R2 兼容性问题
 
-## 配置说明
+**问题现象**：
+- PowerShell 脚本创建任务失败
+- `schtasks.exe` 报错："文件名、目录名或卷标语法不正确"
+- 中文任务名称导致编码错误
 
-### 清理模式
+**根本原因**：
+- Windows Server 2012 R2 的 PowerShell 4.0 存在严重兼容性差异
+- `schtasks.exe` 命令解析器对引号和中文支持不佳
+- SYSTEM 账户在某些情况下权限受限
 
-| cleanupMode | 说明 | 必需参数 |
-|-------------|------|----------|
-| `byDays` | 删除超过指定天数的文件 | `retentionDays` |
-| `bySize` | 目录超过指定大小时，从最早的文件开始删除 | `maxSizeGB` |
+**解决方案**：
+- 使用 **CMD 批处理** 创建任务（而非 PowerShell）
+- 使用 **英文任务名称**（如 `KY` 而非中文）
+- 使用 **CMD 包装器** 调用 PowerShell 脚本
 
-### 清理任务字段
+### 2. 清理模式
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `name` | string | 任务名称，用于日志显示 |
-| `enabled` | bool | 是否启用 |
-| `path` | string | 要清理的目录路径 |
-| `fileExtensions` | array | 文件扩展名列表 |
-| `cleanupMode` | string | `byDays` 或 `bySize` |
-| `retentionDays` | int | 保留天数（byDays 模式） |
-| `maxSizeGB` | number | 最大目录大小 GB（bySize 模式） |
+- `bySize`: 目录超过指定大小时，从最早的文件开始删除
+- `byDays`: 删除超过指定天数的文件（未配置）
 
-### 系统设置
+---
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `logDir` | string | 日志目录 |
-| `logRetentionDays` | int | 日志保留天数 |
-| `dryRun` | bool | `true` 时只模拟，不实际删除 |
+## 📁 文件说明
 
-## 任务管理
+| 文件 | 说明 |
+|------|------|
+| `cleanup.ps1` | 主清理脚本 |
+| `config.json` | 清理配置 |
+| `run_ky.cmd` | CMD 包装器（任务实际执行的文件）|
+| `logs/` | 日志目录 |
+| `坤云清理管理工具.exe` | GUI 管理工具（可选）|
 
-```powershell
-# 停止正在运行的任务
-Stop-ScheduledTask -TaskName "坤云平台定时清理"
+---
 
-# 卸载定时任务
-.\install.ps1 -Uninstall
-```
+## ✅ 验证任务正常
 
-## 故障排查
+1. 检查任务存在：
+   ```powershell
+   Get-ScheduledTask -TaskName "KY"
+   ```
 
-### 任务未执行
+2. 检查下次运行时间：
+   ```powershell
+   (Get-ScheduledTask -TaskName "KY" | Get-ScheduledTaskInfo).NextRunTime
+   ```
 
-```powershell
-# 查看任务详情
-Get-ScheduledTask -TaskName "坤云平台定时清理" | Get-ScheduledTaskInfo
-# 手动测试脚本
-.\cleanup.ps1
-```
+3. 检查最近执行结果：
+   ```powershell
+   (Get-ScheduledTask -TaskName "KY" | Get-ScheduledTaskInfo).LastTaskResult
+   # 0 = 成功，非0 = 失败
+   ```
 
-### 文件未被删除
+4. 查看清理效果：
+   ```powershell
+   # 查看最新日志
+   Get-Content (Get-ChildItem "D:\dist\logs\cleanup_*.log" | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName -Tail 10
+   ```
 
-检查：
-- `dryRun` 是否仍为 `true`
-- 文件是否被其他进程占用
-- 路径和文件扩展名是否匹配
-- 运行账户是否有删除权限
+---
 
-## 注意事项
+## 📝 历史记录
 
-1. **首次使用**先设 `dryRun: true` 测试，确认无误再改为 `false`
-2. **路径格式**：JSON 中 Windows 路径用双反斜杠 `\\`
-3. **权限**：安装脚本和清理脚本都需要管理员权限
-4. **删除不可恢复**：请确保重要数据已备份
+- **2026-03-07**: 修复定时任务创建问题，从 PowerShell 方式改为 CMD 方式
+- **配置**: 每2小时清理一次，保持 G:\NewWeb\monitorUpload 不超过 700GB
+
+---
+
+**维护人员**: 张旭阳
