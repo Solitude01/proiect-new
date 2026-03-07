@@ -421,10 +421,13 @@ class ExcelToM3UConverter:
             self.status_var.set("正在生成M3U文件...")
             self.root.update()
             
+            # 按原始序号排序，确保输出顺序与Excel一致
+            sorted_data = sorted(self.verified_data, key=lambda x: x['index'])
+            
             # 生成M3U内容
             m3u_content = "#EXTM3U\n"
             
-            for cam in self.verified_data:
+            for cam in sorted_data:
                 name = cam['name']
                 ip = cam['ip']
                 password = cam['password']
@@ -441,12 +444,13 @@ class ExcelToM3UConverter:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(m3u_content)
             
-            self.status_var.set(f"成功生成: {output_name} (包含{len(self.verified_data)}个监控点)")
+            self.status_var.set(f"成功生成: {output_name} (包含{len(sorted_data)}个监控点,已按Excel顺序排序)")
             messagebox.showinfo(
                 "成功",
                 f"M3U文件已生成!\n\n"
                 f"路径: {output_path}\n"
-                f"包含: {len(self.verified_data)} 个已验证的监控点"
+                f"包含: {len(sorted_data)} 个已验证的监控点\n"
+                f"顺序: 按Excel原始顺序排列"
             )
             
         except Exception as e:
