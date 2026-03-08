@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LA Middleware - Instance Portal</title>
+    <!-- 使用本地系统字体，避免外部依赖 -->
+    <style>
+        @font-face {
+            font-family: 'Bebas Neue Local';
+            src: local('Bebas Neue'), local('Arial Narrow'), local('Impact');
+            font-weight: 400;
+        }
+    </style>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body class="portal-page">
+    <div class="grid-overlay"></div>
+
+    <!-- Header -->
+    <header class="portal-header">
+        <div class="header-content">
+            <div class="brand">
+                <div class="logo-mark">
+                    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="2" width="36" height="36" rx="4" stroke="currentColor" stroke-width="2"/>
+                        <path d="M10 20L16 26L30 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>LOGIC AGENT</h1>
+                    <span class="subtitle">IIoT MULTI-INSTANCE MIDDLEWARE</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" id="themeToggle" title="切换主题" onclick="toggleTheme()" style="margin-right: 0.75rem;">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" id="themeIcon">
+                        <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M10 2V3M10 17V18M2 10H3M17 10H18M4.3 4.3L5 5M15 15L15.7 15.7M4.3 15.7L5 15M15 5L15.7 4.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <button class="btn btn-primary" id="createInstanceBtn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 2V14M2 8H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    创建实例
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="portal-main">
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-label">总实例数</span>
+                <span class="stat-value" id="totalInstances">0</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <span class="stat-label">在线连接</span>
+                <span class="stat-value" id="totalConnections">0</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <span class="stat-label">系统状态</span>
+                <span class="stat-value status-online">运行中</span>
+            </div>
+        </div>
+
+        <!-- Instance Grid -->
+        <div class="instance-grid" id="instanceGrid">
+            <!-- Instances will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <div class="empty-icon">
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="16" width="48" height="40" rx="4" stroke="currentColor" stroke-width="2" stroke-dasharray="4 4"/>
+                    <path d="M20 32H44M20 40H36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="48" cy="48" r="12" fill="var(--bg-primary)" stroke="var(--accent-cyan)" stroke-width="2"/>
+                    <path d="M44 48H52M48 44V52" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h2>暂无实例</h2>
+            <p>创建您的第一个 LogicAgent 实例以开始监控生产数据</p>
+            <button class="btn btn-primary" onclick="openCreateModal()">
+                创建第一个实例
+            </button>
+        </div>
+    </main>
+
+    <!-- Create Instance Modal -->
+    <div class="modal" id="createModal">
+        <div class="modal-backdrop" onclick="closeCreateModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>创建新实例</h2>
+                <button class="modal-close" onclick="closeCreateModal()">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <form class="modal-form" id="createForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="instanceId">实例ID <span class="required">*</span></label>
+                        <input type="text" id="instanceId" name="instance_id" required
+                               placeholder="workshop_01" pattern="[a-zA-Z0-9_]+">
+                        <span class="hint">仅允许字母、数字和下划线</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="instanceName">显示名称 <span class="required">*</span></label>
+                        <input type="text" id="instanceName" name="name" required
+                               placeholder="一车间实例">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="laIp">LA IP 地址 <span class="required">*</span></label>
+                        <input type="text" id="laIp" name="la_ip" required
+                               placeholder="192.168.1.100" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">
+                    </div>
+                    <div class="form-group">
+                        <label for="laPort">LA 端口 <span class="required">*</span></label>
+                        <input type="number" id="laPort" name="la_port" required
+                               placeholder="8080" min="1" max="65535" value="8080">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">描述</label>
+                    <textarea id="description" name="description" rows="3"
+                              placeholder="生产线路 A - 主装配线"></textarea>
+                </div>
+
+                <!-- Control Buttons Configuration -->
+                <div class="form-section">
+                    <h3>控制按钮配置</h3>
+                    <div id="createButtonsContainer">
+                        <!-- Default buttons -->
+                        <div class="button-config-row">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>按钮名称</label>
+                                    <input type="text" name="btn_label_0" required placeholder="启动生产" value="启动生产">
+                                </div>
+                                <div class="form-group">
+                                    <label>按钮颜色</label>
+                                    <select name="btn_color_0">
+                                        <option value="green" selected>绿色</option>
+                                        <option value="red">红色</option>
+                                        <option value="blue">蓝色</option>
+                                        <option value="orange">橙色</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>端点路径</label>
+                                    <input type="text" name="btn_endpoint_0" placeholder="/api/control" value="/api/control">
+                                </div>
+                                <div class="form-group">
+                                    <label>HTTP 方法</label>
+                                    <select name="btn_method_0">
+                                        <option value="POST" selected>POST</option>
+                                        <option value="GET">GET</option>
+                                        <option value="PUT">PUT</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>发送内容 (JSON格式)</label>
+                                <textarea name="btn_payload_0" rows="2" placeholder='{"action": "start"}'>{"action": "start"}</textarea>
+                            </div>
+                            <button type="button" class="btn btn-danger btn-small" onclick="this.closest('.button-config-row').remove()">删除此按钮</button>
+                            <hr style="border-color: var(--border-subtle); margin: 1rem 0;">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="addCreateButton()">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="margin-right: 4px;">
+                            <path d="M8 2V14M2 8H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        添加按钮
+                    </button>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-text">创建实例</span>
+                        <span class="btn-loader"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Instance Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-backdrop" onclick="closeEditModal()"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>编辑实例</h2>
+                <button class="modal-close" onclick="closeEditModal()">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <form class="modal-form" id="editForm">
+                <input type="hidden" id="editInstanceId" name="instance_id">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editInstanceName">显示名称 <span class="required">*</span></label>
+                        <input type="text" id="editInstanceName" name="name" required placeholder="一车间实例">
+                    </div>
+                    <div class="form-group">
+                        <label for="editLaIp">LA IP 地址 <span class="required">*</span></label>
+                        <input type="text" id="editLaIp" name="la_ip" required placeholder="192.168.1.100" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editLaPort">LA 端口 <span class="required">*</span></label>
+                        <input type="number" id="editLaPort" name="la_port" required placeholder="8080" min="1" max="65535">
+                    </div>
+                    <div class="form-group">
+                        <label for="editDescription">描述</label>
+                        <input type="text" id="editDescription" name="description" placeholder="生产线描述">
+                    </div>
+                </div>
+
+                <!-- Control Buttons Configuration -->
+                <div class="form-section">
+                    <h3>控制按钮配置</h3>
+                    <div id="editButtonsContainer">
+                        <!-- Buttons will be dynamically added here -->
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="addEditButton()">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="margin-right: 4px;">
+                            <path d="M8 2V14M2 8H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        添加按钮
+                    </button>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-text">保存修改</span>
+                        <span class="btn-loader"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-backdrop" onclick="closeDeleteModal()"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>确认删除</h2>
+                <button class="modal-close" onclick="closeDeleteModal()">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="warning-text">
+                    确定要删除实例 <strong id="deleteInstanceName"></strong> 吗？<br>
+                    此操作不可撤销，所有配置数据将被永久删除。
+                </p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">取消</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <span class="btn-text">删除实例</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Theme Toggle Script -->
+    <script>
+        // Theme management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('la-theme') || 'light'; // Default to light
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('la-theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('themeIcon');
+            if (!icon) return;
+
+            if (theme === 'dark') {
+                // Moon icon for dark mode
+                icon.innerHTML = `
+                    <path d="M17.5 10.5C17.5 14.0899 14.5899 17 11 17C7.41015 17 4.5 14.0899 4.5 10.5C4.5 6.91015 7.41015 4 11 4C11.5 4 12 4.05 12.47 4.14C11.54 5.03 11 6.21 11 7.5C11 10.54 13.46 13 16.5 13C16.8 13 17.1 12.97 17.38 12.91C17.45 12.79 17.5 10.5 17.5 10.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                `;
+            } else {
+                // Sun icon for light mode
+                icon.innerHTML = `
+                    <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M10 2V3M10 17V18M2 10H3M17 10H18M4.3 4.3L5 5M15 15L15.7 15.7M4.3 15.7L5 15M15 5L15.7 4.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                `;
+            }
+        }
+
+        // Initialize theme on load
+        initTheme();
+    </script>
+    <script src="/static/js/portal.js"></script>
+</body>
+</html>

@@ -253,12 +253,37 @@ class UnifiedSuperBrainTool:
         self._load_devices()
         self._build_ui()
     
+    def _get_app_dir(self):
+        """获取应用程序所在目录（支持 PyInstaller 打包）"""
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller 打包环境：exe 所在目录
+            return os.path.dirname(sys.executable)
+        else:
+            # 开发环境：脚本所在目录
+            return os.path.dirname(os.path.abspath(__file__))
+    
     def _load_devices(self):
         """加载设备配置"""
         try:
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            parent_dir = os.path.dirname(script_dir)
-            json_path = os.path.join(parent_dir, "Deepmind.json")
+            # 尝试多个可能的路径
+            app_dir = self._get_app_dir()
+            parent_dir = os.path.dirname(app_dir)
+            
+            # 可能的配置文件位置（按优先级）
+            possible_paths = [
+                os.path.join(app_dir, "Deepmind.json"),           # exe/脚本同级目录
+                os.path.join(parent_dir, "Deepmind.json"),        # 上级目录（原逻辑）
+                os.path.join(os.getcwd(), "Deepmind.json"),       # 当前工作目录
+            ]
+            
+            json_path = None
+            for path in possible_paths:
+                if os.path.exists(path):
+                    json_path = path
+                    break
+            
+            if json_path is None:
+                raise FileNotFoundError(f"找不到 Deepmind.json 配置文件，已尝试: {', '.join(possible_paths)}")
             
             with open(json_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
