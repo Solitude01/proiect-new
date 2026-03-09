@@ -1,0 +1,1022 @@
+{
+  "export_time": "2026-03-09T14:52:45.697613",
+  "mode": "stress",
+  "config": {
+    "query_type": "aiop",
+    "start_time": "2026-03-09 00:00",
+    "end_time": "2026-03-09 23:59",
+    "workers": 1,
+    "interval_ms": 5000
+  },
+  "summary": {
+    "total": 100,
+    "success": 100,
+    "fail": 0,
+    "min_time_ms": 8.64553451538086,
+    "max_time_ms": 414.41941261291504,
+    "avg_time_ms": 46.34002685546875,
+    "median_time_ms": 25.399327278137207
+  },
+  "results": [
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_0",
+      "success": true,
+      "response_time_ms": 34.17181968688965,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:09:29.071672"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_1",
+      "success": true,
+      "response_time_ms": 20.30181884765625,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:09:34.092711"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_2",
+      "success": true,
+      "response_time_ms": 19.6225643157959,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:09:39.113041"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_3",
+      "success": true,
+      "response_time_ms": 17.70806312561035,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:09:44.131378"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_4",
+      "success": true,
+      "response_time_ms": 25.968313217163086,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:09:49.158015"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_5",
+      "success": true,
+      "response_time_ms": 27.13751792907715,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:09:54.186128"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_6",
+      "success": true,
+      "response_time_ms": 19.101381301879883,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:09:59.206037"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_7",
+      "success": true,
+      "response_time_ms": 22.309541702270508,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:04.229111"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_8",
+      "success": true,
+      "response_time_ms": 34.82389450073242,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:09.264405"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_9",
+      "success": true,
+      "response_time_ms": 33.19597244262695,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:14.298093"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_10",
+      "success": true,
+      "response_time_ms": 21.86894416809082,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:19.320462"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_11",
+      "success": true,
+      "response_time_ms": 8.943557739257812,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:24.330245"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_12",
+      "success": true,
+      "response_time_ms": 28.850793838500977,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:29.360011"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_13",
+      "success": true,
+      "response_time_ms": 23.627281188964844,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:34.384326"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_14",
+      "success": true,
+      "response_time_ms": 8.844137191772461,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:39.393669"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_15",
+      "success": true,
+      "response_time_ms": 10.018348693847656,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:44.404306"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_16",
+      "success": true,
+      "response_time_ms": 10.154008865356445,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:49.414999"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_17",
+      "success": true,
+      "response_time_ms": 27.919530868530273,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:54.444146"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_18",
+      "success": true,
+      "response_time_ms": 34.06786918640137,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:10:59.478900"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_19",
+      "success": true,
+      "response_time_ms": 29.75606918334961,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:04.509439"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_20",
+      "success": true,
+      "response_time_ms": 27.853965759277344,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:09.538161"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_21",
+      "success": true,
+      "response_time_ms": 9.015321731567383,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:14.548613"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_22",
+      "success": true,
+      "response_time_ms": 27.91309356689453,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:19.577304"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_23",
+      "success": true,
+      "response_time_ms": 12.907266616821289,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:24.590913"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_24",
+      "success": true,
+      "response_time_ms": 25.80428123474121,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:29.617480"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_25",
+      "success": true,
+      "response_time_ms": 8.946657180786133,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:34.627100"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_26",
+      "success": true,
+      "response_time_ms": 25.478839874267578,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:39.653198"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_27",
+      "success": true,
+      "response_time_ms": 28.159379959106445,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:44.681915"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_28",
+      "success": true,
+      "response_time_ms": 9.355545043945312,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:49.691825"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_29",
+      "success": true,
+      "response_time_ms": 23.101329803466797,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:54.715632"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_30",
+      "success": true,
+      "response_time_ms": 73.35233688354492,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:11:59.789895"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_31",
+      "success": true,
+      "response_time_ms": 20.78986167907715,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:04.811396"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_32",
+      "success": true,
+      "response_time_ms": 34.375667572021484,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:09.846544"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_33",
+      "success": true,
+      "response_time_ms": 8.64553451538086,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:14.855688"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_34",
+      "success": true,
+      "response_time_ms": 31.035423278808594,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:19.888452"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_35",
+      "success": true,
+      "response_time_ms": 32.35340118408203,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:24.921817"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_36",
+      "success": true,
+      "response_time_ms": 9.491682052612305,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:29.932113"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_37",
+      "success": true,
+      "response_time_ms": 9.617805480957031,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:34.942622"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_38",
+      "success": true,
+      "response_time_ms": 22.585153579711914,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:39.966151"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_39",
+      "success": true,
+      "response_time_ms": 26.68285369873047,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:44.993416"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_40",
+      "success": true,
+      "response_time_ms": 12.874603271484375,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:50.007072"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_41",
+      "success": true,
+      "response_time_ms": 8.953094482421875,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:12:55.016418"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_42",
+      "success": true,
+      "response_time_ms": 21.839618682861328,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:00.039169"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_43",
+      "success": true,
+      "response_time_ms": 25.95973014831543,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:05.065777"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_44",
+      "success": true,
+      "response_time_ms": 9.00578498840332,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:10.075418"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_45",
+      "success": true,
+      "response_time_ms": 414.41941261291504,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:15.490466"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_46",
+      "success": true,
+      "response_time_ms": 9.622573852539062,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:20.500914"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_47",
+      "success": true,
+      "response_time_ms": 9.212732315063477,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:25.510760"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_48",
+      "success": true,
+      "response_time_ms": 19.30713653564453,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:30.530856"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_49",
+      "success": true,
+      "response_time_ms": 26.17812156677246,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:35.557632"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_50",
+      "success": true,
+      "response_time_ms": 9.891271591186523,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:40.568163"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_51",
+      "success": true,
+      "response_time_ms": 10.012149810791016,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:45.578826"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_52",
+      "success": true,
+      "response_time_ms": 8.719444274902344,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:50.589109"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_53",
+      "success": true,
+      "response_time_ms": 15.146255493164062,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:13:55.604759"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_54",
+      "success": true,
+      "response_time_ms": 9.696006774902344,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:00.615005"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_55",
+      "success": true,
+      "response_time_ms": 20.460844039916992,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:05.635992"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_56",
+      "success": true,
+      "response_time_ms": 9.089469909667969,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:10.645881"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_57",
+      "success": true,
+      "response_time_ms": 33.98394584655762,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:15.680926"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_58",
+      "success": true,
+      "response_time_ms": 25.319814682006836,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:20.707118"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_59",
+      "success": true,
+      "response_time_ms": 22.658109664916992,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:25.730263"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_60",
+      "success": true,
+      "response_time_ms": 21.5146541595459,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:30.752401"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_61",
+      "success": true,
+      "response_time_ms": 9.274721145629883,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:35.762499"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_62",
+      "success": true,
+      "response_time_ms": 43.72262954711914,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:40.807046"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_63",
+      "success": true,
+      "response_time_ms": 28.050899505615234,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:45.835671"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_64",
+      "success": true,
+      "response_time_ms": 341.0356044769287,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:51.177384"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_65",
+      "success": true,
+      "response_time_ms": 27.478933334350586,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:14:56.205603"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_66",
+      "success": true,
+      "response_time_ms": 32.7303409576416,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:01.238853"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_67",
+      "success": true,
+      "response_time_ms": 27.60004997253418,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:06.266938"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_68",
+      "success": true,
+      "response_time_ms": 27.540206909179688,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:11.295206"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_69",
+      "success": true,
+      "response_time_ms": 9.137392044067383,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:16.304956"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_70",
+      "success": true,
+      "response_time_ms": 29.819250106811523,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:21.335326"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_71",
+      "success": true,
+      "response_time_ms": 10.058164596557617,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:26.346444"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_72",
+      "success": true,
+      "response_time_ms": 32.78827667236328,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:31.380190"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_73",
+      "success": true,
+      "response_time_ms": 27.33159065246582,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:36.408173"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_74",
+      "success": true,
+      "response_time_ms": 9.380578994750977,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:41.418278"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_75",
+      "success": true,
+      "response_time_ms": 11.443614959716797,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:46.431496"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_76",
+      "success": true,
+      "response_time_ms": 22.912979125976562,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:51.454998"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_77",
+      "success": true,
+      "response_time_ms": 142.03906059265137,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:15:56.597805"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_78",
+      "success": true,
+      "response_time_ms": 9.17959213256836,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:01.607947"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_79",
+      "success": true,
+      "response_time_ms": 238.1000518798828,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:06.846817"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_80",
+      "success": true,
+      "response_time_ms": 22.88675308227539,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:11.870457"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_81",
+      "success": true,
+      "response_time_ms": 175.93812942504883,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:17.046922"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_82",
+      "success": true,
+      "response_time_ms": 33.17999839782715,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:22.080638"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_83",
+      "success": true,
+      "response_time_ms": 166.05019569396973,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:27.247548"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_84",
+      "success": true,
+      "response_time_ms": 20.939350128173828,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:32.269443"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_85",
+      "success": true,
+      "response_time_ms": 187.20245361328125,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:37.457412"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_86",
+      "success": true,
+      "response_time_ms": 30.33161163330078,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:42.488513"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_87",
+      "success": true,
+      "response_time_ms": 158.12253952026367,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:47.647149"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_88",
+      "success": true,
+      "response_time_ms": 31.455039978027344,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:52.679462"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_89",
+      "success": true,
+      "response_time_ms": 167.00243949890137,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:16:57.847200"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_90",
+      "success": true,
+      "response_time_ms": 28.5794734954834,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:17:02.876755"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_91",
+      "success": true,
+      "response_time_ms": 173.1710433959961,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:17:08.050814"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_92",
+      "success": true,
+      "response_time_ms": 9.412527084350586,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:17:13.061223"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_93",
+      "success": true,
+      "response_time_ms": 185.530424118042,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:17:18.247619"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_94",
+      "success": true,
+      "response_time_ms": 9.863853454589844,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:17:23.258165"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_95",
+      "success": true,
+      "response_time_ms": 146.7289924621582,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:17:28.405435"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_96",
+      "success": true,
+      "response_time_ms": 21.9118595123291,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:17:33.428354"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_97",
+      "success": true,
+      "response_time_ms": 118.04938316345215,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:17:38.547492"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_98",
+      "success": true,
+      "response_time_ms": 26.079177856445312,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:17:43.574493"
+    },
+    {
+      "device_id": "18",
+      "device_ip": "10.153.109.200",
+      "operation": "stress_99",
+      "success": true,
+      "response_time_ms": 172.22189903259277,
+      "data_count": 30,
+      "error_msg": "",
+      "timestamp": "2026-03-09T14:17:48.747866"
+    }
+  ]
+}
