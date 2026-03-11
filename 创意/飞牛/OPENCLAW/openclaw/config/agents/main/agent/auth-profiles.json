@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "profiles": {
+    "default": {
+      "type": "api_key",
+      "provider": "ds-v3",
+      "key": "0"
+    }
+  },
+  "usageStats": {
+    "default": {
+      "lastUsed": 1773127021842,
+      "errorCount": 0
+    }
+  }
+}

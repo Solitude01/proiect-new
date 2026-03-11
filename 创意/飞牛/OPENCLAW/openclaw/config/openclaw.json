@@ -1,0 +1,43 @@
+{
+  "gateway": {
+    "bind": "lan",
+    "controlUi": {
+      "allowedOrigins": ["http://10.30.43.199:3000", "http://10.30.43.199:18789", "http://10.30.44.154:3000", "http://127.0.0.1:18789"],
+      "allowInsecureAuth": true
+    },
+    "trustedProxies": ["172.16.0.0/12", "10.30.0.0/16"]
+  },
+  "agents": {
+    "defaults": {
+      "model": "ds-v3/ds-v3"
+    }
+  },
+  "auth": {
+    "profiles": {
+      "default": {
+        "provider": "ds-v3",
+        "mode": "api_key"
+      }
+    }
+  },
+  "models": {
+    "providers": {
+      "ds-v3": {
+        "baseUrl": "http://ds.scc.com.cn/v1",
+        "apiKey": "0",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "ds-v3",
+            "name": "DeepSeek V3 (Internal)",
+            "reasoning": false,
+            "input": ["text"],
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "contextWindow": 65536,
+            "maxTokens": 8192
+          }
+        ]
+      }
+    }
+  }
+}

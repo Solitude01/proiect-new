@@ -1,0 +1,28 @@
+{
+  "providers": {
+    "ds-v3": {
+      "baseUrl": "http://ds.scc.com.cn/v1",
+      "apiKey": "0",
+      "api": "openai-completions",
+      "models": [
+        {
+          "id": "ds-v3",
+          "name": "DeepSeek V3 (Internal)",
+          "reasoning": false,
+          "input": [
+            "text"
+          ],
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          },
+          "contextWindow": 65536,
+          "maxTokens": 8192,
+          "api": "openai-completions"
+        }
+      ]
+    }
+  }
+}
