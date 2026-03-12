@@ -17,8 +17,11 @@ services:
       OPENAI_API_BASE: http://ds.scc.com.cn/v1
       DEFAULT_MODEL: ds-v3
       HTTP_PROXY: http://10.30.44.154:1111
+      http_proxy: http://10.30.44.154:1111
       HTTPS_PROXY: http://10.30.44.154:1111
-      NO_PROXY: localhost,127.0.0.1,10.30.0.0/16,ds.scc.com.cn
+      https_proxy: http://10.30.44.154:1111
+      NO_PROXY: localhost,127.0.0.1,10.30.43.0/24,ds.scc.com.cn
+      no_proxy: localhost,127.0.0.1,10.30.43.0/24,ds.scc.com.cn
     restart: unless-stopped
 
   nginx:

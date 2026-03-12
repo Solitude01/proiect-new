@@ -2,7 +2,6 @@
   "cab91f67d006a0ee13aa6aa6b225134c78bf747898c557adace0b20cea5a3b2a": {
     "deviceId": "cab91f67d006a0ee13aa6aa6b225134c78bf747898c557adace0b20cea5a3b2a",
     "publicKey": "epQKvkLhhGCjp38EsyDD6f4LfjUFb94X3a240jj8Jms",
-    "displayName": "agent",
     "platform": "linux",
     "clientId": "gateway-client",
     "clientMode": "backend",

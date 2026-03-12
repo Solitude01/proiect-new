@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:openclaws.io)"
+      "WebFetch(domain:openclaws.io)",
+      "WebSearch",
+      "Bash(find openclaw:*)"
     ]
   }
 }

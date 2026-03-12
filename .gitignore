@@ -63,3 +63,26 @@ auto-py-to-exe/
 **/dist/
 *.spec
 **/log/*.txt
+
+# --- 安全与环境 (必须) ---
+.env
+.env.*
+.venv/
+env/
+venv/
+ENV/
+
+# --- Node.js 依赖 ---
+node_modules/
+package-lock.json
+
+# --- 运行时状态与缓存 ---
+**/workspace/.openclaw/
+**/sessions/*.jsonl
+**/sessions/*.jsonl.*
+**/logs/
+*.log
+
+# --- 系统残留 ---
+.DS_Store
+Thumbs.db

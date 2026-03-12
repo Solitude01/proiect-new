@@ -778,7 +778,72 @@
         function showStatus(message, type) {
             statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
         }
-        
+
+        // 在 canvas 上绘制多边形
+        function drawPolygonOnCanvas(context, polygon, width, height, color, label) {
+            if (!polygon || polygon.length < 3) return;
+
+            context.beginPath();
+            polygon.forEach((point, index) => {
+                const x = parseFloat(point.x) * width;
+                const y = parseFloat(point.y) * height;
+                if (index === 0) {
+                    context.moveTo(x, y);
+                } else {
+                    context.lineTo(x, y);
+                }
+            });
+            context.closePath();
+
+            // 填充
+            context.fillStyle = color.fill;
+            context.fill();
+
+            // 边框
+            context.strokeStyle = color.stroke;
+            context.lineWidth = 3;
+            context.stroke();
+
+            // 标签
+            if (label) {
+                // 计算多边形的中心点用于放置标签
+                let centerX = 0, centerY = 0;
+                polygon.forEach(point => {
+                    centerX += parseFloat(point.x);
+                    centerY += parseFloat(point.y);
+                });
+                centerX = (centerX / polygon.length) * width;
+                centerY = (centerY / polygon.length) * height;
+
+                context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                context.font = 'bold 16px Arial';
+                const textMetrics = context.measureText(label);
+                context.fillRect(centerX - textMetrics.width / 2 - 5, centerY - 20, textMetrics.width + 10, 25);
+
+                context.fillStyle = '#ffffff';
+                context.textAlign = 'center';
+                context.fillText(label, centerX, centerY - 3);
+                context.textAlign = 'left';
+            }
+        }
+
+        // 获取目标关联的规则名称
+        function getTargetTypeName(targetId, jsonData) {
+            if (jsonData.events && jsonData.events.alertInfo) {
+                for (const alert of jsonData.events.alertInfo) {
+                    if (alert.unionTargets && alert.unionTargets.childTargets) {
+                        const isRelated = alert.unionTargets.childTargets.some(
+                            child => child.id === targetId
+                        );
+                        if (isRelated && alert.ruleInfo && alert.ruleInfo.ruleName) {
+                            return alert.ruleInfo.ruleName;
+                        }
+                    }
+                }
+            }
+            return `类型${targetId}`;
+        }
+
         function drawCanvas() {
             if (imageDataList.length === 0) {
                 showStatus('请先选择包含图片和JSON文件的文件夹', 'error');
@@ -811,10 +876,18 @@
                 // 绘制所有目标框
                 if (jsonData.targets) {
                     jsonData.targets.forEach((target, index) => {
-                        if (target.obj && target.obj.rect) {
+                        if (target.obj) {
+                            // 动态获取规则名称
+                            const typeName = getTargetTypeName(target.obj.id, jsonData);
+                            const label = `目标${target.obj.id} (${typeName})`;
                             const color = colors[index % colors.length];
-                            const label = `目标${target.obj.id} (类型${target.obj.type})`;
-                            drawRectOnCanvas(ctx, target.obj.rect, canvas.width, canvas.height, color, label);
+
+                            // 优先绘制多边形，如不存在则绘制矩形
+                            if (target.obj.polygon) {
+                                drawPolygonOnCanvas(ctx, target.obj.polygon, canvas.width, canvas.height, color, label);
+                            } else if (target.obj.rect) {
+                                drawRectOnCanvas(ctx, target.obj.rect, canvas.width, canvas.height, color, label);
+                            }
                         }
                     });
                 }
@@ -825,11 +898,17 @@
                 if (jsonData.events && jsonData.events.alertInfo) {
                     jsonData.events.alertInfo.forEach((alert, index) => {
                         const target = alert.unionTargets;
-                        if (target && target.region && target.region.rect) {
+                        if (target && target.region) {
                             const color = { stroke: '#ff0000', fill: 'rgba(255, 0, 0, 0.3)' };
                             const childTargetIds = target.childTargets ? target.childTargets.map(t => t.id).join(',') : '';
                             const label = `⚠️ ${alert.ruleInfo.ruleName} (目标${childTargetIds})`;
-                            drawRectOnCanvas(ctx, target.region.rect, canvas.width, canvas.height, color, label);
+
+                            // 优先绘制多边形，如不存在则绘制矩形
+                            if (target.region.polygon) {
+                                drawPolygonOnCanvas(ctx, target.region.polygon, canvas.width, canvas.height, color, label);
+                            } else if (target.region.rect) {
+                                drawRectOnCanvas(ctx, target.region.rect, canvas.width, canvas.height, color, label);
+                            }
                         }
                     });
                 }
@@ -959,11 +1038,18 @@
                 jsonData.targets.forEach((target, index) => {
                     const obj = target.obj;
                     const color = colors[index % colors.length];
+                    const typeName = getTargetTypeName(obj.id, jsonData);
                     html += `<div class="info-item" style="border-left-color: ${color.stroke};">
-                        <strong>目标 ${obj.id}:</strong> 类型 ${obj.type}<br>
-                        <strong>置信度:</strong> ${(obj.confidence / 10).toFixed(1)}%<br>
-                        <strong>位置:</strong> x=${(parseFloat(obj.rect.x) * 100).toFixed(1)}%, y=${(parseFloat(obj.rect.y) * 100).toFixed(1)}%
-                    </div>`;
+                        <strong>目标 ${obj.id}:</strong> ${typeName}<br>
+                        <strong>置信度:</strong> ${(obj.confidence / 10).toFixed(1)}%<br>`;
+
+                    // 显示多边形或矩形信息
+                    if (obj.polygon) {
+                        html += `<strong>形状:</strong> 多边形 (${obj.polygon.length}个顶点)<br>`;
+                    } else if (obj.rect) {
+                        html += `<strong>位置:</strong> x=${(parseFloat(obj.rect.x) * 100).toFixed(1)}%, y=${(parseFloat(obj.rect.y) * 100).toFixed(1)}%`;
+                    }
+                    html += `</div>`;
                 });
             }
 
@@ -1126,10 +1212,18 @@
                 // 绘制所有目标框
                 if (jsonData.targets) {
                     jsonData.targets.forEach((target, index) => {
-                        if (target.obj && target.obj.rect) {
+                        if (target.obj) {
+                            // 动态获取规则名称
+                            const typeName = getTargetTypeName(target.obj.id, jsonData);
+                            const label = `目标${target.obj.id} (${typeName})`;
                             const color = colors[index % colors.length];
-                            const label = `目标${target.obj.id} (类型${target.obj.type})`;
-                            drawRectOnCanvas(modalCtx, target.obj.rect, modalCanvas.width, modalCanvas.height, color, label);
+
+                            // 优先绘制多边形，如不存在则绘制矩形
+                            if (target.obj.polygon) {
+                                drawPolygonOnCanvas(modalCtx, target.obj.polygon, modalCanvas.width, modalCanvas.height, color, label);
+                            } else if (target.obj.rect) {
+                                drawRectOnCanvas(modalCtx, target.obj.rect, modalCanvas.width, modalCanvas.height, color, label);
+                            }
                         }
                     });
                 }
@@ -1140,11 +1234,17 @@
                 if (jsonData.events && jsonData.events.alertInfo) {
                     jsonData.events.alertInfo.forEach((alert, index) => {
                         const target = alert.unionTargets;
-                        if (target && target.region && target.region.rect) {
+                        if (target && target.region) {
                             const color = { stroke: '#ff0000', fill: 'rgba(255, 0, 0, 0.3)' };
                             const childTargetIds = target.childTargets ? target.childTargets.map(t => t.id).join(',') : '';
                             const label = `⚠️ ${alert.ruleInfo.ruleName} (目标${childTargetIds})`;
-                            drawRectOnCanvas(modalCtx, target.region.rect, modalCanvas.width, modalCanvas.height, color, label);
+
+                            // 优先绘制多边形，如不存在则绘制矩形
+                            if (target.region.polygon) {
+                                drawPolygonOnCanvas(modalCtx, target.region.polygon, modalCanvas.width, modalCanvas.height, color, label);
+                            } else if (target.region.rect) {
+                                drawRectOnCanvas(modalCtx, target.region.rect, modalCanvas.width, modalCanvas.height, color, label);
+                            }
                         }
                     });
                 }

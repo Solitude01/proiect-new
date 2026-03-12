@@ -3,7 +3,7 @@
   "payload": {
     "kind": "update",
     "status": "skipped",
-    "ts": 1773126839860,
+    "ts": 1773189424463,
     "sessionKey": "agent:main:main",
     "deliveryContext": {
       "channel": "webchat"
@@ -19,7 +19,7 @@
       "after": null,
       "steps": [],
       "reason": "not-git-install",
-      "durationMs": 5261
+      "durationMs": 1266
     }
   }
 }
