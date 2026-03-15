@@ -1,0 +1,6 @@
+地址：https://ai.hikvision.com/auth/login?state=none&redirect_uri=https%3A%2F%2Fai.hikvision.com%2Fintellisense%2Fai-training%2Fconsole%2F%23%2Fhome
+
+
+主体账号：ntscc2021
+子账号名称：ZXY6699
+密码：zxc73258

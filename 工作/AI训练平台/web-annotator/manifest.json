@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "海康数据集下载器",
+  "version": "2.1.0",
+  "description": "从海康威视AI训练平台批量下载训练数据集和标注数据",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "downloads",
+    "scripting",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "https://ai.hikvision.com/*",
+    "*://*.oss-cn-hangzhou.aliyuncs.com/*"
+  ],
+  "action": {
+    "default_title": "点击显示/隐藏海康下载器面板"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://ai.hikvision.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["https://ai.hikvision.com/*"]
+    }
+  ]
+}

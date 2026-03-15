@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find . -maxdepth 2 -type f -name \"*.json\" -o -name \"*.md\" -o -name \".cursorrules\" 2>/dev/null | head -50)",
+      "Bash(find . -type f \\\\\\( -name \"*.py\" -o -name \"*.js\" -o -name \"*.ts\" -o -name \"*.jsx\" -o -name \"*.tsx\" -o -name \"*.vue\" -o -name \"*.java\" -o -name \"*.go\" -o -name \"*.rs\" \\\\\\) 2>/dev/null | head -50)",
+      "Bash(find ../../LA交互端 -type f \\\\\\( -name \"*.py\" -o -name \"*.json\" -o -name \"*.md\" \\\\\\) 2>/dev/null | head -30)",
+      "Bash(find ../../统一标注平台 -type f \\\\\\( -name \"*.py\" -o -name \"*.js\" -o -name \"*.json\" -o -name \"*.md\" \\\\\\) 2>/dev/null | head -30)",
+      "Bash(find ../../超脑获取回放 -type f \\\\\\( -name \"*.py\" -o -name \"*.js\" -o -name \"*.json\" -o -name \"*.md\" \\\\\\) 2>/dev/null | head -30)",
+      "Bash(find:*)"
+    ]
+  }
+}

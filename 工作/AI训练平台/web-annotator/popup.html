@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>海康数据集下载器</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">🏭</div>
+      <h1>海康数据集下载器</h1>
+    </header>
+
+    <!-- 状态提示 -->
+    <div id="statusPanel" class="status-panel">
+      <div id="statusText" class="status-text">正在检测页面...</div>
+    </div>
+
+    <!-- 数据集信息 -->
+    <div id="datasetInfo" class="dataset-info" style="display: none;">
+      <div class="info-row">
+        <span class="label">数据集:</span>
+        <span id="datasetName" class="value">--</span>
+      </div>
+      <div class="info-row">
+        <span class="label">ID:</span>
+        <span id="datasetId" class="value">--</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div id="totalFiles" class="stat-value">0</div>
+          <div class="stat-label">总图片</div>
+        </div>
+        <div class="stat-item">
+          <div id="labeledFiles" class="stat-value">0</div>
+          <div class="stat-label">已标注</div>
+        </div>
+        <div class="stat-item">
+          <div id="capturedFiles" class="stat-value highlight">0</div>
+          <div class="stat-label">已捕获</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 下载选项 -->
+    <div id="downloadOptions" class="section" style="display: none;">
+      <h3>下载选项</h3>
+      <div class="form-group">
+        <label>输出格式</label>
+        <select id="outputFormat" class="select">
+          <option value="original">原始JSON (推荐)</option>
+          <option value="yolo">YOLO格式</option>
+          <option value="coco">COCO格式</option>
+        </select>
+      </div>
+      <div class="checkbox-group">
+        <label class="checkbox">
+          <input type="checkbox" id="includeImages" checked>
+          <span class="checkmark"></span>
+          <span class="label-text">同时下载原图</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 下载按钮 -->
+    <div id="downloadButtons" class="button-group" style="display: none;">
+      <button id="downloadCurrent" class="btn btn-primary">
+        <span class="icon">📥</span>
+        <span class="text">导出已捕获数据</span>
+      </button>
+      <button id="downloadAnnotationsOnly" class="btn btn-secondary">
+        <span class="icon">📄</span>
+        <span class="text">仅导出标注JSON</span>
+      </button>
+    </div>
+
+    <!-- 进度显示 -->
+    <div id="progressPanel" class="progress-panel" style="display: none;">
+      <div class="progress-header">
+        <span id="progressText">准备下载...</span>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+      </div>
+      <div id="currentFile" class="current-file"></div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="actions">
+      <button id="clearData" class="btn btn-text" style="display: none;">
+        <span class="icon">🗑️</span> 清空已捕获数据
+      </button>
+      <button id="refreshData" class="btn btn-text">
+        <span class="icon">🔄</span> 刷新数据
+      </button>
+    </div>
+
+    <!-- 使用说明 -->
+    <div class="help-section">
+      <details>
+        <summary>使用说明</summary>
+        <div class="help-content">
+          <ol>
+            <li>在海康AI训练平台打开数据集页面</li>
+            <li>等待页面加载图片列表（插件会自动捕获）</li>
+            <li>翻页浏览以捕获更多图片数据</li>
+            <li>点击"导出已捕获数据"下载</li>
+          </ol>
+          <p class="note">注意：图片URL有过期时间，请尽快下载</p>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
