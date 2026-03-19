@@ -16,6 +16,7 @@ sys.path.insert(0, str(project_root))
 
 from core.auth import AuthManager
 from core.downloader import DatasetDownloader
+from core.converter import COCOConverter
 from browser.bb_browser_bridge import BBBrowserBridge
 
 
@@ -182,6 +183,43 @@ def run_manual_mode(dataset_id: str, version_id: str, token: str, output_dir: Pa
     return result.failed == 0
 
 
+def run_export_coco(folder_path: Path) -> bool:
+    """
+    将已下载的数据集文件夹转换为COCO格式
+    """
+    print("=" * 60)
+    print("海康威视AI平台数据集导出工具 - COCO格式转换")
+    print("=" * 60)
+    print(f"\n数据集目录: {folder_path}")
+
+    try:
+        converter = COCOConverter(folder_path)
+        result = converter.convert()
+
+        print(f"\n转换完成!")
+        print(f"  图片数:   {result.images_count}")
+        print(f"  标注数:   {result.annotations_count}")
+        print(f"  类别数:   {result.categories_count}")
+        if result.skipped_count > 0:
+            print(f"  跳过:     {result.skipped_count} 条（无效bbox或空label）")
+        print(f"\nCOCO目录: {result.coco_dir}")
+        print(f"  - 标注: {result.output_path}")
+        print(f"  - 图片: {result.coco_dir / 'images'}")
+        return True
+
+    except FileNotFoundError as e:
+        print(f"\n错误: {e}")
+        return False
+    except ValueError as e:
+        print(f"\n错误: {e}")
+        return False
+    except Exception as e:
+        print(f"\n转换失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def run_gui_mode():
     """
     GUI模式：启动图形界面
@@ -249,10 +287,19 @@ def main():
         help="输出目录（默认: ~/Downloads/hikvision_dataset_{id}）"
     )
 
+    parser.add_argument(
+        "--export-coco",
+        type=str,
+        metavar="FOLDER",
+        help="将已下载的数据集文件夹转换为COCO格式"
+    )
+
     args = parser.parse_args()
 
     # 根据参数选择模式
-    if args.gui:
+    if args.export_coco:
+        success = run_export_coco(Path(args.export_coco))
+    elif args.gui:
         # GUI模式
         success = run_gui_mode()
     elif args.auto or (not args.dataset and not args.version):

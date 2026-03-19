@@ -21,6 +21,7 @@ sys.path.insert(0, str(project_root))
 
 from core.auth import AuthManager
 from core.downloader import DatasetDownloader, DownloadResult
+from core.converter import COCOConverter, ConversionResult
 from browser.bb_browser_bridge import BBBrowserBridge
 
 
@@ -49,6 +50,7 @@ class MainWindow:
         self.auth_manager: Optional[AuthManager] = None
         self.is_downloading = False
         self.download_thread: Optional[threading.Thread] = None
+        self.last_download_dir: Optional[Path] = None
 
         # 创建UI
         self._create_widgets()
@@ -154,6 +156,13 @@ class MainWindow:
             state=tk.DISABLED
         )
 
+        self.export_coco_btn = ttk.Button(
+            self.button_frame,
+            text="导出COCO格式",
+            command=self._on_export_coco,
+            width=15
+        )
+
         # 进度区域
         self.progress_frame = ttk.LabelFrame(self.root, text="下载进度", padding=10)
 
@@ -204,6 +213,7 @@ class MainWindow:
         self.button_frame.pack(pady=10)
         self.download_btn.pack(side=tk.LEFT, padx=5)
         self.cancel_btn.pack(side=tk.LEFT, padx=5)
+        self.export_coco_btn.pack(side=tk.LEFT, padx=5)
 
         # 进度区域
         self.progress_frame.pack(fill=tk.X, padx=15, pady=5)
@@ -566,6 +576,7 @@ class MainWindow:
     def _download_complete(self, result: DownloadResult, output_dir: Path):
         """下载完成"""
         self.is_downloading = False
+        self.last_download_dir = output_dir
         self.download_btn.config(state=tk.NORMAL)
         self.cancel_btn.config(state=tk.DISABLED)
         self.connect_btn.config(state=tk.NORMAL)
@@ -604,6 +615,65 @@ class MainWindow:
 
         self.log(f"下载错误: {error_msg}")
         messagebox.showerror("下载失败", error_msg)
+
+    def _on_export_coco(self):
+        """导出COCO格式按钮事件"""
+        # 默认打开上次下载目录，否则 home/Downloads
+        initial_dir = str(self.last_download_dir) if self.last_download_dir else str(Path.home() / "Downloads")
+        folder = filedialog.askdirectory(
+            initialdir=initial_dir,
+            title="选择已下载的数据集目录"
+        )
+        if not folder:
+            return
+
+        self.export_coco_btn.config(state=tk.DISABLED)
+        self.log(f"开始转换COCO格式: {folder}")
+
+        t = threading.Thread(
+            target=self._export_coco_worker,
+            args=(Path(folder),),
+            daemon=True
+        )
+        t.start()
+
+    def _export_coco_worker(self, folder: Path):
+        """后台线程执行转换"""
+        try:
+            converter = COCOConverter(folder)
+            result = converter.convert()
+            self.root.after(0, lambda: self._export_coco_complete(result))
+        except Exception as e:
+            msg = str(e)
+            self.root.after(0, lambda: self._export_coco_error(msg))
+
+    def _export_coco_complete(self, result: ConversionResult):
+        """转换完成，恢复按钮并显示结果"""
+        self.export_coco_btn.config(state=tk.NORMAL)
+        self.log("=" * 40)
+        self.log("COCO格式转换完成!")
+        self.log(f"图片数: {result.images_count}")
+        self.log(f"标注数: {result.annotations_count}")
+        self.log(f"类别数: {result.categories_count}")
+        if result.skipped_count > 0:
+            self.log(f"跳过: {result.skipped_count} 条（无效bbox/空label）")
+        self.log(f"输出: {result.output_path}")
+
+        messagebox.showinfo(
+            "COCO转换完成",
+            f"转换成功!\n\n"
+            f"图片数: {result.images_count}\n"
+            f"标注数: {result.annotations_count}\n"
+            f"类别数: {result.categories_count}\n"
+            + (f"跳过: {result.skipped_count} 条\n" if result.skipped_count else "")
+            + f"\nCOCO目录:\n{result.coco_dir}"
+        )
+
+    def _export_coco_error(self, msg: str):
+        """转换出错，恢复按钮并显示错误"""
+        self.export_coco_btn.config(state=tk.NORMAL)
+        self.log(f"COCO转换失败: {msg}")
+        messagebox.showerror("COCO转换失败", msg)
 
     def _on_cancel(self):
         """取消按钮事件"""

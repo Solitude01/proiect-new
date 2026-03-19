@@ -85,6 +85,28 @@ python main.py --auto --output ./my_dataset
 python main.py --dataset 100149930 --version 100240402 --token "your_token_here"
 ```
 
+### 导出COCO格式
+
+下载完成后，将数据集转换为标准COCO格式：
+
+#### CLI
+```bash
+python main.py --export-coco ./dataset_xxx_20250101_120000
+```
+
+#### GUI
+下载完成后点击"导出COCO格式"按钮，选择数据集目录。
+
+转换完成后，在数据集目录下生成 `COCO/` 子文件夹：
+
+```
+dataset_xxx_20250101_120000/
+└── COCO/
+    ├── annotations/
+    │   └── instances.json   # COCO标准标注文件
+    └── images/              # 图片副本
+```
+
 ## 输出目录结构
 
 每次下载会创建一个带时间戳的子文件夹，避免覆盖之前的数据：
@@ -95,9 +117,15 @@ python main.py --dataset 100149930 --version 100240402 --token "your_token_here"
     ├── images/                              # 原始图片
     │   ├── image001.jpg
     │   └── image002.jpg
-    └── annotations/                         # 标注数据（JSON格式）
-        ├── image001.json
-        └── image002.json
+    ├── annotations/                         # 标注数据（JSON格式，海康格式）
+    │   ├── image001.json
+    │   └── image002.json
+    └── COCO/                                # COCO标准格式（导出后生成）
+        ├── annotations/
+        │   └── instances.json               # COCO标准标注文件
+        └── images/                          # 图片副本
+            ├── image001.jpg
+            └── image002.jpg
 ```
 
 ## 标注格式
