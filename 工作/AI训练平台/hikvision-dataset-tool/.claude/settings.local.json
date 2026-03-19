@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xxd \"/c/Users/Lane/Downloads/dataset_100150175_20260319_130424/images/3月16日 \\(1\\)_20260316172106_00000000000000000_0_2560_1440.jpg\")",
+      "Bash(python:*)",
+      "Bash(head -c 2000 C:/Users/Lane/Downloads/dataset_100149930_20260319_125218/images/*.jpg)",
+      "Bash(xxd)",
+      "Bash(grep -o key['']?s*[:=]s*[''][^'']* 手动下载网络请求和控制台信息/ai.hikvision.com.har)",
+      "Bash(chcp:*)",
+      "Bash(pip install:*)",
+      "Bash(.venv/Scripts/pip install:*)"
+    ]
+  }
+}

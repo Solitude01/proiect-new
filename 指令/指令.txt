@@ -87,28 +87,19 @@ claude CLI
         
   
         set ANTHROPIC_AUTH_TOKEN=sk-FgVxnb2oy0MwAHNtoRkcZ4Vbh3jGBj4yFhuGMV6DU5ISy12J & set ANTHROPIC_BASE_URL=https://anyrouter.top & claude
-        set ANTHROPIC_AUTH_TOKEN=sk-FgVxnb2oy0MwAHNtoRkcZ4Vbh3jGBj4yFhuGMV6DU5ISy12J & set ANTHROPIC_BASE_URL=https://a-ocnfniawgw.cn-shanghai.fcapp.run & claude
+
+        
         set ANTHROPIC_AUTH_TOKEN=sk-FgVxnb2oy0MwAHNtoRkcZ4Vbh3jGBj4yFhuGMV6DU5ISy12J & set ANTHROPIC_BASE_URL=https://a-ocnfniawgw.cn-shanghai.fcapp.run & claude
 
 
         带代理 一键打开
 
         set ANTHROPIC_AUTH_TOKEN=sk-FgVxnb2oy0MwAHNtoRkcZ4Vbh3jGBj4yFhuGMV6DU5ISy12J & set ANTHROPIC_BASE_URL=https://anyrouter.top & set HTTP_PROXY=http://10.30.44.154:1111 & set HTTPS_PROXY=http://10.30.44.154:1111 & claude
-        
-        
-        set ANTHROPIC_AUTH_TOKEN=sk-FgVxnb2oy0MwAHNtoRkcZ4Vbh3jGBj4yFhuGMV6DU5ISy12J & set ANTHROPIC_BASE_URL=https://pmpjfbhq.cn-nb1.rainapp.top & set HTTP_PROXY=http://10.30.44.154:7897 & set HTTPS_PROXY=http://10.30.44.154:7897 & claude
-        set ANTHROPIC_AUTH_TOKEN=sk-FgVxnb2oy0MwAHNtoRkcZ4Vbh3jGBj4yFhuGMV6DU5ISy12J & set ANTHROPIC_BASE_URL=https://a-ocnfniawgw.cn-shanghai.fcapp.run & set HTTP_PROXY=http://10.30.44.154:7897 & set HTTPS_PROXY=http://10.30.44.154:7897 & claude
-  
-  带代理 一键打开
+        自用：
+        set ANTHROPIC_AUTH_TOKEN=sk-kimi-LSYzXrUBrok6EY97bVidAwODg3v0ypnHRHERfLKPPZo9oSAKhXe9NeCJQsPrJYZ9 & set ANTHROPIC_BASE_URL=https://api.kimi.com/coding  & set ANTHROPIC_MODEL=kimi-k2.5 & claude
 
-        set ANTHROPIC_AUTH_TOKEN=sk-sGm819p9vNQVSFqQ1g4vQPO5JbZIetBITBcthiYFR89dsNAe & set ANTHROPIC_BASE_URL=https://anyrouter.top & set HTTP_PROXY=http://10.30.44.154:7897 & set HTTPS_PROXY=http://10.30.44.154:7897 & claude
-        set ANTHROPIC_AUTH_TOKEN=sk-sGm819p9vNQVSFqQ1g4vQPO5JbZIetBITBcthiYFR89dsNAe & set ANTHROPIC_BASE_URL=https://pmpjfbhq.cn-nb1.rainapp.top & set HTTP_PROXY=http://10.30.44.154:7897 & set HTTPS_PROXY=http://10.30.44.154:7897 & claude
-        set ANTHROPIC_AUTH_TOKEN=sk-sGm819p9vNQVSFqQ1g4vQPO5JbZIetBITBcthiYFR89dsNAe & set ANTHROPIC_BASE_URL=https://a-ocnfniawgw.cn-shanghai.fcapp.run & set HTTP_PROXY=http://10.30.44.154:7897 & set HTTPS_PROXY=http://10.30.44.154:7897 & claude
-
- set ANTHROPIC_AUTH_TOKEN=sk-kimi-LSYzXrUBrok6EY97bVidAwODg3v0ypnHRHERfLKPPZo9oSAKhXe9NeCJQsPrJYZ9 & set ANTHROPIC_BASE_URL=https://api.kimi.com/coding  & set ANTHROPIC_MODEL=kimi-k2.5 & claude
-
-
-set ANTHROPIC_AUTH_TOKEN=sk-kimi-HC76enqii1GYQY5lkY428RESPjppeVO8CYA1BC15IPnk49G883Hxi65HxXojHZqo & set ANTHROPIC_BASE_URL=https://api.kimi.com/coding  & set ANTHROPIC_MODEL=kimi-k2.5 & claude
+        lbw ： 
+        set ANTHROPIC_AUTH_TOKEN=sk-kimi-HC76enqii1GYQY5lkY428RESPjppeVO8CYA1BC15IPnk49G883Hxi65HxXojHZqo & set ANTHROPIC_BASE_URL=https://api.kimi.com/coding  & set ANTHROPIC_MODEL=kimi-k2.5 & claude
 
 第二家claudecode 
         https://api.codemirror.codes
@@ -120,9 +111,6 @@ Codex
         cd /d D:\proiect2 & set HTTP_PROXY=http://10.30.44.154:7897 & set HTTPS_PROXY=http://10.30.44.154:7897 & codex
 
         set HTTP_PROXY=http://10.30.44.154:7897 & set HTTPS_PROXY=http://10.30.44.154:7897
-
-KAT coder
-        set ANTHROPIC_AUTH_TOKEN=LoPhHtrkO1DKeEyWOLVtc8vDGX2Oz1xG9h1O83s3ttc & set ANTHROPIC_BASE_URL=https://wanqing.streamlakeapi.com/api/gateway/v1/endpoints/ep-n53ffb-1764041087696174857/claude-code-proxy & set ANTHROPIC_MODEL=KAT-Coder & set ANTHROPIC_SMALL_FAST_MODEL=KAT-Coder & claude
 
 海康工具大全
 

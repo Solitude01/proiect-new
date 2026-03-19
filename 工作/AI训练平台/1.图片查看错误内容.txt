@@ -1,4 +1,0 @@
-Error details:
-Magick.NET-Q16-HDRI-OpenMP-x64: Not aJPEG file: starts with 0x49 0x5a `C:\ Users\ Lane\ Downloads\1755581761736c9e1878e. jpg'@ error/ jpeg. c/JPEGErrorHandler/356
-at ImageMagick. MagickImageCollection. NativeMagickImageCollection. ReadFile(IMagickSettings`1 settings) in /_/ src/ Magick. NET/ Generated/ Magick. NET. SourceGenerator/ ImageMagick. SourceGenerator. NativeInteropGenerator/MagickImageCollection. g. cs: line 657
-at ImageMagick. MagickImageCollection. AddImages(String fileName, IMagickReadSettings`1 readSettings, Boolean ping) in /_/ src/ Magick. NET/ MagickImageCollection. cs: line 1827

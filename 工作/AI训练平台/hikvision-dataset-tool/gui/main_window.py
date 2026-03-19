@@ -1,0 +1,638 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+GUI主窗口 - tkinter图形界面
+提供用户友好的数据集下载界面
+"""
+
+import sys
+import tkinter as tk
+from tkinter import ttk, scrolledtext, filedialog, messagebox
+from pathlib import Path
+from datetime import datetime
+from typing import Optional
+from dataclasses import dataclass
+import threading
+import json
+
+# 添加项目目录到Python路径
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from core.auth import AuthManager
+from core.downloader import DatasetDownloader, DownloadResult
+from browser.bb_browser_bridge import BBBrowserBridge
+
+
+@dataclass
+class PageInfo:
+    """页面信息数据类"""
+    dataset_id: str
+    version_id: str
+    labeled_count: int
+    url: str
+    title: str
+    cookies: dict
+
+
+class MainWindow:
+    """主窗口类"""
+
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("海康威视AI平台数据集导出工具")
+        self.root.geometry("700x600")
+        self.root.minsize(600, 500)
+
+        # 状态变量
+        self.page_info: Optional[PageInfo] = None
+        self.auth_manager: Optional[AuthManager] = None
+        self.is_downloading = False
+        self.download_thread: Optional[threading.Thread] = None
+
+        # 创建UI
+        self._create_widgets()
+        self._create_layout()
+
+        # 初始化日志
+        self.log("程序启动")
+        self.log("请确保已在浏览器中登录海康AI平台并打开数据集页面")
+
+        # 尝试加载上次配置
+        self._load_config_on_startup()
+
+    def _create_widgets(self):
+        """创建UI组件"""
+        # 标题
+        self.title_label = ttk.Label(
+            self.root,
+            text="海康威视AI平台数据集导出工具",
+            font=("Microsoft YaHei", 16, "bold")
+        )
+
+        # 认证区域
+        self.auth_frame = ttk.LabelFrame(self.root, text="浏览器连接", padding=10)
+
+        self.auth_method_var = tk.StringVar(value="手动输入Token")
+        self.auth_method_combo = ttk.Combobox(
+            self.auth_frame,
+            textvariable=self.auth_method_var,
+            values=["自动获取", "手动输入Token"],
+            state="readonly",
+            width=20
+        )
+
+        self.connect_btn = ttk.Button(
+            self.auth_frame,
+            text="连接浏览器",
+            command=self._on_connect
+        )
+
+        self.status_label = ttk.Label(
+            self.auth_frame,
+            text="未连接",
+            foreground="red"
+        )
+
+        # 页面信息区域
+        self.info_frame = ttk.LabelFrame(self.root, text="当前页面信息", padding=10)
+
+        self.dataset_id_var = tk.StringVar(value="-")
+        self.version_id_var = tk.StringVar(value="-")
+        self.labeled_count_var = tk.StringVar(value="-")
+        self.page_title_var = tk.StringVar(value="-")
+
+        ttk.Label(self.info_frame, text="数据集ID:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Label(self.info_frame, textvariable=self.dataset_id_var).grid(row=0, column=1, sticky=tk.W, pady=2)
+
+        ttk.Label(self.info_frame, text="版本ID:").grid(row=1, column=0, sticky=tk.W, pady=2)
+        ttk.Label(self.info_frame, textvariable=self.version_id_var).grid(row=1, column=1, sticky=tk.W, pady=2)
+
+        ttk.Label(self.info_frame, text="已标注图片:").grid(row=2, column=0, sticky=tk.W, pady=2)
+        ttk.Label(self.info_frame, textvariable=self.labeled_count_var).grid(row=2, column=1, sticky=tk.W, pady=2)
+
+        ttk.Label(self.info_frame, text="页面标题:").grid(row=3, column=0, sticky=tk.W, pady=2)
+        ttk.Label(self.info_frame, textvariable=self.page_title_var, wraplength=400).grid(row=3, column=1, sticky=tk.W, pady=2)
+
+        # 下载设置区域
+        self.download_frame = ttk.LabelFrame(self.root, text="下载设置", padding=10)
+
+        self.output_dir_var = tk.StringVar()
+        default_dir = str(Path.home() / "Downloads")
+        self.output_dir_var.set(default_dir)
+
+        ttk.Label(self.download_frame, text="下载目录:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(self.download_frame, textvariable=self.output_dir_var, width=50).grid(row=0, column=1, sticky=tk.EW, pady=5, padx=5)
+        ttk.Button(self.download_frame, text="浏览...", command=self._on_browse).grid(row=0, column=2, sticky=tk.W, pady=5)
+
+        ttk.Label(self.download_frame, text="并发数:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.concurrent_var = tk.IntVar(value=5)
+        self.concurrent_spin = ttk.Spinbox(
+            self.download_frame,
+            from_=1,
+            to=10,
+            textvariable=self.concurrent_var,
+            width=10
+        )
+        self.concurrent_spin.grid(row=1, column=1, sticky=tk.W, pady=5)
+
+        # 操作按钮区域
+        self.button_frame = ttk.Frame(self.root)
+
+        self.download_btn = ttk.Button(
+            self.button_frame,
+            text="开始下载",
+            command=self._on_start_download,
+            width=15
+        )
+
+        self.cancel_btn = ttk.Button(
+            self.button_frame,
+            text="取消",
+            command=self._on_cancel,
+            width=15,
+            state=tk.DISABLED
+        )
+
+        # 进度区域
+        self.progress_frame = ttk.LabelFrame(self.root, text="下载进度", padding=10)
+
+        self.progress_var = tk.DoubleVar(value=0)
+        self.progress_bar = ttk.Progressbar(
+            self.progress_frame,
+            variable=self.progress_var,
+            maximum=100,
+            length=500,
+            mode='determinate'
+        )
+
+        self.progress_label = ttk.Label(self.progress_frame, text="就绪")
+        self.current_file_var = tk.StringVar(value="")
+        self.current_file_label = ttk.Label(self.progress_frame, textvariable=self.current_file_var)
+
+        # 日志区域
+        self.log_frame = ttk.LabelFrame(self.root, text="日志", padding=10)
+
+        self.log_text = scrolledtext.ScrolledText(
+            self.log_frame,
+            wrap=tk.WORD,
+            height=10,
+            state=tk.DISABLED
+        )
+
+    def _create_layout(self):
+        """布局UI组件"""
+        # 标题
+        self.title_label.pack(pady=15)
+
+        # 认证区域
+        self.auth_frame.pack(fill=tk.X, padx=15, pady=5)
+        ttk.Label(self.auth_frame, text="认证方式:").grid(row=0, column=0, sticky=tk.W, padx=5)
+        self.auth_method_combo.grid(row=0, column=1, sticky=tk.W, padx=5)
+        self.connect_btn.grid(row=0, column=2, sticky=tk.W, padx=5)
+        self.status_label.grid(row=0, column=3, sticky=tk.W, padx=10)
+
+        # 页面信息区域
+        self.info_frame.pack(fill=tk.X, padx=15, pady=5)
+        self.info_frame.columnconfigure(1, weight=1)
+
+        # 下载设置区域
+        self.download_frame.pack(fill=tk.X, padx=15, pady=5)
+        self.download_frame.columnconfigure(1, weight=1)
+
+        # 操作按钮
+        self.button_frame.pack(pady=10)
+        self.download_btn.pack(side=tk.LEFT, padx=5)
+        self.cancel_btn.pack(side=tk.LEFT, padx=5)
+
+        # 进度区域
+        self.progress_frame.pack(fill=tk.X, padx=15, pady=5)
+        self.progress_bar.pack(fill=tk.X, pady=5)
+        self.progress_label.pack(anchor=tk.W, pady=2)
+        self.current_file_label.pack(anchor=tk.W, pady=2)
+
+        # 日志区域
+        self.log_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
+        self.log_text.pack(fill=tk.BOTH, expand=True)
+
+    def log(self, message: str):
+        """添加日志"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        log_entry = f"[{timestamp}] {message}\n"
+
+        self.log_text.configure(state=tk.NORMAL)
+        self.log_text.insert(tk.END, log_entry)
+        self.log_text.see(tk.END)
+        self.log_text.configure(state=tk.DISABLED)
+
+    def _load_config(self) -> dict:
+        """加载配置文件"""
+        config_path = project_root / "config.json"
+        if config_path.exists():
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                self.log(f"加载配置失败: {e}")
+        return {}
+
+    def _save_config(self, token: str, dataset_id: str, version_id: str):
+        """保存配置文件"""
+        config_path = project_root / "config.json"
+        try:
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump({
+                    "token": token,
+                    "dataset_id": dataset_id,
+                    "version_id": version_id
+                }, f, indent=2, ensure_ascii=False)
+            self.log("配置已保存")
+        except Exception as e:
+            self.log(f"保存配置失败: {e}")
+
+    def _load_config_on_startup(self):
+        """启动时加载配置"""
+        cfg = self._load_config()
+        if cfg.get("token") and cfg.get("dataset_id") and cfg.get("version_id"):
+            # 自动恢复上次配置，无需弹窗
+            self._setup_connection(
+                token=cfg["token"],
+                cookies={"token": cfg["token"]},
+                dataset_id=cfg["dataset_id"],
+                version_id=cfg["version_id"],
+                title=f"数据集 {cfg['dataset_id']}",
+                labeled_count=0
+            )
+            self.log("已自动加载上次配置")
+
+    def _on_connect(self):
+        """连接浏览器按钮事件"""
+        auth_method = self.auth_method_var.get()
+
+        # 手动输入Token模式
+        if "手动" in auth_method:
+            self._show_manual_token_dialog()
+            return
+
+        self.log("正在连接浏览器...")
+        self.status_label.config(text="连接中...", foreground="orange")
+        self.root.update()
+
+        try:
+            bridge = BBBrowserBridge()
+
+            # 步骤1：通过HTTP CDP获取页面信息（不需要WebSocket）
+            page = bridge.find_hikvision_page()
+            if not page:
+                self.status_label.config(text="未找到页面", foreground="red")
+                self.log("未找到海康AI平台页面")
+                self.log("提示: 请确保浏览器已打开数据集页面（URL含 /overall/.../gallery）")
+                ask = messagebox.askyesno(
+                    "未找到页面",
+                    "未在浏览器中找到海康AI平台数据集页面\n\n"
+                    "请确保:\n"
+                    "1. Chrome/Edge 已启动并登录海康AI平台\n"
+                    "2. 已打开数据集页面（URL含 /overall/.../gallery）\n\n"
+                    "是否改用手动输入Token？"
+                )
+                if ask:
+                    self._show_manual_token_dialog()
+                return
+
+            url = page.get("url", "")
+            title = page.get("title", "")
+            page_id = page.get("id")
+
+            dataset_id, version_id = bridge.extract_ids_from_url(url)
+            if not dataset_id or not version_id:
+                self.log("错误: 无法从URL提取数据集ID")
+                self.status_label.config(text="ID提取失败", foreground="red")
+                return
+
+            self.log(f"找到页面: {title[:50]}")
+            self.log(f"Dataset ID: {dataset_id}, Version ID: {version_id}")
+
+            # 步骤2：获取cookies（优先browser_cookie3）
+            self.log("正在获取认证信息...")
+            self.root.update()
+            cookies = bridge.get_cookies(page_id)
+
+            token = cookies.get("token")
+            if not token:
+                self.log("未获取到token，请尝试手动输入")
+                self.status_label.config(text="无Token", foreground="red")
+                ask = messagebox.askyesno(
+                    "获取Token失败",
+                    "未能自动获取认证Token\n\n"
+                    "可能原因:\n"
+                    "• Chrome未登录海康AI平台\n"
+                    "• Cookie数据库被锁定（请关闭Chrome后重试）\n"
+                    "• browser_cookie3 未安装\n\n"
+                    "是否手动输入Token？"
+                )
+                if ask:
+                    self._show_manual_token_dialog(
+                        dataset_id=dataset_id,
+                        version_id=version_id,
+                        title=title
+                    )
+                return
+
+            # 步骤3：设置认证并更新UI
+            self._setup_connection(
+                token=token,
+                cookies=cookies,
+                dataset_id=dataset_id,
+                version_id=version_id,
+                title=title,
+                labeled_count=0  # 从API获取，此处先显示0
+            )
+
+        except Exception as e:
+            self.status_label.config(text="连接失败", foreground="red")
+            self.log(f"连接错误: {e}")
+            messagebox.showerror("连接失败", str(e))
+
+    def _show_manual_token_dialog(
+        self,
+        token: str = "",
+        dataset_id: str = "",
+        version_id: str = "",
+        title: str = ""
+    ):
+        """显示手动输入Token的对话框"""
+        # 如果没有传入参数，尝试从配置文件加载
+        if not token and not dataset_id and not version_id:
+            cfg = self._load_config()
+            token = cfg.get("token", "")
+            dataset_id = cfg.get("dataset_id", "")
+            version_id = cfg.get("version_id", "")
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("手动输入认证信息")
+        dialog.geometry("500x320")
+        dialog.resizable(False, False)
+        dialog.grab_set()  # 模态
+
+        ttk.Label(dialog, text="请输入认证信息", font=("Microsoft YaHei", 12, "bold")).pack(pady=10)
+
+        frame = ttk.Frame(dialog, padding=10)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        # Token
+        ttk.Label(frame, text="Token (必填):").grid(row=0, column=0, sticky=tk.W, pady=5)
+        token_var = tk.StringVar(value=token)
+        ttk.Entry(frame, textvariable=token_var, width=50, show="").grid(row=0, column=1, sticky=tk.EW, pady=5)
+
+        # Dataset ID
+        ttk.Label(frame, text="数据集ID:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ds_var = tk.StringVar(value=dataset_id)
+        ttk.Entry(frame, textvariable=ds_var, width=50).grid(row=1, column=1, sticky=tk.EW, pady=5)
+
+        # Version ID
+        ttk.Label(frame, text="版本ID:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        ver_var = tk.StringVar(value=version_id)
+        ttk.Entry(frame, textvariable=ver_var, width=50).grid(row=2, column=1, sticky=tk.EW, pady=5)
+
+        ttk.Label(
+            frame,
+            text="提示: 在浏览器F12开发者工具 → Application → Cookies → ai.hikvision.com 中找到token",
+            wraplength=450,
+            foreground="gray"
+        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=5)
+
+        frame.columnconfigure(1, weight=1)
+
+        def on_confirm():
+            t = token_var.get().strip()
+            d = ds_var.get().strip()
+            v = ver_var.get().strip()
+            if not t:
+                messagebox.showwarning("提示", "Token不能为空", parent=dialog)
+                return
+            if not d or not v:
+                messagebox.showwarning("提示", "数据集ID和版本ID不能为空", parent=dialog)
+                return
+            dialog.destroy()
+            self._setup_connection(
+                token=t,
+                cookies={"token": t},
+                dataset_id=d,
+                version_id=v,
+                title=title or f"数据集 {d}",
+                labeled_count=0
+            )
+
+        btn_frame = ttk.Frame(dialog)
+        btn_frame.pack(pady=10)
+        ttk.Button(btn_frame, text="确认", command=on_confirm, width=12).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="取消", command=dialog.destroy, width=12).pack(side=tk.LEFT, padx=5)
+
+    def _setup_connection(
+        self,
+        token: str,
+        cookies: dict,
+        dataset_id: str,
+        version_id: str,
+        title: str,
+        labeled_count: int
+    ):
+        """设置连接状态并更新UI"""
+        self.page_info = PageInfo(
+            dataset_id=dataset_id,
+            version_id=version_id,
+            labeled_count=labeled_count,
+            url="",
+            title=title,
+            cookies=cookies
+        )
+
+        # 更新UI
+        self.dataset_id_var.set(dataset_id)
+        self.version_id_var.set(version_id)
+        self.labeled_count_var.set("（下载时获取）" if labeled_count == 0 else str(labeled_count))
+        self.page_title_var.set(title)
+
+        # 设置认证
+        self.auth_manager = AuthManager()
+        self.auth_manager.authenticate_manual(
+            token=token,
+            account_name=cookies.get("accountName", ""),
+            sub_account_name=cookies.get("subAccountName", ""),
+            project_id=cookies.get("projectId", "")
+        )
+
+        self.status_label.config(text="已连接", foreground="green")
+        self.log(f"连接成功! Dataset: {dataset_id}, Version: {version_id}")
+
+        # 保存配置
+        self._save_config(token, dataset_id, version_id)
+
+    def _on_browse(self):
+        """浏览按钮事件"""
+        dir_path = filedialog.askdirectory(
+            initialdir=self.output_dir_var.get(),
+            title="选择下载目录"
+        )
+        if dir_path:
+            self.output_dir_var.set(dir_path)
+            self.log(f"下载目录: {dir_path}")
+
+    def _generate_output_dir(self) -> Path:
+        """生成带时间戳的输出目录"""
+        base_dir = Path(self.output_dir_var.get())
+        dataset_id = self.page_info.dataset_id if self.page_info else "unknown"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = base_dir / f"dataset_{dataset_id}_{timestamp}"
+
+        # 避免覆盖
+        counter = 1
+        original_output_dir = output_dir
+        while output_dir.exists():
+            output_dir = base_dir / f"dataset_{dataset_id}_{timestamp}_{counter}"
+            counter += 1
+
+        return output_dir
+
+    def _on_start_download(self):
+        """开始下载按钮事件"""
+        if not self.page_info or not self.auth_manager:
+            messagebox.showwarning("提示", "请先连接浏览器获取页面信息")
+            return
+
+        if self.is_downloading:
+            return
+
+        # 确认下载
+        count_str = f"{self.page_info.labeled_count} 张" if self.page_info.labeled_count > 0 else "所有已标注"
+        if not messagebox.askyesno(
+            "确认下载",
+            f"即将下载 {count_str} 图片和标注数据\n\n是否继续?"
+        ):
+            return
+
+        # 生成输出目录
+        output_dir = self._generate_output_dir()
+        self.log(f"输出目录: {output_dir}")
+
+        # 更新UI状态
+        self.is_downloading = True
+        self.download_btn.config(state=tk.DISABLED)
+        self.cancel_btn.config(state=tk.NORMAL)
+        self.connect_btn.config(state=tk.DISABLED)
+        self.progress_var.set(0)
+        self.progress_label.config(text="准备下载...")
+
+        # 在后台线程执行下载
+        self.download_thread = threading.Thread(
+            target=self._download_worker,
+            args=(output_dir,),
+            daemon=True
+        )
+        self.download_thread.start()
+
+    def _download_worker(self, output_dir: Path):
+        """下载工作线程"""
+        try:
+            def progress_callback(current: int, total: int, filename: str):
+                """进度回调"""
+                pct = (current / total * 100) if total > 0 else 0
+                self.root.after(0, lambda: self._update_progress(pct, current, total, filename))
+
+            downloader = DatasetDownloader(
+                auth_manager=self.auth_manager,
+                dataset_id=self.page_info.dataset_id,
+                version_id=self.page_info.version_id,
+                output_dir=output_dir,
+                max_concurrent=self.concurrent_var.get(),
+                progress_callback=progress_callback
+            )
+
+            result = downloader.run(labeled_only=True)
+
+            # 在主线程更新UI
+            self.root.after(0, lambda: self._download_complete(result, output_dir))
+
+        except Exception as e:
+            self.root.after(0, lambda: self._download_error(str(e)))
+
+    def _update_progress(self, pct: float, current: int, total: int, filename: str):
+        """更新进度"""
+        self.progress_var.set(pct)
+        self.progress_label.config(text=f"进度: {pct:.1f}% ({current}/{total})")
+        self.current_file_var.set(f"当前: {filename[:50]}..." if len(filename) > 50 else f"当前: {filename}")
+        self.log(f"下载 {filename}")
+
+    def _download_complete(self, result: DownloadResult, output_dir: Path):
+        """下载完成"""
+        self.is_downloading = False
+        self.download_btn.config(state=tk.NORMAL)
+        self.cancel_btn.config(state=tk.DISABLED)
+        self.connect_btn.config(state=tk.NORMAL)
+        self.progress_label.config(text="下载完成")
+        self.current_file_var.set("")
+
+        self.log("=" * 40)
+        self.log(f"下载完成!")
+        self.log(f"成功: {result.success}/{result.total}")
+        self.log(f"失败: {result.failed}")
+        self.log(f"保存位置: {output_dir}")
+
+        if result.failed > 0:
+            messagebox.showwarning(
+                "下载完成",
+                f"下载完成，但有 {result.failed} 个文件失败\n\n"
+                f"成功: {result.success}\n"
+                f"失败: {result.failed}\n\n"
+                f"保存位置:\n{output_dir}"
+            )
+        else:
+            messagebox.showinfo(
+                "下载完成",
+                f"所有文件下载成功!\n\n"
+                f"总计: {result.success} 个文件\n\n"
+                f"保存位置:\n{output_dir}"
+            )
+
+    def _download_error(self, error_msg: str):
+        """下载错误"""
+        self.is_downloading = False
+        self.download_btn.config(state=tk.NORMAL)
+        self.cancel_btn.config(state=tk.DISABLED)
+        self.connect_btn.config(state=tk.NORMAL)
+        self.progress_label.config(text="下载失败")
+
+        self.log(f"下载错误: {error_msg}")
+        messagebox.showerror("下载失败", error_msg)
+
+    def _on_cancel(self):
+        """取消按钮事件"""
+        if self.is_downloading and self.download_thread:
+            # 注意：实际上无法真正中断线程，只能标记状态
+            self.is_downloading = False
+            self.log("用户取消下载")
+            self.progress_label.config(text="已取消")
+            self.download_btn.config(state=tk.NORMAL)
+            self.cancel_btn.config(state=tk.DISABLED)
+            self.connect_btn.config(state=tk.NORMAL)
+
+    def run(self):
+        """运行主循环"""
+        self.root.mainloop()
+
+
+def main():
+    """主函数"""
+    # 设置DPI感知（Windows）
+    try:
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        pass
+
+    app = MainWindow()
+    app.run()
+
+
+if __name__ == "__main__":
+    main()

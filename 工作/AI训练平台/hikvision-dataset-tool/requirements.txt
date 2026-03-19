@@ -1,0 +1,20 @@
+# 海康威视AI平台数据集导出工具依赖
+
+# HTTP请求
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# 异步文件操作
+aiofiles>=23.2.0
+
+# WebSocket（用于CDP通信）
+websocket-client>=1.7.0
+
+# 配置解析
+PyYAML>=6.0.1
+
+# 可选：从本地浏览器cookie数据库读取（WebSocket失败时的备选方案）
+browser-cookie3>=0.19.1
+
+# 图片解密（海康威视AES-ECB加密）
+pycryptodome>=3.15.0

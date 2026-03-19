@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LA 预警框和目标框渲染工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #4ecca3;
+            margin-bottom: 10px;
+        }
+        .controls {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        button {
+            background: #4ecca3;
+            color: #1a1a2e;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #3db892;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .file-label {
+            background: #0f3460;
+            color: #eee;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .file-label:hover {
+            background: #1a4a7a;
+        }
+        .info-panel {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .info-panel h3 {
+            color: #4ecca3;
+            margin-bottom: 10px;
+        }
+        .json-tree {
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            background: #0f0f1a;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
+            gap: 20px;
+        }
+        .image-card {
+            background: #16213e;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .image-card-header {
+            padding: 10px 15px;
+            background: #0f3460;
+            font-size: 12px;
+            word-break: break-all;
+            cursor: pointer;
+        }
+        .image-card-header:hover {
+            background: #1a4a7a;
+        }
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .canvas-wrapper canvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .legend {
+            display: flex;
+            gap: 15px;
+            padding: 10px 15px;
+            background: #0f0f1a;
+            font-size: 11px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 3px;
+        }
+        .legend-color.green { background: #00ff00; }
+        .legend-color.red { background: #ff0000; }
+        .legend-color.yellow { background: #ffff00; }
+        .legend-color.cyan { background: #00ffff; }
+        .stats {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .stat-item {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4ecca3;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        .progress {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .progress-bar {
+            height: 20px;
+            background: #1a1a2e;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecca3, #3db892);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .detail-panel {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .detail-box {
+            background: #0f0f1a;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #4ecca3;
+        }
+        .detail-box h4 {
+            color: #4ecca3;
+            margin-bottom: 10px;
+        }
+        .detail-box table {
+            width: 100%;
+            font-size: 12px;
+            border-collapse: collapse;
+        }
+        .detail-box td {
+            padding: 5px;
+            border-bottom: 1px solid #333;
+        }
+        .detail-box td:first-child {
+            color: #aaa;
+            width: 40%;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>LA 预警框和目标框渲染工具</h1>
+        <p>选择包含 PNG 和 JSON 文件的目录，自动匹配并渲染预警框</p>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label class="file-label">
+                <input type="file" id="directoryInput" webkitdirectory directory multiple>
+                📁 选择目录
+            </label>
+        </div>
+        <div class="control-group">
+            <button id="clearBtn" onclick="clearAll()">清空</button>
+            <button id="exportBtn" onclick="exportResults()" disabled>导出结果</button>
+        </div>
+        <div class="control-group checkbox-group">
+            <label>
+                <input type="checkbox" id="showTargetPolygon" checked>
+                <span style="color: #00ffff">目标四边形</span>
+            </label>
+            <label>
+                <input type="checkbox" id="showTargetRect" checked>
+                <span style="color: #00ff00">目标外接矩形</span>
+            </label>
+            <label>
+                <input type="checkbox" id="showAlertRect" checked>
+                <span style="color: #ff0000">预警外接矩形</span>
+            </label>
+            <label>
+                <input type="checkbox" id="showRuleRegion" checked>
+                <span style="color: #ffff00">规则区域四边形</span>
+            </label>
+        </div>
+    </div>
+
+    <div class="progress" id="progressPanel">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">处理中...</div>
+    </div>
+
+    <div class="stats" id="statsPanel" style="display: none;">
+        <h3>统计信息</h3>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value" id="totalFiles">0</div>
+                <div class="stat-label">总文件数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="matchedPairs">0</div>
+                <div class="stat-label">匹配对数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalTargets">0</div>
+                <div class="stat-label">目标总数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalAlerts">0</div>
+                <div class="stat-label">预警总数</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-panel" id="detailPanel">
+        <h3>当前文件详情</h3>
+        <div class="detail-grid" id="detailGrid"></div>
+    </div>
+
+    <div class="gallery" id="gallery"></div>
+
+    <script>
+        let filePairs = [];
+        let currentResults = [];
+
+        document.getElementById('directoryInput').addEventListener('change', handleFileSelect);
+
+        ['showTargetPolygon', 'showTargetRect', 'showAlertRect', 'showRuleRegion'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                redrawAll();
+            });
+        });
+
+        async function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            showProgress(true);
+            filePairs = [];
+            currentResults = [];
+
+            const pngFiles = files.filter(f => f.name.toLowerCase().endsWith('.png'));
+            const jsonFiles = files.filter(f => f.name.toLowerCase().endsWith('.json'));
+
+            for (const png of pngFiles) {
+                const baseName = png.name.replace('.png', '');
+                const jsonFile = jsonFiles.find(j => {
+                    const jsonBase = j.name.replace('.json', '');
+                    return baseName === jsonBase || baseName.startsWith(jsonBase) || jsonBase.startsWith(baseName);
+                });
+                if (jsonFile) {
+                    filePairs.push({ png, json: jsonFile });
+                }
+            }
+
+            document.getElementById('totalFiles').textContent = files.length;
+            document.getElementById('matchedPairs').textContent = filePairs.length;
+
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '';
+
+            let totalTargets = 0;
+            let totalAlerts = 0;
+
+            for (let i = 0; i < filePairs.length; i++) {
+                const pair = filePairs[i];
+                updateProgress((i + 1) / filePairs.length * 100, `处理 ${pair.png.name}...`);
+
+                try {
+                    const jsonContent = await readFileAsText(pair.json);
+                    const data = JSON.parse(jsonContent);
+
+                    if (data.targets) totalTargets += data.targets.length;
+                    if (data.events && data.events.alertInfo) totalAlerts += data.events.alertInfo.length;
+
+                    currentResults.push({
+                        pngFile: pair.png,
+                        jsonFile: pair.json,
+                        data: data
+                    });
+
+                    const card = await createImageCard(pair.png, data, i);
+                    gallery.appendChild(card);
+
+                } catch (err) {
+                    console.error('处理文件失败:', pair.png.name, err);
+                }
+            }
+
+            document.getElementById('totalTargets').textContent = totalTargets;
+            document.getElementById('totalAlerts').textContent = totalAlerts;
+            document.getElementById('statsPanel').style.display = 'block';
+            document.getElementById('exportBtn').disabled = false;
+
+            showProgress(false);
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function createImageCard(pngFile, jsonData, index) {
+            const card = document.createElement('div');
+            card.className = 'image-card';
+            card.dataset.index = index;
+
+            const header = document.createElement('div');
+            header.className = 'image-card-header';
+            header.innerHTML = `<strong>${pngFile.name}</strong>`;
+            header.onclick = () => showDetail(index);
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'canvas-wrapper';
+
+            const canvas = document.createElement('canvas');
+            canvas.id = `canvas-${index}`;
+
+            wrapper.appendChild(canvas);
+
+            const legend = document.createElement('div');
+            legend.className = 'legend';
+            legend.innerHTML = `
+                <div class="legend-item">
+                    <div class="legend-color cyan"></div>
+                    <span>目标四边形(4顶点)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color green"></div>
+                    <span>目标外接矩形(计算)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color red"></div>
+                    <span>预警外接矩形(JSON)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color yellow"></div>
+                    <span>规则区域四边形(JSON)</span>
+                </div>
+            `;
+
+            card.appendChild(header);
+            card.appendChild(wrapper);
+            card.appendChild(legend);
+
+            // 等待图片加载完成
+            const imgData = await readFileAsDataURL(pngFile);
+            await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    currentResults[index].imgData = imgData;
+                    drawOnCanvas(canvas, img, jsonData);
+                    resolve();
+                };
+                img.onerror = reject;
+                img.src = imgData;
+            });
+
+            return card;
+        }
+
+        function drawOnCanvas(canvas, img, data) {
+            const ctx = canvas.getContext('2d');
+            const videoWidth = parseInt(data.width) || 2560;
+            const videoHeight = parseInt(data.height) || 1440;
+
+            canvas.width = videoWidth;
+            canvas.height = videoHeight;
+
+            // 绘制图片
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const showTargetPolygon = document.getElementById('showTargetPolygon').checked;
+            const showTargetRect = document.getElementById('showTargetRect').checked;
+            const showAlertRect = document.getElementById('showAlertRect').checked;
+            const showRuleRegion = document.getElementById('showRuleRegion').checked;
+
+            // 1. 绘制目标四边形
+            if (data.targets && showTargetPolygon) {
+                data.targets.forEach((target, idx) => {
+                    if (target.obj && target.obj.polygon) {
+                        const poly = target.obj.polygon;
+                        drawPolygon(ctx, poly, videoWidth, videoHeight, '#00ffff', 3);
+
+                        // 标注：目标四边形
+                        const centerX = poly.reduce((sum, p) => sum + parseFloat(p.x), 0) / poly.length * videoWidth;
+                        const centerY = poly.reduce((sum, p) => sum + parseFloat(p.y), 0) / poly.length * videoHeight;
+
+                        ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.fillText(`【目标四边形】ID:${target.obj.id}`, centerX - 50, centerY - 10);
+
+                        // 顶点标注
+                        poly.forEach((point, i) => {
+                            const x = parseFloat(point.x) * videoWidth;
+                            const y = parseFloat(point.y) * videoHeight;
+                            ctx.fillStyle = '#00ffff';
+                            ctx.font = '12px Arial';
+                            ctx.fillText(`P${i}`, x + 5, y - 5);
+                        });
+                    }
+                });
+            }
+
+            // 2. 绘制目标的外接矩形（算法计算）
+            if (data.targets && showTargetRect) {
+                data.targets.forEach((target, idx) => {
+                    if (target.obj && target.obj.polygon) {
+                        const rect = calculateBoundingRect(target.obj.polygon);
+                        drawRect(ctx, rect, videoWidth, videoHeight, '#00ff00', 3);
+
+                        // 标注：目标外接矩形（计算）
+                        const x = rect.x * videoWidth;
+                        const y = rect.y * videoHeight;
+
+                        // 绘制标签背景
+                        const text = `【目标外接矩形】ID:${target.obj.id} 置信度:${target.obj.confidence}`;
+                        const textWidth = ctx.measureText(text).width;
+                        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                        ctx.fillRect(x, y - 25, textWidth + 10, 22);
+
+                        ctx.fillStyle = '#00ff00';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.fillText(text, x + 5, y - 8);
+
+                        // 显示矩形尺寸
+                        const sizeText = `W:${(rect.w * videoWidth).toFixed(1)}px H:${(rect.h * videoHeight).toFixed(1)}px`;
+                        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                        ctx.fillRect(x, y + rect.h * videoHeight + 3, ctx.measureText(sizeText).width + 10, 18);
+                        ctx.fillStyle = '#00ff00';
+                        ctx.font = '12px Arial';
+                        ctx.fillText(sizeText, x + 5, y + rect.h * videoHeight + 16);
+                    }
+                });
+            }
+
+            // 3. 绘制预警外接矩形（来自JSON）
+            if (data.events && data.events.alertInfo && showAlertRect) {
+                data.events.alertInfo.forEach((alert, idx) => {
+                    if (alert.unionTargets && alert.unionTargets.region && alert.unionTargets.region.rect) {
+                        const rect = alert.unionTargets.region.rect;
+                        drawRect(ctx, rect, videoWidth, videoHeight, '#ff0000', 4);
+
+                        const x = parseFloat(rect.x) * videoWidth;
+                        const y = parseFloat(rect.y) * videoHeight;
+
+                        // 标注：预警外接矩形（JSON）
+                        const text = `【预警外接矩形】来自JSON rect字段`;
+                        const textWidth = ctx.measureText(text).width;
+                        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                        ctx.fillRect(x, y - 28, textWidth + 15, 26);
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 18px Arial';
+                        ctx.fillText(text, x + 5, y - 8);
+
+                        // 显示坐标信息
+                        const coordText = `x:${rect.x} y:${rect.y} w:${rect.w} h:${rect.h}`;
+                        ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                        ctx.fillRect(x, y + parseFloat(rect.h) * videoHeight + 3, ctx.measureText(coordText).width + 10, 18);
+                        ctx.fillStyle = '#ff0000';
+                        ctx.font = '12px Arial';
+                        ctx.fillText(coordText, x + 5, y + parseFloat(rect.h) * videoHeight + 16);
+                    }
+                });
+            }
+
+            // 4. 绘制规则区域四边形（来自JSON）
+            if (data.events && data.events.alertInfo && showRuleRegion) {
+                data.events.alertInfo.forEach((alert, idx) => {
+                    if (alert.ruleInfo && alert.ruleInfo.region && alert.ruleInfo.region.polygon) {
+                        const poly = alert.ruleInfo.region.polygon;
+                        drawPolygon(ctx, poly, videoWidth, videoHeight, '#ffff00', 2, true);
+
+                        // 标注：规则区域四边形
+                        const centerX = poly.reduce((sum, p) => sum + parseFloat(p.x), 0) / poly.length * videoWidth;
+                        const centerY = poly.reduce((sum, p) => sum + parseFloat(p.y), 0) / poly.length * videoHeight;
+
+                        const text = `【规则区域四边形】${alert.ruleInfo.ruleName || ''}`;
+                        const textWidth = ctx.measureText(text).width;
+                        ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
+                        ctx.fillRect(centerX - textWidth/2 - 5, centerY - 30, textWidth + 10, 24);
+
+                        ctx.fillStyle = '#000000';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.fillText(text, centerX - textWidth/2, centerY - 12);
+
+                        // 虚线标注
+                        ctx.fillStyle = '#ffff00';
+                        ctx.font = '12px Arial';
+                        ctx.fillText('(虚线表示规则区域)', centerX - 60, centerY + 20);
+                    }
+                });
+            }
+        }
+
+        function calculateBoundingRect(polygon) {
+            let minX = 1, minY = 1, maxX = 0, maxY = 0;
+
+            polygon.forEach(point => {
+                const x = parseFloat(point.x);
+                const y = parseFloat(point.y);
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+            });
+
+            return {
+                x: minX,
+                y: minY,
+                w: maxX - minX,
+                h: maxY - minY
+            };
+        }
+
+        function drawPolygon(ctx, polygon, videoWidth, videoHeight, color, lineWidth, dashed = false) {
+            if (!polygon || polygon.length < 3) return;
+
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            if (dashed) {
+                ctx.setLineDash([15, 8]);
+            } else {
+                ctx.setLineDash([]);
+            }
+
+            polygon.forEach((point, i) => {
+                const x = parseFloat(point.x) * videoWidth;
+                const y = parseFloat(point.y) * videoHeight;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+
+            ctx.closePath();
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 绘制顶点圆圈
+            polygon.forEach((point, i) => {
+                const x = parseFloat(point.x) * videoWidth;
+                const y = parseFloat(point.y) * videoHeight;
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        function drawRect(ctx, rect, videoWidth, videoHeight, color, lineWidth) {
+            const x = parseFloat(rect.x) * videoWidth;
+            const y = parseFloat(rect.y) * videoHeight;
+            const w = parseFloat(rect.w) * videoWidth;
+            const h = parseFloat(rect.h) * videoHeight;
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.strokeRect(x, y, w, h);
+
+            // 绘制四个角标记
+            const cornerSize = 15;
+            ctx.beginPath();
+            // 左上
+            ctx.moveTo(x, y + cornerSize);
+            ctx.lineTo(x, y);
+            ctx.lineTo(x + cornerSize, y);
+            // 右上
+            ctx.moveTo(x + w - cornerSize, y);
+            ctx.lineTo(x + w, y);
+            ctx.lineTo(x + w, y + cornerSize);
+            // 右下
+            ctx.moveTo(x + w, y + h - cornerSize);
+            ctx.lineTo(x + w, y + h);
+            ctx.lineTo(x + w - cornerSize, y + h);
+            // 左下
+            ctx.moveTo(x + cornerSize, y + h);
+            ctx.lineTo(x, y + h);
+            ctx.lineTo(x, y + h - cornerSize);
+            ctx.stroke();
+        }
+
+        function redrawAll() {
+            currentResults.forEach((result, index) => {
+                const canvas = document.getElementById(`canvas-${index}`);
+                if (canvas && result.imgData) {
+                    const img = new Image();
+                    img.onload = () => {
+                        drawOnCanvas(canvas, img, result.data);
+                    };
+                    img.src = result.imgData;
+                }
+            });
+        }
+
+        function showDetail(index) {
+            const result = currentResults[index];
+            if (!result) return;
+
+            const panel = document.getElementById('detailPanel');
+            const grid = document.getElementById('detailGrid');
+
+            const data = result.data;
+            let targetsHtml = '';
+            let alertsHtml = '';
+
+            if (data.targets) {
+                data.targets.forEach((t, i) => {
+                    const rect = calculateBoundingRect(t.obj.polygon);
+                    targetsHtml += `
+                        <div class="detail-box">
+                            <h4>目标 #${i+1} (ID: ${t.obj.id})</h4>
+                            <table>
+                                <tr><td>类型</td><td>${t.obj.type}</td></tr>
+                                <tr><td>置信度</td><td>${t.obj.confidence}</td></tr>
+                                <tr><td>四边形顶点数</td><td>${t.obj.polygon.length} (四边形)</td></tr>
+                                <tr><td>顶点1</td><td>x:${t.obj.polygon[0].x}, y:${t.obj.polygon[0].y}</td></tr>
+                                <tr><td>顶点2</td><td>x:${t.obj.polygon[1].x}, y:${t.obj.polygon[1].y}</td></tr>
+                                <tr><td>顶点3</td><td>x:${t.obj.polygon[2].x}, y:${t.obj.polygon[2].y}</td></tr>
+                                <tr><td>顶点4</td><td>x:${t.obj.polygon[3].x}, y:${t.obj.polygon[3].y}</td></tr>
+                                <tr><td>外接矩形x</td><td>${rect.x.toFixed(6)}</td></tr>
+                                <tr><td>外接矩形y</td><td>${rect.y.toFixed(6)}</td></tr>
+                                <tr><td>外接矩形w</td><td>${rect.w.toFixed(6)}</td></tr>
+                                <tr><td>外接矩形h</td><td>${rect.h.toFixed(6)}</td></tr>
+                            </table>
+                        </div>
+                    `;
+                });
+            }
+
+            if (data.events && data.events.alertInfo) {
+                data.events.alertInfo.forEach((a, i) => {
+                    const rect = a.unionTargets.region.rect;
+                    const poly = a.ruleInfo.region.polygon;
+                    alertsHtml += `
+                        <div class="detail-box" style="border-left-color: #ff0000;">
+                            <h4 style="color: #ff6b6b;">预警 #${i+1}</h4>
+                            <table>
+                                <tr><td>规则名称</td><td>${a.ruleInfo.ruleName}</td></tr>
+                                <tr><td>规则ID</td><td>${a.ruleInfo.ruleID}</td></tr>
+                                <tr><td>触发类型</td><td>${a.ruleInfo.triggerType}</td></tr>
+                                <tr><td>方向</td><td>${a.ruleInfo.movDir}</td></tr>
+                                <tr><td colspan="2" style="color: #ff6b6b; font-weight: bold;">-- 预警外接矩形(JSON) --</td></tr>
+                                <tr><td>rect.x</td><td>${rect.x}</td></tr>
+                                <tr><td>rect.y</td><td>${rect.y}</td></tr>
+                                <tr><td>rect.w</td><td>${rect.w}</td></tr>
+                                <tr><td>rect.h</td><td>${rect.h}</td></tr>
+                                <tr><td colspan="2" style="color: #ffd93d; font-weight: bold;">-- 规则区域四边形(JSON) --</td></tr>
+                                <tr><td>区域顶点数</td><td>${poly.length} (四边形)</td></tr>
+                                <tr><td>顶点1</td><td>x:${poly[0].x}, y:${poly[0].y}</td></tr>
+                                <tr><td>顶点2</td><td>x:${poly[1].x}, y:${poly[1].y}</td></tr>
+                                <tr><td>顶点3</td><td>x:${poly[2].x}, y:${poly[2].y}</td></tr>
+                                <tr><td>顶点4</td><td>x:${poly[3].x}, y:${poly[3].y}</td></tr>
+                            </table>
+                        </div>
+                    `;
+                });
+            }
+
+            grid.innerHTML = targetsHtml + alertsHtml;
+            panel.style.display = 'block';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showProgress(show) {
+            document.getElementById('progressPanel').style.display = show ? 'block' : 'none';
+        }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text || `处理中... ${Math.round(percent)}%`;
+        }
+
+        function clearAll() {
+            document.getElementById('gallery').innerHTML = '';
+            document.getElementById('detailPanel').style.display = 'none';
+            document.getElementById('statsPanel').style.display = 'none';
+            document.getElementById('exportBtn').disabled = true;
+            filePairs = [];
+            currentResults = [];
+            document.getElementById('directoryInput').value = '';
+        }
+
+        function exportResults() {
+            const exportData = currentResults.map(r => ({
+                fileName: r.pngFile.name,
+                width: r.data.width,
+                height: r.data.height,
+                targetCount: r.data.targets ? r.data.targets.length : 0,
+                alertCount: r.data.events && r.data.events.alertInfo ? r.data.events.alertInfo.length : 0,
+                targets: r.data.targets ? r.data.targets.map(t => ({
+                    id: t.obj.id,
+                    type: t.obj.type,
+                    confidence: t.obj.confidence,
+                    polygon: t.obj.polygon,
+                    boundingRect: calculateBoundingRect(t.obj.polygon)
+                })) : [],
+                alerts: r.data.events && r.data.events.alertInfo ? r.data.events.alertInfo.map(a => ({
+                    ruleID: a.ruleInfo.ruleID,
+                    ruleName: a.ruleInfo.ruleName,
+                    triggerType: a.ruleInfo.triggerType,
+                    movDir: a.ruleInfo.movDir,
+                    rect: a.unionTargets.region.rect,
+                    rulePolygon: a.ruleInfo.region.polygon
+                })) : []
+            }));
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'alert_analysis_results.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
