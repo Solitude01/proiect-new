@@ -414,6 +414,7 @@ class DashboardManager {
 
         if (this.audioAlertRules && this.audioAlertRules.length > 0) {
             for (const rule of this.audioAlertRules) {
+                if (rule.enabled === false) continue; // Skip disabled rules
                 const keyword = (rule.keyword || '').toUpperCase();
                 if (!keyword || keyword === 'KEYWORD') continue; // Skip empty/default keywords
                 console.log('[Dashboard] Checking rule:', { keyword, match: upperMessage.includes(keyword) });
@@ -1486,7 +1487,7 @@ class DashboardManager {
         if (!panel || !overlay) return;
 
         const isVisible = panel.style.display !== 'none';
-        panel.style.display = isVisible ? 'none' : 'block';
+        panel.style.display = isVisible ? 'none' : 'flex';
         overlay.style.display = isVisible ? 'none' : 'block';
 
         if (!isVisible) {
@@ -1634,30 +1635,143 @@ class DashboardManager {
             return;
         }
 
-        container.innerHTML = buttons.map((btn, index) => `
-            <div class="control-button-item">
-                <input type="text" placeholder="标签" value="${this.escapeHtml(btn.label || '')}" data-field="label" data-index="${index}" title="按钮显示标签">
-                <input type="text" placeholder="命令" value="${this.escapeHtml(btn.command || '')}" data-field="command" data-index="${index}" title="发送的命令">
-                <select data-field="button_type" data-index="${index}" title="按钮类型">
-                    <option value="command" ${btn.button_type === 'command' ? 'selected' : ''}>命令</option>
-                    <option value="input" ${btn.button_type === 'input' ? 'selected' : ''}>输入</option>
-                </select>
-                <select data-field="color" data-index="${index}" title="按钮颜色">
-                    <option value="green" ${btn.color === 'green' ? 'selected' : ''}>绿色</option>
-                    <option value="red" ${btn.color === 'red' ? 'selected' : ''}>红色</option>
-                    <option value="blue" ${btn.color === 'blue' ? 'selected' : ''}>蓝色</option>
-                    <option value="orange" ${btn.color === 'orange' ? 'selected' : ''}>橙色</option>
-                </select>
-                <button onclick="window.dashboard.removeControlButton(${index})" title="删除" style="background: transparent; border: none; color: var(--accent-red); cursor: pointer; font-size: 0.75rem;">删除</button>
-            </div>
-        `).join('');
+        container.innerHTML = buttons.map((btn, index) => {
+            const payloadStr = btn.payload && Object.keys(btn.payload).length > 0
+                ? JSON.stringify(btn.payload, null, 2) : '';
+            const color = btn.color || 'blue';
+            const btype = btn.button_type || 'command';
+            const nameText = btn.label || '未命名按钮';
+            const nameClass = btn.label ? 'ctrl-btn-name' : 'ctrl-btn-name ctrl-btn-name-empty';
+            const typeClass = btype === 'input' ? 'ctrl-btn-type-badge ctrl-btn-type-input' : 'ctrl-btn-type-badge ctrl-btn-type-command';
+            const typeText  = btype === 'input' ? '输入' : '命令';
 
-        // Add change listeners
-        container.querySelectorAll('input, select').forEach(input => {
-            input.addEventListener('change', (e) => {
+            return `
+    <div class="control-button-item" data-btn-index="${index}">
+      <div class="ctrl-btn-header">
+        <span class="ctrl-btn-index">#${index + 1}</span>
+        <span class="ctrl-btn-swatch ctrl-btn-swatch-${color}" data-swatch="${index}"></span>
+        <span class="${nameClass}" data-header-name="${index}">${this.escapeHtml(nameText)}</span>
+        <span class="${typeClass}" data-header-type="${index}">${typeText}</span>
+        <span class="ctrl-btn-arrow">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+            <path d="M3 6L8 11L13 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <button class="ctrl-btn-delete" onclick="window.dashboard.removeControlButton(${index})"
+                title="删除按钮" aria-label="删除按钮">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+            <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="ctrl-btn-body">
+        <div class="ctrl-btn-row-2">
+          <div class="ctrl-btn-field">
+            <label>标签</label>
+            <input type="text" placeholder="按钮显示名称"
+                   value="${this.escapeHtml(btn.label || '')}"
+                   data-field="label" data-index="${index}">
+          </div>
+          <div class="ctrl-btn-field">
+            <label>命令</label>
+            <input type="text" placeholder="命令标识"
+                   value="${this.escapeHtml(btn.command || '')}"
+                   data-field="command" data-index="${index}">
+          </div>
+        </div>
+        <div class="ctrl-btn-row-2">
+          <div class="ctrl-btn-field">
+            <label>端点路径</label>
+            <input type="text" placeholder="/api/control"
+                   value="${this.escapeHtml(btn.endpoint || '/api/control')}"
+                   data-field="endpoint" data-index="${index}">
+          </div>
+          <div class="ctrl-btn-field">
+            <label>HTTP 方法</label>
+            <select data-field="method" data-index="${index}">
+              <option value="POST" ${(btn.method||'POST')==='POST'?'selected':''}>POST</option>
+              <option value="GET"  ${btn.method==='GET'?'selected':''}>GET</option>
+              <option value="PUT"  ${btn.method==='PUT'?'selected':''}>PUT</option>
+            </select>
+          </div>
+        </div>
+        <div class="ctrl-btn-field">
+          <label>发送内容 (JSON)</label>
+          <textarea data-field="payload" data-index="${index}"
+                    placeholder='{"action": "start"}'
+                    rows="3">${this.escapeHtml(payloadStr)}</textarea>
+          <span class="ctrl-btn-hint">输入按钮可用 <code>{{input}}</code> 占位符</span>
+        </div>
+        <div class="ctrl-btn-row-2">
+          <div class="ctrl-btn-field">
+            <label>颜色</label>
+            <select data-field="color" data-index="${index}">
+              <option value="green"  ${color==='green'?'selected':''}>绿色</option>
+              <option value="red"    ${color==='red'?'selected':''}>红色</option>
+              <option value="blue"   ${color==='blue'?'selected':''}>蓝色</option>
+              <option value="orange" ${color==='orange'?'selected':''}>橙色</option>
+            </select>
+          </div>
+          <div class="ctrl-btn-field">
+            <label>按钮类型</label>
+            <select data-field="button_type" data-index="${index}">
+              <option value="command" ${btype==='command'?'selected':''}>命令</option>
+              <option value="input"   ${btype==='input'?'selected':''}>输入</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>`;
+        }).join('');
+
+        // Change listeners for inputs and selects
+        container.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('change', (e) => {
                 const index = parseInt(e.target.dataset.index);
                 const field = e.target.dataset.field;
                 this.updateControlButton(index, field, e.target.value);
+                if (['label', 'color', 'button_type'].includes(field)) {
+                    this.syncButtonCardHeader(index);
+                }
+            });
+        });
+        // Real-time label preview on keyup (no JSON parse needed)
+        container.querySelectorAll('input[data-field="label"]').forEach(el => {
+            el.addEventListener('input', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                this.tempControlButtons[index].label = e.target.value;
+                this.syncButtonCardHeader(index);
+            });
+        });
+
+        // Payload textarea: live parse on input, finalize on blur
+        container.querySelectorAll('textarea[data-field="payload"]').forEach(ta => {
+            ta.addEventListener('input', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                try {
+                    const parsed = JSON.parse(e.target.value);
+                    this.updateControlButton(index, 'payload', parsed);
+                } catch (_) { /* wait for blur */ }
+            });
+            ta.addEventListener('blur', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                const val = e.target.value.trim();
+                if (!val) {
+                    this.updateControlButton(index, 'payload', {});
+                } else {
+                    try {
+                        this.updateControlButton(index, 'payload', JSON.parse(val));
+                    } catch (_) { /* keep previous value */ }
+                }
+            });
+        });
+
+        // 折叠/展开：点击 header 切换 is-expanded
+        container.querySelectorAll('.ctrl-btn-header').forEach(header => {
+            header.addEventListener('click', (e) => {
+                if (e.target.closest('.ctrl-btn-delete')) return;
+                const card = header.closest('.control-button-item');
+                card.classList.toggle('is-expanded');
             });
         });
     }
@@ -1698,7 +1812,10 @@ class DashboardManager {
             label: '',
             command: '',
             color: 'blue',
-            button_type: 'command'
+            button_type: 'command',
+            endpoint: '/api/control',
+            method: 'POST',
+            payload: {}
         });
         this.renderSettingsControlButtons(this.tempControlButtons);
     }
@@ -1716,126 +1833,183 @@ class DashboardManager {
         }
     }
 
+    syncButtonCardHeader(index) {
+        const btn = this.tempControlButtons?.[index];
+        if (!btn) return;
+        const card = document.querySelector(`.control-button-item[data-btn-index="${index}"]`);
+        if (!card) return;
+
+        // 颜色 swatch
+        const swatch = card.querySelector(`[data-swatch="${index}"]`);
+        if (swatch) {
+            swatch.className = `ctrl-btn-swatch ctrl-btn-swatch-${btn.color || 'blue'}`;
+        }
+        // 标签预览
+        const nameEl = card.querySelector(`[data-header-name="${index}"]`);
+        if (nameEl) {
+            nameEl.textContent = btn.label || '未命名按钮';
+            nameEl.className = btn.label ? 'ctrl-btn-name' : 'ctrl-btn-name ctrl-btn-name-empty';
+        }
+        // 类型徽章
+        const typeEl = card.querySelector(`[data-header-type="${index}"]`);
+        if (typeEl) {
+            const isInput = btn.button_type === 'input';
+            typeEl.textContent = isInput ? '输入' : '命令';
+            typeEl.className = `ctrl-btn-type-badge ${isInput ? 'ctrl-btn-type-input' : 'ctrl-btn-type-command'}`;
+        }
+    }
+
     // Settings Panel Audio Alerts Management
     renderSettingsAudioAlerts(rules) {
         const container = document.getElementById('settingsAlertConfigList');
         if (!container) return;
 
+        // Preserve match switch if it exists
+        const existingSwitch = container.querySelector('.alert-match-switch');
+        const switchHtml = existingSwitch ? existingSwitch.outerHTML : '';
+
         if (rules.length === 0) {
-            container.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.875rem;">暂无告警规则</div>';
+            container.innerHTML = switchHtml + '<div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.875rem;">暂无告警规则</div>';
+            this._rebindMatchSwitch(container);
             return;
         }
 
-        // Get server IP (fallback to window.location.hostname)
-        const serverIp = this.serverIp || window.location.hostname;
-        const baseUrl = `http://${serverIp}:8000`;
-        const viewUid = this.instanceConfig?.view_uid || '';
+        const cards = rules.map((rule, index) => {
+            // Determine current sound selector value
+            let soundValue;
+            if (rule.audio_file_id) {
+                soundValue = 'custom:' + rule.audio_file_id;
+            } else {
+                soundValue = 'builtin:' + (rule.sound || 'warning');
+            }
 
-        container.innerHTML = rules.map((rule, index) => {
-            const audioFileOptions = (this.tempAudioFiles || []).map(f =>
-                `<option value="${f.id}" ${rule.audio_file_id === f.id ? 'selected' : ''}>${this.escapeHtml(f.name)}</option>`
+            const customAudioOptions = (this.tempAudioFiles || []).map(f =>
+                `<option value="custom:${f.id}" ${soundValue === 'custom:' + f.id ? 'selected' : ''}>${this.escapeHtml(f.name)}</option>`
             ).join('');
 
-            // Generate API endpoint info
-            const alertEndpoint = `${baseUrl}/api/${this.instanceId}/alert`;
-            const viewUrl = viewUid ? `${baseUrl.replace(':8000', ':6010')}/view/${viewUid}` : '';
-
-            // Generate curl example based on rule keyword
-            const exampleMessage = `测试${rule.keyword || '告警'}触发`;
-            const curlExample = `curl -X POST ${alertEndpoint} \\\
-  -H "Content-Type: application/json" \\\
-  -d '{"message":"${exampleMessage}","level":"${rule.sound || 'error'}"}'`;
-
-            // Generate GET example
-            const getExample = `${alertEndpoint}?message=${encodeURIComponent(exampleMessage)}&level=${rule.sound || 'error'}`;
+            const keyword = this.escapeHtml(rule.keyword || '');
+            const name = this.escapeHtml(rule.name || '');
+            const enabled = rule.enabled !== false;
 
             return `
-            <div class="alert-rule-item" style="padding: 0.75rem; background: var(--bg-tertiary); border-radius: 4px; margin-bottom: 0.5rem; font-size: 0.8125rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <strong style="color: var(--accent-cyan);">规则 ${index + 1}</strong>
-                    <button onclick="window.dashboard.removeSettingsAudioAlert(${index})" style="background: transparent; border: none; color: var(--accent-red); cursor: pointer; font-size: 0.75rem;">删除</button>
-                </div>
-                <div style="margin-bottom: 0.5rem;">
-                    <label style="font-size: 0.6875rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">关键词</label>
-                    <input type="text" value="${this.escapeHtml(rule.keyword || '')}" data-field="keyword" data-index="${index}" style="width: 100%; padding: 0.375rem; font-size: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-primary);">
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <div>
-                        <label style="font-size: 0.6875rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">内置声音</label>
-                        <select data-field="sound" data-index="${index}" style="width: 100%; padding: 0.375rem; font-size: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-primary);">
-                            <option value="error" ${rule.sound === 'error' ? 'selected' : ''}>Error (高频)</option>
-                            <option value="warning" ${rule.sound === 'warning' ? 'selected' : ''}>Warning (中频)</option>
-                            <option value="stop" ${rule.sound === 'stop' ? 'selected' : ''}>Stop (低频)</option>
-                            <option value="info" ${rule.sound === 'info' ? 'selected' : ''}>Info (提示)</option>
-                        </select>
+            <div class="alert-rule-card" data-index="${index}" data-enabled="${enabled}">
+                <div class="alert-rule-card-header">
+                    <div class="alert-rule-header-left">
+                        <span class="alert-rule-seq">#${index + 1}</span>
+                        <span class="alert-rule-keyword-badge">${keyword || '未设置'}</span>
+                        <span class="alert-rule-name-label ${name ? '' : 'is-empty'}" id="alert-name-label-${index}">${name || '无名称'}</span>
                     </div>
-                    <div>
-                        <label style="font-size: 0.6875rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">自定义音频</label>
-                        <select data-field="audio_file_id" data-index="${index}" style="width: 100%; padding: 0.375rem; font-size: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-primary);">
-                            <option value="">-- 不使用 --</option>
-                            ${audioFileOptions}
-                        </select>
+                    <div class="alert-rule-header-right">
+                        <label class="alert-rule-toggle">
+                            <input type="checkbox" data-field="enabled" data-index="${index}" ${enabled ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="alert-rule-arrow">▼</span>
                     </div>
                 </div>
-                <div style="margin-bottom: 0.5rem;">
-                    <label style="font-size: 0.6875rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">报警间隔 (分钟，0=不限制)</label>
-                    <input type="number" min="0" max="1440" value="${rule.min_interval || 0}" data-field="min_interval" data-index="${index}" style="width: 100%; padding: 0.375rem; font-size: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-primary);">
-                </div>
-
-                <!-- API Endpoint Info -->
-                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle);">
-                    <div style="font-size: 0.6875rem; color: var(--text-muted); margin-bottom: 0.25rem;">告警接收地址</div>
-                    <div style="display: flex; gap: 0.25rem; margin-bottom: 0.5rem;">
-                        <input type="text" value="${alertEndpoint}" readonly style="flex: 1; padding: 0.25rem 0.5rem; font-size: 0.6875rem; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-secondary); font-family: monospace;"
-                            onclick="this.select();"
-                            title="点击复制">
-                        <button onclick="navigator.clipboard.writeText('${alertEndpoint}'); window.dashboard.showToast('地址已复制', 'success');" class="btn btn-secondary" style="font-size: 0.6875rem; padding: 0.25rem 0.5rem;">复制</button>
-                    </div>
-                    ${viewUrl ? `
-                    <div style="font-size: 0.6875rem; color: var(--text-muted); margin-bottom: 0.25rem;">业务视图地址</div>
-                    <div style="display: flex; gap: 0.25rem; margin-bottom: 0.5rem;">
-                        <input type="text" value="${viewUrl}" readonly style="flex: 1; padding: 0.25rem 0.5rem; font-size: 0.6875rem; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-secondary); font-family: monospace;"
-                            onclick="this.select();"
-                            title="点击复制">
-                        <button onclick="navigator.clipboard.writeText('${viewUrl}'); window.dashboard.showToast('地址已复制', 'success');" class="btn btn-secondary" style="font-size: 0.6875rem; padding: 0.25rem 0.5rem;">复制</button>
-                    </div>
-                    ` : ''}
-
-                    <!-- Collapsible Request Examples -->
-                    <div style="margin-top: 0.5rem;">
-                        <div onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('span').style.transform = this.nextElementSibling.style.display === 'none' ? 'rotate(0deg)' : 'rotate(90deg)';" style="cursor: pointer; display: flex; align-items: center; gap: 0.25rem; font-size: 0.6875rem; color: var(--accent-cyan); user-select: none;">
-                            <span style="display: inline-block; transition: transform 0.2s;">▶</span>
-                            请求示例
+                <div class="alert-rule-card-body">
+                    <div class="alert-rule-body-grid">
+                        <div class="alert-rule-name-row">
+                            <label style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;display:block">规则名称</label>
+                            <input class="alert-rule-name-input" type="text" value="${name}" data-field="name" data-index="${index}" placeholder="自定义名称（可选）">
                         </div>
-                        <div style="display: none; margin-top: 0.5rem;">
-                            <div style="font-size: 0.625rem; color: var(--text-muted); margin-bottom: 0.25rem;">POST (JSON)</div>
-                            <div style="position: relative; margin-bottom: 0.5rem;">
-                                <pre style="margin: 0; padding: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 4px; font-size: 0.625rem; color: var(--text-secondary); overflow-x: auto; white-space: pre-wrap; word-break: break-all;">${this.escapeHtml(curlExample)}</pre>
-                                <button onclick="navigator.clipboard.writeText(\`${curlExample.replace(/\\/g, '\\\\').replace(/`/g, '\\`')}\`); window.dashboard.showToast('curl命令已复制', 'success');" class="btn btn-secondary" style="position: absolute; top: 0.25rem; right: 0.25rem; font-size: 0.625rem; padding: 0.125rem 0.375rem;">复制</button>
-                            </div>
-                            <div style="font-size: 0.625rem; color: var(--text-muted); margin-bottom: 0.25rem;">GET (URL)</div>
-                            <div style="position: relative; margin-bottom: 0.5rem;">
-                                <pre style="margin: 0; padding: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 4px; font-size: 0.625rem; color: var(--text-secondary); overflow-x: auto; white-space: pre-wrap; word-break: break-all;">${this.escapeHtml(getExample)}</pre>
-                                <button onclick="navigator.clipboard.writeText('${getExample}'); window.dashboard.showToast('URL已复制', 'success');" class="btn btn-secondary" style="position: absolute; top: 0.25rem; right: 0.25rem; font-size: 0.625rem; padding: 0.125rem 0.375rem;">复制</button>
-                            </div>
+                        <div class="form-group" style="margin:0">
+                            <label style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;display:block">关键词</label>
+                            <input type="text" value="${keyword}" data-field="keyword" data-index="${index}" placeholder="触发关键词" style="width:100%;background:var(--bg-primary);border:1px solid var(--border-subtle);border-radius:4px;padding:5px 8px;color:var(--text-primary);font-size:0.8125rem">
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;display:block">声音</label>
+                            <select data-field="sound_selector" data-index="${index}" style="width:100%;background:var(--bg-primary);border:1px solid var(--border-subtle);border-radius:4px;padding:5px 8px;color:var(--text-primary);font-size:0.8125rem">
+                                <optgroup label="内置声音">
+                                    <option value="builtin:error" ${soundValue === 'builtin:error' ? 'selected' : ''}>Error (高频)</option>
+                                    <option value="builtin:warning" ${soundValue === 'builtin:warning' ? 'selected' : ''}>Warning (中频)</option>
+                                    <option value="builtin:stop" ${soundValue === 'builtin:stop' ? 'selected' : ''}>Stop (低频)</option>
+                                    <option value="builtin:info" ${soundValue === 'builtin:info' ? 'selected' : ''}>Info (提示)</option>
+                                </optgroup>
+                                ${customAudioOptions.length ? `<optgroup label="自定义音频">${customAudioOptions}</optgroup>` : ''}
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;display:block">间隔(分)</label>
+                            <input type="number" min="0" max="1440" value="${rule.min_interval || 0}" data-field="min_interval" data-index="${index}" style="width:100%;background:var(--bg-primary);border:1px solid var(--border-subtle);border-radius:4px;padding:5px 8px;color:var(--text-primary);font-size:0.8125rem">
+                        </div>
+                        <div class="alert-rule-body-actions">
+                            <button class="btn btn-secondary" data-action="test" data-index="${index}" style="font-size:0.75rem;padding:0.3rem 0.6rem" title="测试">▶ 测试</button>
+                            <button class="btn btn-danger" data-action="delete" data-index="${index}" style="font-size:0.75rem;padding:0.3rem 0.6rem" title="删除">✕</button>
                         </div>
                     </div>
                 </div>
-
-                <button onclick="window.dashboard.testSettingsAlertRule(${index})" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; margin-top: 0.5rem;">测试</button>
-            </div>
-            `;
+            </div>`;
         }).join('');
 
-        // Add change listeners
-        container.querySelectorAll('input, select').forEach(input => {
-            input.addEventListener('change', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                const field = e.target.dataset.field;
-                const value = field === 'min_interval' ? parseInt(e.target.value) || 0 : e.target.value;
-                this.updateSettingsAudioAlert(index, field, value);
+        container.innerHTML = switchHtml + cards;
+        this._rebindMatchSwitch(container);
+
+        // Bind card header click (toggle collapse) — header has no editable controls
+        container.querySelectorAll('.alert-rule-card-header').forEach(header => {
+            header.addEventListener('click', (e) => {
+                if (e.target.closest('.alert-rule-toggle')) return;
+                const card = header.closest('.alert-rule-card');
+                card.classList.toggle('is-expanded');
             });
         });
+
+        // Bind input/select changes
+        container.querySelectorAll('input[data-field], select[data-field]').forEach(el => {
+            const eventType = el.type === 'checkbox' ? 'change' : 'input';
+            el.addEventListener(eventType, (e) => {
+                const index = parseInt(e.target.dataset.index);
+                const field = e.target.dataset.field;
+                let value;
+                if (field === 'min_interval') value = parseInt(e.target.value) || 0;
+                else if (field === 'enabled') value = e.target.checked;
+                else value = e.target.value;
+                this.updateSettingsAudioAlert(index, field, value);
+                // Sync header name label when name field changes
+                if (field === 'name') {
+                    const label = container.querySelector(`#alert-name-label-${index}`);
+                    if (label) {
+                        label.textContent = value || '无名称';
+                        label.classList.toggle('is-empty', !value);
+                    }
+                }
+            });
+        });
+
+        // Update badge when keyword input changes
+        container.querySelectorAll('input[data-field="keyword"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const card = e.target.closest('.alert-rule-card');
+                const badge = card && card.querySelector('.alert-rule-keyword-badge');
+                if (badge) badge.textContent = e.target.value || '未设置';
+            });
+        });
+
+        // Bind action buttons
+        container.querySelectorAll('[data-action]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                if (e.target.dataset.action === 'test') this.testSettingsAlertRule(index);
+                else if (e.target.dataset.action === 'delete') this.removeSettingsAudioAlert(index);
+            });
+        });
+    }
+
+    _rebindMatchSwitch(container) {
+        const switchInput = container.querySelector('#audioAlertMatchSwitch');
+        if (switchInput) {
+            switchInput.addEventListener('change', (e) => {
+                this.tempAudioAlertMatchEnabled = e.target.checked;
+                this.renderAudioAlertMatchSwitch(this.tempAudioAlertMatchEnabled);
+            });
+        }
+    }
+
+    toggleAlertRuleCard(index) {
+        const container = document.getElementById('settingsAlertConfigList');
+        if (!container) return;
+        const card = container.querySelector(`.alert-rule-card[data-index="${index}"]`);
+        if (card) card.classList.toggle('is-expanded');
     }
 
     renderAudioAlertMatchSwitch(enabled) {
@@ -1907,19 +2081,25 @@ class DashboardManager {
     }
 
     addSettingsAudioAlert() {
-        const keyword = prompt('输入触发关键词 (如: ERROR, STOP):');
-        if (!keyword) return;
-
         if (!this.tempAudioAlerts) {
             this.tempAudioAlerts = [];
         }
         this.tempAudioAlerts.push({
-            keyword: keyword,
-            sound: 'error',
+            name: '',
+            keyword: '',
+            sound: 'warning',
+            audio_file_id: '',
             min_interval: 0,
-            audio_file_id: ''
+            enabled: true
         });
         this.renderSettingsAudioAlerts(this.tempAudioAlerts);
+        // Auto-expand the newly added card
+        const newIndex = this.tempAudioAlerts.length - 1;
+        const container = document.getElementById('settingsAlertConfigList');
+        if (container) {
+            const card = container.querySelector(`.alert-rule-card[data-index="${newIndex}"]`);
+            if (card) card.classList.add('is-expanded');
+        }
     }
 
     removeSettingsAudioAlert(index) {
@@ -1930,8 +2110,37 @@ class DashboardManager {
     }
 
     updateSettingsAudioAlert(index, field, value) {
-        if (this.tempAudioAlerts && this.tempAudioAlerts[index]) {
-            this.tempAudioAlerts[index][field] = value;
+        if (!this.tempAudioAlerts || !this.tempAudioAlerts[index]) return;
+        const alert = this.tempAudioAlerts[index];
+
+        switch (field) {
+            case 'name':
+                alert.name = value;
+                break;
+            case 'enabled': {
+                alert.enabled = value;
+                // Reflect visually on the card immediately
+                const container = document.getElementById('settingsAlertConfigList');
+                if (container) {
+                    const card = container.querySelector(`.alert-rule-card[data-index="${index}"]`);
+                    if (card) card.dataset.enabled = String(value);
+                }
+                break;
+            }
+            case 'sound_selector':
+                if (value.startsWith('builtin:')) {
+                    alert.sound = value.slice(8);
+                    alert.audio_file_id = '';
+                } else if (value.startsWith('custom:')) {
+                    alert.sound = 'custom';
+                    alert.audio_file_id = value.slice(7);
+                }
+                break;
+            case 'min_interval':
+                alert.min_interval = value;
+                break;
+            default:
+                alert[field] = value;
         }
     }
 
@@ -2055,7 +2264,6 @@ class DashboardManager {
 
             if (response.ok) {
                 this.showToast('success', '保存成功', '设置已保存');
-                this.toggleSettingsPanel();
                 // Update local config without reloading
                 await this.loadAudioAlertConfig();
                 this.initViewLink();

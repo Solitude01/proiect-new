@@ -189,6 +189,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Templates
 templates = Jinja2Templates(directory="templates")
 
+# Cache-busting version for dashboard.js — updated each server restart so
+# browsers always re-download when the server is restarted after file changes.
+_dash_js = Path("static/js/dashboard.js")
+JS_VERSION = int(_dash_js.stat().st_mtime) if _dash_js.exists() else 1
+
 
 # ============================================================================
 # Frontend Routes
@@ -209,7 +214,8 @@ async def index(request: Request):
                 "request": request,
                 "instance_id": SINGLE_INSTANCE_ID,
                 "instance": instance.model_dump() if instance else {},
-                "single_instance_mode": True
+                "single_instance_mode": True,
+                "js_version": JS_VERSION
             }
         )
 
@@ -235,7 +241,8 @@ async def dashboard(request: Request, instance_id: str):
             "request": request,
             "instance_id": instance_id,
             "instance": instance.model_dump() if instance else {},
-            "single_instance_mode": SINGLE_INSTANCE_MODE and instance_id == SINGLE_INSTANCE_ID
+            "single_instance_mode": SINGLE_INSTANCE_MODE and instance_id == SINGLE_INSTANCE_ID,
+            "js_version": JS_VERSION
         }
     )
 

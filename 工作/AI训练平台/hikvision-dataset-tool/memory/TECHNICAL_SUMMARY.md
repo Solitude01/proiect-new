@@ -5,7 +5,8 @@
 该工具用于从海康威视AI开放平台导出数据集（图片+标注），支持以下特性：
 - 批量下载已标注图片
 - 自动解密加密图片（AES-ECB）
-- 导出标注数据为JSON格式
+- 导出标注数据为JSON格式（海康原始格式）
+- **导出COCO标准格式**（含图片拷贝）
 - 支持并发下载
 - GUI/CLI双模式
 
@@ -212,7 +213,8 @@ hikvision-dataset-tool/
 ├── core/
 │   ├── auth.py               # 认证管理
 │   ├── api_client.py         # API封装
-│   └── downloader.py         # 下载器（含解密）
+│   ├── downloader.py         # 下载器（含解密）
+│   └── converter.py          # COCO格式转换器
 ├── browser/
 │   └── bb_browser_bridge.py  # 浏览器CDP桥接
 ├── gui/
@@ -227,6 +229,9 @@ MainWindow (GUI)
     └── DatasetDownloader (下载)
         └── HikvisionAPIClient (API)
         └── decrypt_image (解密)
+    └── COCOConverter (格式转换)
+        └── COCO/annotations/instances.json
+        └── COCO/images/
 ```
 
 ---
@@ -253,32 +258,112 @@ python main.py --auto
 python main.py --dataset 100149930 --version 100240402 --token "xxx"
 ```
 
+### 6.4 导出COCO格式
+```bash
+python main.py --export-coco ./dataset_xxx_20250101_120000
+```
+输出目录结构：
+```
+dataset_xxx_20250101_120000/
+├── images/                    # 原始图片（不动）
+├── annotations/               # 原始标注（海康格式）
+└── COCO/                      # 标准COCO格式
+    ├── annotations/
+    │   └── instances.json     # COCO标注文件
+    └── images/                # 图片副本
+```
+
 ---
 
-## 7. 关键依赖
+## 7. COCO格式转换器
+
+### 7.1 功能说明
+`COCOConverter` 类将海康威视JSON标注转换为COCO标准格式，支持：
+- bbox坐标转换（xmin,ymin,xmax,ymax → COCO xywh格式）
+- 自动生成 category_id（从0开始按首次出现顺序）
+- 图片尺寸自动读取（优先标注数据，缺失时用PIL）
+- 自动创建标准COCO目录结构并拷贝图片
+
+### 7.2 转换规则
+
+| 海康格式 | COCO格式 | 说明 |
+|---------|---------|------|
+| `label_name` | `name` | 类别名称 |
+| `bbox.xmin/ymin/xmax/ymax` | `bbox: [x,y,w,h]` | 转换为xywh格式 |
+| `bbox.xmin/ymin/xmax/ymax` | `segmentation` | 生成四边形轮廓 |
+| `width * height` | `area` | 矩形面积 |
+| `file_id` | `id` | 从1开始递增 |
+| 图片文件名 | `file_name` | 保留原文件名 |
+
+### 7.3 输出结构
+```python
+{
+    "images": [
+        {
+            "id": 1,
+            "file_name": "image001.jpg",
+            "width": 1920,
+            "height": 1080
+        }
+    ],
+    "annotations": [
+        {
+            "id": 1,
+            "image_id": 1,
+            "category_id": 0,
+            "bbox": [100.0, 100.0, 50.0, 80.0],
+            "area": 4000.0,
+            "segmentation": [[100,100,150,100,150,180,100,180]],
+            "iscrowd": 0
+        }
+    ],
+    "categories": [
+        {"id": 0, "name": "person"},
+        {"id": 1, "name": "car"}
+    ]
+}
+```
+
+### 7.4 使用方式
+```python
+from core.converter import COCOConverter
+
+converter = COCOConverter(Path("./dataset_folder"))
+result = converter.convert()
+
+print(f"图片数: {result.images_count}")
+print(f"标注数: {result.annotations_count}")
+print(f"输出目录: {result.coco_dir}")
+```
+
+---
+
+## 8. 关键依赖
 
 ```
 pycryptodome      # AES解密
 requests          # HTTP请求
 browser_cookie3   # 浏览器cookie读取（可选）
 websocket-client  # CDP通信（可选）
+Pillow            # 图片尺寸读取（COCO转换器）
 ```
 
 ---
 
-## 8. 已知限制
+## 9. 已知限制
 
 1. **图片加密**: 部分图片需解密，必须有正确的key
 2. **Token有效期**: 海康token会过期，需定期更新
 3. **并发限制**: 默认5并发，过高可能触发限流
 4. **batch限制**: 标注接口每次最多50个file_id
+5. **COCO图片拷贝**: 大数据集拷贝耗时，后续可优化为符号链接
 
 ---
 
-## 9. 扩展方向
+## 10. 扩展方向
 
 1. **增量下载**: 记录已下载文件，避免重复
-2. **格式转换**: 支持导出COCO/YOLO格式
+2. **格式转换**: ✅ COCO格式已完成，YOLO格式待支持
 3. **筛选功能**: 按标签、标注人、时间筛选
 4. **断点续传**: 支持大数据集中断恢复
 5. **多数据集**: 批量导出多个数据集

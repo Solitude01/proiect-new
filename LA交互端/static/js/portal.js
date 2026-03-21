@@ -6,7 +6,6 @@
 // State
 let instances = [];
 let instanceToDelete = null;
-let buttonIndexCounter = 0;  // 全局按钮索引计数器，确保唯一性
 
 // DOM Elements
 const instanceGrid = document.getElementById('instanceGrid');
@@ -150,7 +149,6 @@ function renderInstances() {
 // Modal functions
 function openCreateModal() {
     console.log('[Portal] Opening create modal...');
-    buttonIndexCounter = 0;  // 重置计数器
     if (!createModal) {
         console.error('[Portal] createModal element is null!');
         return;
@@ -189,51 +187,12 @@ async function handleCreateSubmit(e) {
 
     const formData = new FormData(createForm);
 
-    // Collect button configs
-    const buttons = [];
-    const container = document.getElementById('createButtonsContainer');
-    const rows = container.querySelectorAll('.button-config-row');
-
-    rows.forEach((row, index) => {
-        // 从第一个输入框的 name 属性中提取实际索引
-        const firstInput = row.querySelector('input[name^="btn_label_"]');
-        const actualIndex = firstInput ? firstInput.name.replace('btn_label_', '') : index;
-
-        const label = row.querySelector(`[name="btn_label_${actualIndex}"]`)?.value;
-        const buttonType = row.querySelector(`[name="btn_type_${actualIndex}"]`)?.value || 'command';
-        const color = row.querySelector(`[name="btn_color_${actualIndex}"]`)?.value;
-        const endpoint = row.querySelector(`[name="btn_endpoint_${actualIndex}"]`)?.value;
-        const method = row.querySelector(`[name="btn_method_${actualIndex}"]`)?.value;
-        const payloadStr = row.querySelector(`[name="btn_payload_${actualIndex}"]`)?.value;
-
-        let payload = {};
-        try {
-            payload = payloadStr ? JSON.parse(payloadStr) : {};
-        } catch (e) {
-            console.warn('Invalid JSON payload for button', label);
-        }
-
-        if (label) {
-            buttons.push({
-                id: `btn_${Date.now()}_${index}`,
-                label: label,
-                command: label,
-                color: color,
-                endpoint: endpoint || '/api/control',
-                method: method || 'POST',
-                payload: payload,
-                button_type: buttonType
-            });
-        }
-    });
-
     const data = {
         instance_id: formData.get('instance_id').trim(),
         name: formData.get('name').trim(),
         la_ip: formData.get('la_ip').trim(),
         la_port: parseInt(formData.get('la_port'), 10),
-        description: formData.get('description').trim(),
-        control_buttons: buttons
+        description: formData.get('description').trim()
     };
 
     try {
@@ -357,7 +316,6 @@ document.addEventListener('keydown', (e) => {
 async function openEditModal(instanceId) {
     console.log('[Portal] Opening edit modal for:', instanceId);
     currentEditInstance = instanceId;
-    buttonIndexCounter = 0;  // 重置计数器
 
     try {
         const response = await fetch(`/api/instances/${instanceId}`);
@@ -380,20 +338,6 @@ async function openEditModal(instanceId) {
         document.getElementById('editLaPort').value = instance.la_config?.port || 8080;
         document.getElementById('editDescription').value = instance.description || '';
 
-        // Fill control buttons
-        const container = document.getElementById('editButtonsContainer');
-        container.innerHTML = '';
-
-        const buttons = instance.control_buttons || [];
-        if (buttons.length === 0) {
-            // Add default empty button
-            addEditButton();
-        } else {
-            buttons.forEach((btn, index) => {
-                addEditButton(btn, index);
-            });
-        }
-
         editModal.classList.add('active');
     } catch (error) {
         console.error('[Portal] Failed to load instance:', error);
@@ -407,206 +351,11 @@ function closeEditModal() {
     currentEditInstance = null;
 }
 
-// 处理按钮类型切换，自动更新发送内容示例
-function handleButtonTypeChange(select, btnIndex) {
-    const isInput = select.value === 'input';
-    const payloadTextarea = select.closest('.button-config-row').querySelector(`[name="btn_payload_${btnIndex}"]`);
-
-    if (payloadTextarea) {
-        if (isInput) {
-            // 如果当前是默认的命令格式或为空，则替换为输入按钮示例
-            const currentValue = payloadTextarea.value.trim();
-            if (currentValue === '{"action": "start"}' || currentValue === '' || currentValue === '{}') {
-                payloadTextarea.value = '{"value": "{{input}}"}';
-            }
-        } else {
-            // 如果当前是输入按钮格式，则替换为命令按钮示例
-            const currentValue = payloadTextarea.value.trim();
-            if (currentValue.includes('{{input}}')) {
-                payloadTextarea.value = '{"action": "start"}';
-            }
-        }
-    }
-}
-
-function addEditButton(btnData = null, index = null) {
-    const container = document.getElementById('editButtonsContainer');
-    // 使用传入的索引或全局计数器，确保唯一性
-    const btnIndex = index !== null ? index : buttonIndexCounter++;
-
-    const div = document.createElement('div');
-    div.className = 'button-config-row';
-    // 保留原始按钮ID，用于保存时识别
-    if (btnData?.id) {
-        div.dataset.buttonId = btnData.id;
-    }
-    div.innerHTML = `
-        <div class="form-row">
-            <div class="form-group">
-                <label>按钮名称</label>
-                <input type="text" name="btn_label_${btnIndex}" required placeholder="启动生产"
-                    value="${btnData ? escapeHtml(btnData.label) : ''}">
-            </div>
-            <div class="form-group">
-                <label>按钮颜色</label>
-                <select name="btn_color_${btnIndex}">
-                    <option value="green" ${btnData?.color === 'green' ? 'selected' : ''}>绿色</option>
-                    <option value="red" ${btnData?.color === 'red' ? 'selected' : ''}>红色</option>
-                    <option value="blue" ${btnData?.color === 'blue' || !btnData ? 'selected' : ''}>蓝色</option>
-                    <option value="orange" ${btnData?.color === 'orange' ? 'selected' : ''}>橙色</option>
-                </select>
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>按钮类型</label>
-                <select name="btn_type_${btnIndex}" onchange="handleButtonTypeChange(this, ${btnIndex})">
-                    <option value="command" ${btnData?.button_type === 'command' || !btnData ? 'selected' : ''}>命令按钮</option>
-                    <option value="input" ${btnData?.button_type === 'input' ? 'selected' : ''}>输入按钮(带输入框)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>命令标识</label>
-                <input type="text" name="btn_command_${btnIndex}" placeholder="START_PRODUCTION"
-                    value="${btnData ? escapeHtml(btnData.command || '') : ''}">
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>端点路径</label>
-                <input type="text" name="btn_endpoint_${btnIndex}" placeholder="/api/control"
-                    value="${btnData ? escapeHtml(btnData.endpoint || '/api/control') : '/api/control'}">
-            </div>
-            <div class="form-group">
-                <label>HTTP 方法</label>
-                <select name="btn_method_${btnIndex}">
-                    <option value="POST" ${btnData?.method === 'POST' || !btnData ? 'selected' : ''}>POST</option>
-                    <option value="GET" ${btnData?.method === 'GET' ? 'selected' : ''}>GET</option>
-                    <option value="PUT" ${btnData?.method === 'PUT' ? 'selected' : ''}>PUT</option>
-                </select>
-            </div>
-        </div>
-        <div class="form-group">
-            <label>发送内容 (JSON格式)</label>
-            <textarea name="btn_payload_${btnIndex}" rows="2" placeholder='{"action": "start"}'
-                >${btnData && btnData.payload ? JSON.stringify(btnData.payload, null, 2) : '{"action": "start"}'}</textarea>
-            <div class="form-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
-                输入按钮可使用 <code>{{input}}</code> 作为占位符，会被替换为用户输入的值
-            </div>
-        </div>
-        <button type="button" class="btn btn-danger btn-small" onclick="this.closest('.button-config-row').remove()">删除此按钮</button>
-        <hr style="border-color: var(--border-subtle); margin: 1rem 0;">
-    `;
-    container.appendChild(div);
-}
-
-function addCreateButton() {
-    const container = document.getElementById('createButtonsContainer');
-    const btnIndex = buttonIndexCounter++;
-
-    const div = document.createElement('div');
-    div.className = 'button-config-row';
-    div.innerHTML = `
-        <div class="form-row">
-            <div class="form-group">
-                <label>按钮名称</label>
-                <input type="text" name="btn_label_${btnIndex}" required placeholder="按钮名称">
-            </div>
-            <div class="form-group">
-                <label>按钮类型</label>
-                <select name="btn_type_${btnIndex}" onchange="handleButtonTypeChange(this, ${btnIndex})">
-                    <option value="command" selected>命令按钮</option>
-                    <option value="input">输入按钮(带输入框)</option>
-                </select>
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>按钮颜色</label>
-                <select name="btn_color_${btnIndex}">
-                    <option value="green">绿色</option>
-                    <option value="red">红色</option>
-                    <option value="blue" selected>蓝色</option>
-                    <option value="orange">橙色</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>HTTP 方法</label>
-                <select name="btn_method_${btnIndex}">
-                    <option value="POST" selected>POST</option>
-                    <option value="GET">GET</option>
-                    <option value="PUT">PUT</option>
-                </select>
-            </div>
-        </div>
-        <div class="form-group">
-            <label>端点路径</label>
-            <input type="text" name="btn_endpoint_${btnIndex}" placeholder="/api/control" value="/api/control">
-        </div>
-        <div class="form-group">
-            <label>发送内容 (JSON格式)</label>
-            <textarea name="btn_payload_${btnIndex}" rows="2" placeholder='{"action": "start"}'>{"action": "start"}</textarea>
-            <div class="form-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
-                输入按钮可使用 <code>{{input}}</code> 作为占位符，会被替换为用户输入的值
-            </div>
-        </div>
-        <button type="button" class="btn btn-danger btn-small" onclick="this.closest('.button-config-row').remove()">删除此按钮</button>
-        <hr style="border-color: var(--border-subtle); margin: 1rem 0;">
-    `;
-    container.appendChild(div);
-}
-
 async function handleEditSubmit(e) {
     e.preventDefault();
 
     const submitBtn = editForm.querySelector('button[type="submit"]');
     submitBtn.classList.add('loading');
-
-    // Collect button configs
-    const buttons = [];
-    const container = document.getElementById('editButtonsContainer');
-    const rows = container.querySelectorAll('.button-config-row');
-
-    rows.forEach((row, index) => {
-        // 从第一个输入框的 name 属性中提取实际索引
-        const firstInput = row.querySelector('input[name^="btn_label_"]');
-        const actualIndex = firstInput ? firstInput.name.replace('btn_label_', '') : index;
-
-        const buttonTypeSelect = row.querySelector(`[name="btn_type_${actualIndex}"]`);
-        const buttonType = buttonTypeSelect?.value || 'command';
-        console.log(`[EditSubmit] Row ${index}: actualIndex=${actualIndex}, buttonType=${buttonType}`, buttonTypeSelect);
-
-        const label = row.querySelector(`[name="btn_label_${actualIndex}"]`)?.value;
-        const color = row.querySelector(`[name="btn_color_${actualIndex}"]`)?.value;
-        const endpoint = row.querySelector(`[name="btn_endpoint_${actualIndex}"]`)?.value;
-        const method = row.querySelector(`[name="btn_method_${actualIndex}"]`)?.value;
-        const command = row.querySelector(`[name="btn_command_${actualIndex}"]`)?.value || label;
-        const payloadStr = row.querySelector(`[name="btn_payload_${actualIndex}"]`)?.value;
-
-        let payload = {};
-        try {
-            payload = payloadStr ? JSON.parse(payloadStr) : {};
-        } catch (e) {
-            console.warn('Invalid JSON payload for button', label);
-        }
-
-        if (label) {
-            // 尝试从已有的 data-id 属性获取原始ID，否则生成新ID
-            const existingId = row.dataset.buttonId;
-            const btnId = existingId || `btn_${Date.now()}_${index}`;
-
-            buttons.push({
-                id: btnId,
-                label: label,
-                command: command,
-                color: color,
-                endpoint: endpoint || '/api/control',
-                method: method || 'POST',
-                payload: payload,
-                button_type: buttonType
-            });
-        }
-    });
 
     const data = {
         name: document.getElementById('editInstanceName').value,
@@ -614,8 +363,7 @@ async function handleEditSubmit(e) {
         la_config: {
             ip: document.getElementById('editLaIp').value,
             port: parseInt(document.getElementById('editLaPort').value, 10)
-        },
-        control_buttons: buttons
+        }
     };
 
     console.log('[EditSubmit] Sending data:', JSON.stringify(data, null, 2));

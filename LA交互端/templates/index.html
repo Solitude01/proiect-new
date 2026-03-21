@@ -28,7 +28,7 @@
                     </svg>
                 </div>
                 <div class="brand-text">
-                    <h1>LOGIC AGENT</h1>
+                    <h1>SCC 智能制造推进部</h1>
                     <span class="subtitle">IIoT MULTI-INSTANCE MIDDLEWARE</span>
                 </div>
             </div>
@@ -138,56 +138,13 @@
                               placeholder="生产线路 A - 主装配线"></textarea>
                 </div>
 
-                <!-- Control Buttons Configuration -->
-                <div class="form-section">
-                    <h3>控制按钮配置</h3>
-                    <div id="createButtonsContainer">
-                        <!-- Default buttons -->
-                        <div class="button-config-row">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>按钮名称</label>
-                                    <input type="text" name="btn_label_0" required placeholder="启动生产" value="启动生产">
-                                </div>
-                                <div class="form-group">
-                                    <label>按钮颜色</label>
-                                    <select name="btn_color_0">
-                                        <option value="green" selected>绿色</option>
-                                        <option value="red">红色</option>
-                                        <option value="blue">蓝色</option>
-                                        <option value="orange">橙色</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>端点路径</label>
-                                    <input type="text" name="btn_endpoint_0" placeholder="/api/control" value="/api/control">
-                                </div>
-                                <div class="form-group">
-                                    <label>HTTP 方法</label>
-                                    <select name="btn_method_0">
-                                        <option value="POST" selected>POST</option>
-                                        <option value="GET">GET</option>
-                                        <option value="PUT">PUT</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>发送内容 (JSON格式)</label>
-                                <textarea name="btn_payload_0" rows="2" placeholder='{"action": "start"}'>{"action": "start"}</textarea>
-                            </div>
-                            <button type="button" class="btn btn-danger btn-small" onclick="this.closest('.button-config-row').remove()">删除此按钮</button>
-                            <hr style="border-color: var(--border-subtle); margin: 1rem 0;">
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-secondary" onclick="addCreateButton()">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="margin-right: 4px;">
-                            <path d="M8 2V14M2 8H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-                        添加按钮
-                    </button>
-                </div>
+                <p style="font-size:0.8125rem;color:var(--text-muted);margin:0.5rem 0 0.25rem;display:flex;align-items:center;gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;">
+                        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 5V9M8 11V11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    控制按钮可在创建后进入实例控制台「设置 → 控制按钮」中配置
+                </p>
 
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">取消</button>
@@ -237,19 +194,13 @@
                     </div>
                 </div>
 
-                <!-- Control Buttons Configuration -->
-                <div class="form-section">
-                    <h3>控制按钮配置</h3>
-                    <div id="editButtonsContainer">
-                        <!-- Buttons will be dynamically added here -->
-                    </div>
-                    <button type="button" class="btn btn-secondary" onclick="addEditButton()">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="margin-right: 4px;">
-                            <path d="M8 2V14M2 8H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-                        添加按钮
-                    </button>
-                </div>
+                <p style="font-size:0.8125rem;color:var(--text-muted);margin:0.5rem 0 0.25rem;display:flex;align-items:center;gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;">
+                        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 5V9M8 11V11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    控制按钮可在实例控制台「设置 → 控制按钮」中配置
+                </p>
 
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>

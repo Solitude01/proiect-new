@@ -40,10 +40,12 @@ class AudioFile(BaseModel):
 
 class AudioAlert(BaseModel):
     """Audio alert configuration"""
+    name: str = ""           # 规则自定义名称
     keyword: str
     sound: str
     audio_file_id: str = ""  # 关联的自定义音频文件ID
     min_interval: int = 0    # 最小报警间隔（分钟），0表示不限制
+    enabled: bool = True     # 启用/禁用开关
 
 
 class MetricsMapping(BaseModel):
