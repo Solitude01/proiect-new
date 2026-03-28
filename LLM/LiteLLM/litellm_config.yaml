@@ -1,0 +1,10 @@
+model_list:
+  - model_name: ds-v3
+    litellm_params:
+      model: openai/ds-v3
+      api_base: http://ds.scc.com.cn/v1
+      api_key: "0"
+      use_responses_api: false
+
+litellm_settings:
+  drop_params: true

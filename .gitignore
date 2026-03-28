@@ -86,3 +86,5 @@ package-lock.json
 # --- 系统残留 ---
 .DS_Store
 Thumbs.db
+
+.har

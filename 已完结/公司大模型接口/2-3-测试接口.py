@@ -31,34 +31,11 @@ MODELS_CONFIG = [
         "note": "DeepSeek 域名 - DeepSeek v3"
     },
     {
-        "name": "deepseek-r1",
-        "model": "deepseek-r1",
+        "name": "glm",
+        "model": "glm",
         "url": "http://ds.scc.com.cn/v1/chat/completions",
         "api_key": "0",
-        "note": "DeepSeek 域名 - DeepSeek R1"
-    },
-    
-    # 千帆内网接口（需要有效的 AccessCode）
-    {
-        "name": "HY-MT1.5",
-        "model": "HY-MT1.5",
-        "url": "http://10.10.103.251:8088/generativeLargeModel/hy-mt",
-        "api_key": "0",  # 需要替换为有效的 AccessCode
-        "note": "千帆 - HY-MT1.5-1.8B (需要有效AccessCode)"
-    },
-    {
-        "name": "qwen-vl-thinking",
-        "model": "qwen3-vl-30b-a3b-thinking",
-        "url": "http://10.10.103.251:8088/generativeLargeModelImage2Text/qwen3-vl-30b-a3b",
-        "api_key": "0",  # 需要替换为有效的 AccessCode
-        "note": "千帆 - Qwen VL 30B 思考版 (需要有效AccessCode)"
-    },
-    {
-        "name": "qwen-30b",
-        "model": "qwen3-30b-a3b",
-        "url": "http://10.10.103.251:8088/generativeLargeModel/qwen3-30b-a3b",
-        "api_key": "0",  # 需要替换为有效的 AccessCode
-        "note": "千帆 - Qwen3 30B (需要有效AccessCode)"
+        "note": "DeepSeek 域名 - GLM 4.7 Flash"
     },
 ]
 
