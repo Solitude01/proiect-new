@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(: [)",
+      "Bash(:)",
+      "Bash(python:*)",
+      "Bash(build_venv/Scripts/pip install:*)",
+      "Bash(where ffmpeg:*)",
+      "Bash(cp D:/software/ffmpeg/bin/ffmpeg.exe .)",
+      "Bash(cp D:/software/ffmpeg/bin/ffprobe.exe .)",
+      "Bash(build_venv/Scripts/pyinstaller --noconfirm --onefile --windowed --add-binary \"ffmpeg.exe:.\" --add-binary \"ffprobe.exe:.\" --name \"视频帧提取工具\" 1.py)",
+      "Bash(build_venv/Scripts/pyinstaller --noconfirm --onedir --windowed --add-binary \"ffmpeg.exe:.\" --add-binary \"ffprobe.exe:.\" --name \"视频帧提取工具\" 1.py)",
+      "Bash(ls:*)"
+    ]
+  }
+}

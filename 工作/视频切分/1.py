@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import os
 import subprocess
+import sys
 import threading
 from datetime import datetime
 import random
@@ -80,9 +81,10 @@ class CompactVideoFrameExtractor:
 
     def check_ffmpeg(self):
         """检查FFmpeg是否安装"""
+        ffmpeg_path = self.get_ffmpeg_path()
         try:
-            subprocess.run(
-                ["ffmpeg", "-version"],
+            self.run_subprocess(
+                [ffmpeg_path, "-version"],
                 capture_output=True,
                 encoding='utf-8',
                 errors='ignore',
@@ -91,6 +93,40 @@ class CompactVideoFrameExtractor:
             return True
         except (FileNotFoundError, subprocess.TimeoutExpired):
             return False
+
+    def run_subprocess(self, cmd, **kwargs):
+        """运行子进程，Windows 下隐藏命令行窗口"""
+        if os.name == 'nt':  # Windows
+            kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+        return subprocess.run(cmd, **kwargs)
+
+    def get_ffmpeg_path(self):
+        """获取 ffmpeg 路径，优先使用打包目录中的版本"""
+        # PyInstaller 打包后的 exe 所在目录
+        if hasattr(sys, '_MEIPASS'):
+            exe_dir = os.path.dirname(sys.executable)
+        else:
+            exe_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # 优先查找 exe 同级目录的 ffmpeg.exe
+        local_ffmpeg = os.path.join(exe_dir, 'ffmpeg.exe')
+        if os.path.exists(local_ffmpeg):
+            return local_ffmpeg
+
+        # 检查 _internal 目录（PyInstaller onedir 模式）
+        internal_ffmpeg = os.path.join(exe_dir, '_internal', 'ffmpeg.exe')
+        if os.path.exists(internal_ffmpeg):
+            return internal_ffmpeg
+
+        # 回退到系统 PATH
+        return 'ffmpeg'
+
+    def get_ffprobe_path(self):
+        """获取 ffprobe 路径，优先使用打包目录中的版本"""
+        ffmpeg_path = self.get_ffmpeg_path()
+        if ffmpeg_path.endswith('.exe'):
+            return ffmpeg_path.replace('ffmpeg.exe', 'ffprobe.exe')
+        return 'ffprobe'
 
     def create_ui(self):
         """创建紧凑UI"""
@@ -527,15 +563,16 @@ class CompactVideoFrameExtractor:
 
     def get_video_info(self, video_path):
         """获取视频信息"""
+        ffprobe_path = self.get_ffprobe_path()
         try:
             cmd = [
-                "ffprobe", "-v", "error",
+                ffprobe_path, "-v", "error",
                 "-select_streams", "v:0",
                 "-show_entries", "stream=width,height",
                 "-of", "csv=s=x:p=0",
                 video_path
             ]
-            result = subprocess.run(cmd, capture_output=True, encoding='utf-8', errors='ignore', timeout=10)
+            result = self.run_subprocess(cmd, capture_output=True, encoding='utf-8', errors='ignore', timeout=10)
             if 'x' in result.stdout:
                 w, h = result.stdout.strip().split('x')
                 return {'width': int(w), 'height': int(h)}
@@ -544,16 +581,19 @@ class CompactVideoFrameExtractor:
         return {'width': 1920, 'height': 1080}
 
     def select_video(self):
-        """选择视频文件"""
+        """选择视频文件，自动设置输出目录为视频所在文件夹"""
         path = filedialog.askopenfilename(
             title="选择视频文件",
             filetypes=[("视频文件", "*.mp4 *.avi *.mov *.mkv *.flv *.wmv *.webm"), ("所有文件", "*.*")]
         )
         if path:
             self.video_path.set(path)
+            # 自动设置输出目录为视频所在目录
+            video_dir = os.path.dirname(path)
+            self.output_path.set(video_dir)
             info = self.get_video_info(path)
             self.video_info_label.config(
-                text=f"📹 {info['width']}x{info['height']}",
+                text=f"📹 {info['width']}x{info['height']} | 输出目录: {video_dir}",
                 fg=self.colors['text_primary']
             )
 
@@ -614,13 +654,15 @@ class CompactVideoFrameExtractor:
 
     def extract_frames(self, video_path, output_dir, fmt, total=None, fps=None):
         """提取帧并实时重命名"""
+        ffmpeg_path = self.get_ffmpeg_path()
+        ffprobe_path = self.get_ffprobe_path()
         info = self.get_video_info(video_path)
         width, height = info['width'], info['height']
 
         # 获取视频时长
-        cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+        cmd = [ffprobe_path, "-v", "error", "-show_entries", "format=duration",
                "-of", "default=noprint_wrappers=1:nokey=1", video_path]
-        result = subprocess.run(cmd, capture_output=True, encoding='utf-8', errors='ignore', timeout=10)
+        result = self.run_subprocess(cmd, capture_output=True, encoding='utf-8', errors='ignore', timeout=10)
         duration = float(result.stdout.strip()) if result.stdout.strip() else 0
 
         timestamp = datetime.now().strftime("%m%d%H%M")
@@ -639,14 +681,14 @@ class CompactVideoFrameExtractor:
                 break
 
             temp_path = os.path.join(output_dir, f"_temp_{idx:06d}.{fmt}")
-            cmd = ["ffmpeg", "-y", "-ss", str(ts), "-i", video_path, "-vframes", "1", "-threads", "1", temp_path]
+            cmd = [ffmpeg_path, "-y", "-ss", str(ts), "-i", video_path, "-vframes", "1", "-threads", "1", temp_path]
 
             if fmt.lower() in ['jpg', 'jpeg']:
                 cmd.extend(["-q:v", "2"])
             elif fmt.lower() == 'png':
                 cmd.extend(["-compression_level", "3"])
 
-            result = subprocess.run(cmd, capture_output=True, encoding='utf-8', errors='ignore', timeout=60)
+            result = self.run_subprocess(cmd, capture_output=True, encoding='utf-8', errors='ignore', timeout=60)
 
             if result.returncode == 0 and os.path.exists(temp_path):
                 final_name = f"{timestamp}_{random_num}_{idx+1:04d}_{width}_{height}.{fmt}"
