@@ -49,7 +49,7 @@ def main():
     # 安装依赖
     print()
     print("[2/5] 安装依赖...")
-    run(f'"{pip}" install pyinstaller -i https://pypi.tuna.tsinghua.edu.cn/simple')
+    run(f'"{pip}" install pyinstaller ttkbootstrap opencv-python -i https://pypi.tuna.tsinghua.edu.cn/simple')
 
     # 清理旧构建
     print()
@@ -68,7 +68,7 @@ def main():
         f'--add-binary "ffmpeg.exe;." '
         f'--add-binary "ffprobe.exe;." '
         f'--name "视频帧提取工具" '
-        f'1.py'
+        f'video_frame_extractor.py'
     )
     if run(cmd) != 0:
         print()

@@ -196,7 +196,7 @@ class CompactVideoFrameExtractor:
 
         tk.Label(
             title_row,
-            text="🎬 视频帧提取工具",
+            text="SCC-🎬 视频帧提取工具",
             font=self.fonts['title'],
             bg=self.colors['bg_header'],
             fg='white',

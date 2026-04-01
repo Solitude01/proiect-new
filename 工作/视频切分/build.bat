@@ -30,7 +30,7 @@ if not exist "build_venv" (
 
 echo.
 echo [2/5] 安装依赖...
-build_venv\Scripts\pip install pyinstaller -i https://pypi.tuna.tsinghua.edu.cn/simple -q
+build_venv\Scripts\pip install pyinstaller ttkbootstrap opencv-python -i https://pypi.tuna.tsinghua.edu.cn/simple -q
 
 echo.
 echo [3/5] 清理旧构建...
@@ -46,7 +46,7 @@ build_venv\Scripts\pyinstaller ^
   --add-binary "ffmpeg.exe;." ^
   --add-binary "ffprobe.exe;." ^
   --name "视频帧提取工具" ^
-  1.py
+  video_frame_extractor.py
 
 if errorlevel 1 (
     echo.

@@ -10,7 +10,15 @@
       "Bash(cp D:/software/ffmpeg/bin/ffprobe.exe .)",
       "Bash(build_venv/Scripts/pyinstaller --noconfirm --onefile --windowed --add-binary \"ffmpeg.exe:.\" --add-binary \"ffprobe.exe:.\" --name \"视频帧提取工具\" 1.py)",
       "Bash(build_venv/Scripts/pyinstaller --noconfirm --onedir --windowed --add-binary \"ffmpeg.exe:.\" --add-binary \"ffprobe.exe:.\" --name \"视频帧提取工具\" 1.py)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(pip list:*)",
+      "Bash(findstr ttkbootstrap:*)",
+      "Bash(pip install:*)",
+      "Bash(:///D/proiect/工作/视频切分)",
+      "Bash(: 运行 video_frame_extractor.py 并捕获所有终端输出错误)",
+      "Bash(: rm:*)",
+      "Bash(:\\\\Users\\\\Lane)",
+      "Bash(: true:*)"
     ]
   }
 }
