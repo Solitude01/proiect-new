@@ -9,6 +9,7 @@ from tkinter import messagebox, filedialog
 import os
 import sys
 import json
+import random
 import subprocess
 import threading
 import queue
@@ -80,7 +81,7 @@ class ExtractConfig:
     """切分配置"""
     total_value: int = 100
     output_format: str = "jpg"
-    quality: int = 2
+    quality: int = 1
 
 
 @dataclass
@@ -280,80 +281,6 @@ class FFmpegFrameExtractor:
         except Exception as e:
             return False, str(e)
 
-    def extract_frames_to_shared_dir(
-        self,
-        video_path: str,
-        output_dir: str,
-        video_prefix: str,
-        config: ExtractConfig,
-        progress_callback: Optional[Callable[[float, str], None]] = None,
-        stop_event: Optional[threading.Event] = None
-    ) -> tuple[bool, str]:
-        """提取帧到共享目录，使用video_prefix作为文件名前缀区分不同视频"""
-        try:
-            info = self.get_video_info(video_path)
-
-            # 创建输出目录
-            os.makedirs(output_dir, exist_ok=True)
-
-            # 生成时间戳和随机数
-            timestamp = datetime.now().strftime("%m%d%H%M")
-            import random
-            random_num = random.randint(100, 999)
-
-            # 计算提取时间点
-            timestamps = [info.duration * i / config.total_value for i in range(config.total_value)]
-
-            total_count = len(timestamps)
-
-            for idx, ts in enumerate(timestamps):
-                # 检查取消
-                if stop_event and stop_event.is_set():
-                    return False, "用户取消"
-
-                # 构建输出文件名，添加视频名前缀以区分不同视频
-                filename = f"{video_prefix}_{timestamp}_{random_num}_{idx+1:04d}_{info.width}_{info.height}.{config.output_format}"
-                output_path = os.path.join(output_dir, filename)
-
-                # 构建ffmpeg命令
-                cmd = [
-                    self.ffmpeg_path, "-y",
-                    "-ss", str(ts),
-                    "-i", video_path,
-                    "-vframes", "1",
-                    "-threads", "1"
-                ]
-
-                # 添加格式参数
-                if config.output_format.lower() in ['jpg', 'jpeg']:
-                    cmd.extend(["-q:v", str(config.quality)])
-                elif config.output_format.lower() == 'png':
-                    cmd.extend(["-compression_level", "3"])
-
-                cmd.append(output_path)
-
-                # 执行提取
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    encoding='utf-8',
-                    errors='ignore',
-                    timeout=60,
-                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-                )
-
-                # 更新进度
-                progress = ((idx + 1) / total_count) * 100
-                message = f"已保存: {filename}"
-                if progress_callback:
-                    progress_callback(progress, message)
-
-            return True, f"成功提取 {total_count} 帧"
-
-        except Exception as e:
-            return False, str(e)
-
-
 # ============================================================================
 # 批量处理器
 # ============================================================================
@@ -460,6 +387,7 @@ class VideoFrameExtractorApp:
         # 模式数据
         self.single_video_path = ttk.StringVar()
         self.single_output_path = ttk.StringVar()
+        self.single_video_sub_dir = ttk.StringVar()
         self.single_total = ttk.IntVar(value=100)
         self.output_format = ttk.StringVar(value=self.config.output_format)
 
@@ -623,6 +551,13 @@ class VideoFrameExtractorApp:
                 'title': '多目录并发切分',
                 'desc': '并发处理多个目录，提高效率',
                 'bootstyle': 'warning'
+            },
+            {
+                'id': 'fangxinyu_custom',
+                'icon': '✨',
+                'title': '方欣雨定制专属',
+                'desc': '每个视频可单独设置输出目录',
+                'bootstyle': 'primary'
             }
         ]
 
@@ -694,6 +629,8 @@ class VideoFrameExtractorApp:
             self.create_single_directory_ui()
         elif mode == "multi_directory":
             self.create_multi_directory_ui()
+        elif mode == "fangxinyu_custom":
+            self.create_fangxinyu_custom_ui()
 
     def clear_content(self):
         """清空内容区"""
@@ -793,6 +730,30 @@ class VideoFrameExtractorApp:
             bootstyle="outline",
             width=12
         ).pack(side=LEFT, padx=2)
+
+        # 子目录名称
+        sub_dir_frame = ttk.Frame(output_inner)
+        sub_dir_frame.pack(fill=X, pady=(10, 0))
+
+        ttk.Label(sub_dir_frame, text="子目录名称:").pack(side=LEFT)
+        ttk.Entry(
+            sub_dir_frame,
+            textvariable=self.single_video_sub_dir,
+            width=30
+        ).pack(side=LEFT, padx=10)
+        ttk.Button(
+            sub_dir_frame,
+            text="🎲 随机",
+            command=self.random_single_sub_dir,
+            bootstyle="outline",
+            width=8
+        ).pack(side=LEFT, padx=2)
+        ttk.Label(
+            sub_dir_frame,
+            text="子目录将创建于输出目录下",
+            bootstyle="secondary",
+            font=('Segoe UI', 9)
+        ).pack(side=LEFT, padx=(10, 0))
 
         # 切分参数
         params_frame = ttk.LabelFrame(self.content_frame, text="切分参数")
@@ -1039,21 +1000,33 @@ class VideoFrameExtractorApp:
                 bootstyle="outline"
             ).pack(side=LEFT, padx=2)
 
-        # 视频列表 - 添加切分张数列
+        # 视频列表 - 添加切分张数列和子目录名列
         list_frame = ttk.LabelFrame(content_frame, text="待处理视频")
         list_frame.pack(fill=BOTH, expand=True, pady=10)
         list_inner = ttk.Frame(list_frame)
         list_inner.pack(fill=BOTH, expand=True, padx=10, pady=10)
 
-        # 使用Treeview显示视频列表 - 添加切分张数列
-        columns = ('filename', 'size', 'frame_count')
+        # 工具栏
+        list_toolbar = ttk.Frame(list_inner)
+        list_toolbar.pack(fill=X, pady=(0, 5))
+        ttk.Button(
+            list_toolbar,
+            text="🎲 随机子目录名",
+            command=self.random_all_single_dir_sub_dirs,
+            bootstyle="outline"
+        ).pack(side=LEFT, padx=2)
+
+        # 使用Treeview显示视频列表 - 添加切分张数列和子目录名列
+        columns = ('filename', 'size', 'frame_count', 'sub_dir')
         self.video_tree = ttk.Treeview(list_inner, columns=columns, show='headings', height=8)
         self.video_tree.heading('filename', text='文件名')
         self.video_tree.heading('size', text='大小')
         self.video_tree.heading('frame_count', text='切分张数')
-        self.video_tree.column('filename', width=350)
-        self.video_tree.column('size', width=100)
-        self.video_tree.column('frame_count', width=100)
+        self.video_tree.heading('sub_dir', text='子目录名称')
+        self.video_tree.column('filename', width=300)
+        self.video_tree.column('size', width=80)
+        self.video_tree.column('frame_count', width=80)
+        self.video_tree.column('sub_dir', width=120)
 
         scrollbar = ttk.Scrollbar(list_inner, orient=VERTICAL, command=self.video_tree.yview)
         self.video_tree.configure(yscrollcommand=scrollbar.set)
@@ -1061,7 +1034,7 @@ class VideoFrameExtractorApp:
         self.video_tree.pack(side=LEFT, fill=BOTH, expand=True)
         scrollbar.pack(side=RIGHT, fill=Y)
 
-        # 双击编辑切分张数
+        # 双击编辑切分张数或子目录名称
         self.video_tree.bind('<Double-Button-1>', self.on_video_tree_double_click)
 
         # 存储视频数据
@@ -1110,6 +1083,259 @@ class VideoFrameExtractorApp:
         # 日志区域
         self.dir_log_text = self.create_log_viewer(content_frame, height=8)
 
+    def create_fangxinyu_custom_ui(self):
+        """创建方欣雨定制专属模式UI - 支持每个视频单独设置输出目录"""
+        # 创建主滚动容器
+        scroll_container = ttk.Frame(self.content_frame)
+        scroll_container.pack(fill=BOTH, expand=True)
+
+        # 创建可滚动区域
+        content_frame, canvas = self.create_scrollable_frame(scroll_container)
+
+        # 标题
+        ttk.Label(
+            content_frame,
+            text="✨ 方欣雨定制专属",
+            font=('Segoe UI', 16, 'bold')
+        ).pack(anchor=W, pady=(0, 20))
+
+        # 目录选择
+        dir_frame = ttk.LabelFrame(content_frame, text="输入目录")
+        dir_frame.pack(fill=X, pady=10)
+        dir_inner = ttk.Frame(dir_frame)
+        dir_inner.pack(fill=X, expand=True, padx=10, pady=10)
+
+        entry_frame = ttk.Frame(dir_inner)
+        entry_frame.pack(fill=X)
+
+        ttk.Entry(
+            entry_frame,
+            textvariable=self.single_dir_path,
+            state='readonly'
+        ).pack(side=LEFT, fill=X, expand=True, padx=(0, 10))
+
+        ttk.Button(
+            entry_frame,
+            text="选择目录",
+            command=self.select_input_directory,
+            bootstyle="info"
+        ).pack(side=RIGHT)
+
+        # 复制和打开按钮
+        dir_btn_frame = ttk.Frame(dir_inner)
+        dir_btn_frame.pack(fill=X, pady=(5, 0))
+
+        ttk.Button(
+            dir_btn_frame,
+            text="📋 复制路径",
+            command=lambda: self.copy_to_clipboard(self.single_dir_path.get()),
+            bootstyle="outline",
+            width=12
+        ).pack(side=LEFT, padx=2)
+
+        ttk.Button(
+            dir_btn_frame,
+            text="📂 打开目录",
+            command=lambda: self.open_directory(self.single_dir_path.get()),
+            bootstyle="outline",
+            width=12
+        ).pack(side=LEFT, padx=2)
+
+        # 输出目录
+        out_frame = ttk.LabelFrame(content_frame, text="输出设置")
+        out_frame.pack(fill=X, pady=10)
+        out_inner = ttk.Frame(out_frame)
+        out_inner.pack(fill=X, expand=True, padx=10, pady=10)
+
+        out_entry_frame = ttk.Frame(out_inner)
+        out_entry_frame.pack(fill=X, pady=5)
+
+        ttk.Label(out_entry_frame, text="默认输出目录:").pack(side=LEFT)
+        ttk.Entry(
+            out_entry_frame,
+            textvariable=self.single_dir_output,
+            state='readonly'
+        ).pack(side=LEFT, fill=X, expand=True, padx=10)
+
+        ttk.Button(
+            out_entry_frame,
+            text="更改",
+            command=self.select_dir_output
+        ).pack(side=RIGHT)
+
+        # 复制和打开按钮
+        out_btn_frame = ttk.Frame(out_inner)
+        out_btn_frame.pack(fill=X, pady=(5, 0))
+
+        ttk.Button(
+            out_btn_frame,
+            text="📋 复制路径",
+            command=lambda: self.copy_to_clipboard(self.single_dir_output.get()),
+            bootstyle="outline",
+            width=12
+        ).pack(side=LEFT, padx=2)
+
+        ttk.Button(
+            out_btn_frame,
+            text="📂 打开目录",
+            command=lambda: self.open_directory(self.single_dir_output.get()),
+            bootstyle="outline",
+            width=12
+        ).pack(side=LEFT, padx=2)
+
+        ttk.Label(
+            out_frame,
+            text="提示: 可在视频列表中双击\"输出目录\"列为每个视频单独设置输出位置",
+            bootstyle="secondary",
+            font=('Segoe UI', 9)
+        ).pack(anchor=W, pady=(5, 0))
+
+        # 切分模式选择
+        split_mode_frame = ttk.LabelFrame(content_frame, text="切分模式")
+        split_mode_frame.pack(fill=X, pady=10)
+        split_mode_inner = ttk.Frame(split_mode_frame)
+        split_mode_inner.pack(fill=X, expand=True, padx=10, pady=10)
+
+        self.fangxinyu_split_mode = ttk.StringVar(value="uniform")
+
+        mode_select_frame = ttk.Frame(split_mode_inner)
+        mode_select_frame.pack(fill=X)
+
+        ttk.Radiobutton(
+            mode_select_frame,
+            text="统一设置 (所有视频相同张数)",
+            variable=self.fangxinyu_split_mode,
+            value="uniform",
+            command=self.on_fangxinyu_mode_change
+        ).pack(side=LEFT, padx=10)
+
+        ttk.Radiobutton(
+            mode_select_frame,
+            text="单独设置 (为每个视频指定张数)",
+            variable=self.fangxinyu_split_mode,
+            value="individual",
+            command=self.on_fangxinyu_mode_change
+        ).pack(side=LEFT, padx=10)
+
+        # 统一设置时的全局设置
+        self.fangxinyu_uniform_frame = ttk.Frame(split_mode_inner)
+        self.fangxinyu_uniform_frame.pack(fill=X, pady=(10, 0))
+
+        ttk.Label(self.fangxinyu_uniform_frame, text="切分张数:").pack(side=LEFT, padx=(20, 5))
+        self.fangxinyu_uniform_count = ttk.IntVar(value=100)
+        ttk.Spinbox(
+            self.fangxinyu_uniform_frame,
+            from_=1,
+            to=1000,
+            textvariable=self.fangxinyu_uniform_count,
+            width=10
+        ).pack(side=LEFT)
+
+        # 快捷按钮
+        quick_frame = ttk.Frame(self.fangxinyu_uniform_frame)
+        quick_frame.pack(side=LEFT, padx=(20, 0))
+        for num in [50, 100, 150, 200]:
+            ttk.Button(
+                quick_frame,
+                text=str(num),
+                width=4,
+                command=lambda n=num: self.fangxinyu_uniform_count.set(n),
+                bootstyle="outline"
+            ).pack(side=LEFT, padx=2)
+
+        # 视频列表 - 方欣雨定制专属：增加输出目录列
+        list_frame = ttk.LabelFrame(content_frame, text="待处理视频")
+        list_frame.pack(fill=BOTH, expand=True, pady=10)
+        list_inner = ttk.Frame(list_frame)
+        list_inner.pack(fill=BOTH, expand=True, padx=10, pady=10)
+
+        # 工具栏
+        list_toolbar = ttk.Frame(list_inner)
+        list_toolbar.pack(fill=X, pady=(0, 5))
+
+        ttk.Button(
+            list_toolbar,
+            text="🎲 随机子目录名",
+            command=self.random_fangxinyu_sub_dirs,
+            bootstyle="outline"
+        ).pack(side=LEFT, padx=2)
+
+        ttk.Button(
+            list_toolbar,
+            text="📁 统一输出目录",
+            command=self.set_unified_output_for_all,
+            bootstyle="info-outline"
+        ).pack(side=LEFT, padx=2)
+
+        # 使用Treeview显示视频列表 - 5列：文件名、大小、切分张数、子目录、输出目录
+        columns = ('filename', 'size', 'frame_count', 'sub_dir', 'output')
+        self.fangxinyu_video_tree = ttk.Treeview(list_inner, columns=columns, show='headings', height=8)
+        self.fangxinyu_video_tree.heading('filename', text='文件名')
+        self.fangxinyu_video_tree.heading('size', text='大小')
+        self.fangxinyu_video_tree.heading('frame_count', text='切分张数')
+        self.fangxinyu_video_tree.heading('sub_dir', text='子目录')
+        self.fangxinyu_video_tree.heading('output', text='输出目录')
+        self.fangxinyu_video_tree.column('filename', width=180)
+        self.fangxinyu_video_tree.column('size', width=60)
+        self.fangxinyu_video_tree.column('frame_count', width=70)
+        self.fangxinyu_video_tree.column('sub_dir', width=100)
+        self.fangxinyu_video_tree.column('output', width=200)
+
+        scrollbar = ttk.Scrollbar(list_inner, orient=VERTICAL, command=self.fangxinyu_video_tree.yview)
+        self.fangxinyu_video_tree.configure(yscrollcommand=scrollbar.set)
+
+        self.fangxinyu_video_tree.pack(side=LEFT, fill=BOTH, expand=True)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        # 双击编辑
+        self.fangxinyu_video_tree.bind('<Double-Button-1>', self.on_fangxinyu_video_double_click)
+
+        # 存储视频数据
+        self.fangxinyu_videos = []
+
+        # 绑定目录变化更新列表
+        self.single_dir_path.trace_add('write', lambda *args: self.update_fangxinyu_video_list())
+
+        # 绑定统一设置张数变化更新列表
+        self.fangxinyu_uniform_count.trace_add('write', lambda *args: self.on_fangxinyu_uniform_count_change())
+
+        # 执行按钮
+        btn_frame = ttk.Frame(content_frame)
+        btn_frame.pack(fill=X, pady=20)
+
+        self.fangxinyu_start_btn = ttk.Button(
+            btn_frame,
+            text="🚀 开始切分",
+            command=self.start_fangxinyu_directory,
+            bootstyle="success",
+            width=20
+        )
+        self.fangxinyu_start_btn.pack(pady=10)
+
+        # 进度区域
+        self.progress_frame = ttk.LabelFrame(content_frame, text="处理进度")
+        self.progress_frame.pack(fill=X, pady=10)
+        progress_inner = ttk.Frame(self.progress_frame)
+        progress_inner.pack(fill=X, expand=True, padx=10, pady=10)
+
+        self.progress_var = ttk.DoubleVar(value=0)
+        self.progress_bar = ttk.Progressbar(
+            progress_inner,
+            variable=self.progress_var,
+            maximum=100,
+            bootstyle="success"
+        )
+        self.progress_bar.pack(fill=X, pady=5)
+
+        self.status_label = ttk.Label(progress_inner, text="准备就绪")
+        self.status_label.pack(anchor=W)
+
+        self.current_file_label = ttk.Label(progress_inner, text="", bootstyle="secondary")
+        self.current_file_label.pack(anchor=W)
+
+        # 日志区域
+        self.fangxinyu_log_text = self.create_log_viewer(content_frame, height=8)
+
     def create_multi_directory_ui(self):
         """创建多目录并发模式UI"""
         # 创建主滚动容器
@@ -1156,6 +1382,13 @@ class VideoFrameExtractorApp:
             bootstyle="warning-outline"
         ).pack(side=LEFT, padx=2)
 
+        ttk.Button(
+            toolbar,
+            text="🎲 随机子目录名",
+            command=self.random_multi_sub_dirs,
+            bootstyle="info-outline"
+        ).pack(side=LEFT, padx=2)
+
         # 选中项操作按钮
         ttk.Button(
             toolbar,
@@ -1173,19 +1406,21 @@ class VideoFrameExtractorApp:
             width=14
         ).pack(side=RIGHT, padx=2)
 
-        # 目录列表
-        columns = ('path', 'output', 'videos', 'status', 'settings')
+        # 目录列表 - 新列顺序: path, videos, frame_count, sub_dir, output, status
+        columns = ('path', 'videos', 'frame_count', 'sub_dir', 'output', 'status')
         self.multi_tree = ttk.Treeview(list_inner, columns=columns, show='headings', height=10)
         self.multi_tree.heading('path', text='目录路径')
-        self.multi_tree.heading('output', text='输出路径')
         self.multi_tree.heading('videos', text='视频数')
+        self.multi_tree.heading('frame_count', text='切分张数')
+        self.multi_tree.heading('sub_dir', text='子目录命名')
+        self.multi_tree.heading('output', text='输出路径')
         self.multi_tree.heading('status', text='状态')
-        self.multi_tree.heading('settings', text='切分设置')
-        self.multi_tree.column('path', width=300, minwidth=150, stretch=True)
-        self.multi_tree.column('output', width=200, minwidth=100, stretch=True)
+        self.multi_tree.column('path', width=200, minwidth=150, stretch=True)
         self.multi_tree.column('videos', width=60, minwidth=60, stretch=False)
-        self.multi_tree.column('status', width=80, minwidth=80, stretch=False)
-        self.multi_tree.column('settings', width=100, minwidth=80, stretch=False)
+        self.multi_tree.column('frame_count', width=80, minwidth=80, stretch=False)
+        self.multi_tree.column('sub_dir', width=120, minwidth=100, stretch=False)
+        self.multi_tree.column('output', width=150, minwidth=100, stretch=True)
+        self.multi_tree.column('status', width=60, minwidth=60, stretch=False)
 
         scrollbar = ttk.Scrollbar(list_inner, orient=VERTICAL, command=self.multi_tree.yview)
         self.multi_tree.configure(yscrollcommand=scrollbar.set)
@@ -1198,7 +1433,7 @@ class VideoFrameExtractorApp:
         scrollbar.pack(side=RIGHT, fill=Y)
         h_scrollbar.pack(side=BOTTOM, fill=X)
 
-        # 双击打开设置对话框
+        # 双击处理
         self.multi_tree.bind('<Double-Button-1>', self.on_multi_dir_double_click)
 
         # 切分参数 - 只保留总数模式
@@ -1382,6 +1617,8 @@ class VideoFrameExtractorApp:
             video_dir = os.path.dirname(path)
             default_output = os.path.join(video_dir, "切分图片")
             self.single_output_path.set(default_output)
+            # 自动设置子目录名称
+            self.single_video_sub_dir.set(Path(path).stem)
 
     def select_output_dir(self):
         """选择输出目录"""
@@ -1438,11 +1675,59 @@ class VideoFrameExtractorApp:
                 'path': video,
                 'name': filename,
                 'size': size,
-                'frame_count': default_count
+                'frame_count': default_count,
+                'sub_dir_name': Path(video).stem
             }
             self.single_dir_videos.append(video_data)
 
-            self.video_tree.insert('', 'end', values=(filename, size_str, default_count))
+            self.video_tree.insert('', 'end', values=(filename, size_str, default_count, Path(video).stem))
+
+    def update_fangxinyu_video_list(self):
+        """更新方欣雨定制专属模式的视频列表 - 包含单独输出目录"""
+        directory = self.single_dir_path.get()
+        if not directory or not os.path.exists(directory):
+            # 清空列表和数据
+            for item in self.fangxinyu_video_tree.get_children():
+                self.fangxinyu_video_tree.delete(item)
+            self.fangxinyu_videos = []
+            return
+
+        # 清空列表
+        for item in self.fangxinyu_video_tree.get_children():
+            self.fangxinyu_video_tree.delete(item)
+
+        # 扫描视频
+        videos = self.extractor.scan_videos(directory, recursive=False)
+        self.fangxinyu_videos = []
+
+        # 获取默认输出目录
+        default_output = self.single_dir_output.get()
+
+        for video in videos:
+            filename = os.path.basename(video)
+            size = os.path.getsize(video)
+            size_str = self.format_size(size)
+
+            # 根据当前模式确定默认值
+            if self.fangxinyu_split_mode.get() == "uniform":
+                default_count = self.fangxinyu_uniform_count.get()
+            else:
+                default_count = 100
+
+            # 创建视频数据项 - 包含单独输出目录
+            video_data = {
+                'path': video,
+                'name': filename,
+                'size': size,
+                'frame_count': default_count,
+                'sub_dir_name': Path(video).stem,
+                'output_dir': default_output  # 默认使用全局输出目录
+            }
+            self.fangxinyu_videos.append(video_data)
+
+            # 截断输出目录用于显示
+            display_output = self._truncate_path(default_output, 25)
+            self.fangxinyu_video_tree.insert('', 'end', values=(filename, size_str, default_count, Path(video).stem, display_output))
 
     def on_single_dir_mode_change(self):
         """单目录模式改变时更新UI"""
@@ -1472,7 +1757,7 @@ class VideoFrameExtractorApp:
             # 更新Treeview显示
             for i, item_id in enumerate(self.video_tree.get_children()):
                 values = self.video_tree.item(item_id, 'values')
-                self.video_tree.item(item_id, values=(values[0], values[1], uniform_count))
+                self.video_tree.item(item_id, values=(values[0], values[1], uniform_count, values[3]))
 
     def on_uniform_count_change(self):
         """统一设置张数改变时更新视频列表"""
@@ -1480,10 +1765,7 @@ class VideoFrameExtractorApp:
             self.update_video_list_display()
 
     def on_video_tree_double_click(self, event=None):
-        """双击视频列表编辑切分张数"""
-        if self.single_dir_split_mode.get() == "uniform":
-            return  # 统一设置模式下不允许单独编辑
-
+        """双击视频列表编辑切分张数或子目录名称"""
         selected = self.video_tree.selection()
         if not selected:
             return
@@ -1492,26 +1774,116 @@ class VideoFrameExtractorApp:
         if index < 0 or index >= len(self.single_dir_videos):
             return
 
-        # 获取当前值
-        current_value = self.single_dir_videos[index]['frame_count']
+        # 获取点击的列
+        column = self.video_tree.identify_column(event.x)
 
-        # 弹出输入对话框
-        from tkinter.simpledialog import askinteger
-        new_value = askinteger(
-            "设置切分张数",
-            f"设置 '{self.single_dir_videos[index]['name']}' 的切分张数:",
-            initialvalue=current_value,
-            minvalue=1,
-            maxvalue=1000,
-            parent=self.root
-        )
+        if column == '#3':
+            # 编辑切分张数
+            if self.single_dir_split_mode.get() == "uniform":
+                return  # 统一设置模式下不允许单独编辑
 
-        if new_value is not None:
-            # 更新数据
-            self.single_dir_videos[index]['frame_count'] = new_value
-            # 更新显示
-            values = self.video_tree.item(selected[0], 'values')
-            self.video_tree.item(selected[0], values=(values[0], values[1], new_value))
+            current_value = self.single_dir_videos[index]['frame_count']
+            from tkinter.simpledialog import askinteger
+            new_value = askinteger(
+                "设置切分张数",
+                f"设置 '{self.single_dir_videos[index]['name']}' 的切分张数:",
+                initialvalue=current_value,
+                minvalue=1,
+                maxvalue=1000,
+                parent=self.root
+            )
+
+            if new_value is not None:
+                self.single_dir_videos[index]['frame_count'] = new_value
+                values = self.video_tree.item(selected[0], 'values')
+                self.video_tree.item(selected[0], values=(values[0], values[1], new_value, values[3]))
+
+        elif column == '#4':
+            # 编辑子目录名称
+            current_value = self.single_dir_videos[index]['sub_dir_name']
+            from tkinter.simpledialog import askstring
+            new_value = askstring(
+                "设置子目录名称",
+                f"设置 '{self.single_dir_videos[index]['name']}' 的子目录名称:",
+                initialvalue=current_value,
+                parent=self.root
+            )
+
+            if new_value is not None:
+                new_value = new_value.strip()
+                if new_value:
+                    self.single_dir_videos[index]['sub_dir_name'] = new_value
+                    values = self.video_tree.item(selected[0], 'values')
+                    self.video_tree.item(selected[0], values=(values[0], values[1], values[2], new_value))
+
+    def on_fangxinyu_video_double_click(self, event=None):
+        """方欣雨定制专属模式 - 双击视频列表处理"""
+        from tkinter.simpledialog import askinteger, askstring
+
+        selected = self.fangxinyu_video_tree.selection()
+        if not selected:
+            return
+
+        index = self.fangxinyu_video_tree.index(selected[0])
+        if index < 0 or index >= len(self.fangxinyu_videos):
+            return
+
+        # 获取点击的列
+        column = self.fangxinyu_video_tree.identify_column(event.x)
+        video_name = self.fangxinyu_videos[index]['name']
+
+        if column == '#3':
+            # 编辑切分张数
+            if self.fangxinyu_split_mode.get() == "uniform":
+                return  # 统一设置模式下不允许单独编辑
+
+            current_value = self.fangxinyu_videos[index]['frame_count']
+            new_value = askinteger(
+                "设置切分张数",
+                f"设置 '{video_name}' 的切分张数:",
+                initialvalue=current_value,
+                minvalue=1,
+                maxvalue=1000,
+                parent=self.root
+            )
+
+            if new_value is not None:
+                self.fangxinyu_videos[index]['frame_count'] = new_value
+                values = self.fangxinyu_video_tree.item(selected[0], 'values')
+                self.fangxinyu_video_tree.item(selected[0], values=(values[0], values[1], new_value, values[3], values[4]))
+
+        elif column == '#4':
+            # 编辑子目录名称
+            current_value = self.fangxinyu_videos[index]['sub_dir_name']
+            new_value = askstring(
+                "设置子目录名称",
+                f"设置 '{video_name}' 的子目录名称:",
+                initialvalue=current_value,
+                parent=self.root
+            )
+
+            if new_value is not None:
+                new_value = new_value.strip()
+                if new_value:
+                    self.fangxinyu_videos[index]['sub_dir_name'] = new_value
+                    values = self.fangxinyu_video_tree.item(selected[0], 'values')
+                    self.fangxinyu_video_tree.item(selected[0], values=(values[0], values[1], values[2], new_value, values[4]))
+
+        elif column == '#5':
+            # 编辑输出目录 - 方欣雨定制专属特性
+            current_value = self.fangxinyu_videos[index]['output_dir']
+            new_value = filedialog.askdirectory(
+                title=f"选择 '{video_name}' 的输出目录",
+                initialdir=current_value if current_value else self.single_dir_output.get(),
+                parent=self.root
+            )
+
+            if new_value:
+                self.fangxinyu_videos[index]['output_dir'] = new_value
+                values = self.fangxinyu_video_tree.item(selected[0], 'values')
+                # 截断路径用于显示
+                display_path = self._truncate_path(new_value, 25)
+                self.fangxinyu_video_tree.item(selected[0], values=(values[0], values[1], values[2], values[3], display_path))
 
     def format_size(self, size: int) -> str:
         """格式化文件大小"""
@@ -1575,6 +1947,7 @@ class VideoFrameExtractorApp:
                     'path': video_path,
                     'name': os.path.basename(video_path),
                     'frame_count': default_count,
+                    'sub_dir_name': Path(video_path).stem,
                     'status': '等待'
                 })
 
@@ -1583,13 +1956,13 @@ class VideoFrameExtractorApp:
                 'output': default_output,
                 'videos': videos_data,
                 'video_count': len(videos_data),
-                'status': '等待',
-                'split_mode': 'uniform',
-                'uniform_count': default_count
+                'status': '等待'
             }
             self.multi_dirs.append(dir_item)
+            # 新列顺序: path, videos, frame_count, sub_dir, output, status
+            first_sub_dir = videos_data[0]['sub_dir_name'] if videos_data else ''
             self.multi_tree.insert('', 'end', values=(
-                path, default_output, len(videos_data), '等待', f'统一: {default_count}'
+                path, len(videos_data), default_count, first_sub_dir, default_output, '等待'
             ))
             added_count += 1
 
@@ -1597,7 +1970,7 @@ class VideoFrameExtractorApp:
             messagebox.showinfo("提示", f"成功添加 {added_count} 个目录")
 
     def on_multi_dir_double_click(self, event=None):
-        """双击目录列表打开设置对话框"""
+        """双击目录列表处理 - 根据点击列执行不同操作"""
         selected = self.multi_tree.selection()
         if not selected:
             return
@@ -1606,47 +1979,67 @@ class VideoFrameExtractorApp:
         if index < 0 or index >= len(self.multi_dirs):
             return
 
-        dir_item = self.multi_dirs[index]
+        # 获取点击的列
+        column = self.multi_tree.identify_column(event.x)
 
-        # 打开设置对话框
-        dialog = self.DirectorySettingsDialog(self.root, dir_item, self.extractor)
-        self.root.wait_window(dialog)
+        if column == '#1':  # path 列 - 打开视频预览窗口
+            self.show_video_preview(index)
+        elif column == '#3':  # frame_count 列 - 编辑切分张数
+            self.edit_dir_frame_count(index)
+        elif column == '#4':  # sub_dir 列 - 编辑子目录名称
+            self.edit_dir_sub_dir(index)
 
-        if dialog.result:
-            # 更新目录项数据
-            dir_item['split_mode'] = dialog.result['split_mode']
-            dir_item['uniform_count'] = dialog.result['uniform_count']
-            dir_item['videos'] = dialog.result['videos']
+    def edit_dir_frame_count(self, dir_index):
+        """编辑目录下所有视频的切分张数"""
+        from tkinter.simpledialog import askinteger
+        dir_item = self.multi_dirs[dir_index]
 
-            # 更新显示
-            self.update_multi_dir_settings_display(index)
+        # 获取当前值（使用第一个视频的值作为默认）
+        current = dir_item['videos'][0]['frame_count'] if dir_item['videos'] else 100
 
-    def update_multi_dir_settings_display(self, index):
-        """更新目录的切分设置显示"""
-        if index < 0 or index >= len(self.multi_dirs):
-            return
+        new_val = askinteger(
+            "设置切分张数",
+            f"设置 '{os.path.basename(dir_item['path'])}' 下所有视频的切分张数:",
+            initialvalue=current,
+            minvalue=1,
+            maxvalue=1000,
+            parent=self.root
+        )
 
-        dir_item = self.multi_dirs[index]
-        mode = dir_item.get('split_mode', 'uniform')
+        if new_val:
+            # 更新该目录下所有视频的 frame_count
+            for video in dir_item['videos']:
+                video['frame_count'] = new_val
 
-        if mode == 'uniform':
-            count = dir_item.get('uniform_count', 100)
-            settings_text = f"统一: {count}"
-        else:
-            # 单独设置
-            video_count = len(dir_item.get('videos', []))
-            settings_text = f"单独: {video_count}个"
+            # 更新 Treeview 显示
+            self.update_multi_dir_display(dir_index)
 
-        # 更新Treeview中的值
-        item_id = self.multi_tree.get_children()[index]
-        current_values = self.multi_tree.item(item_id, 'values')
-        self.multi_tree.item(item_id, values=(
-            current_values[0],  # path
-            current_values[1],  # output
-            current_values[2],  # videos
-            current_values[3],  # status
-            settings_text       # settings
-        ))
+    def edit_dir_sub_dir(self, dir_index):
+        """编辑目录下所有视频的子目录名称"""
+        from tkinter.simpledialog import askstring
+        dir_item = self.multi_dirs[dir_index]
+
+        # 获取当前值
+        current = dir_item['videos'][0]['sub_dir_name'] if dir_item['videos'] else ''
+
+        new_val = askstring(
+            "设置子目录名称",
+            f"设置 '{os.path.basename(dir_item['path'])}' 下所有视频的子目录名称:\n" +
+            "使用 {name} 表示原视频文件名",
+            initialvalue=current,
+            parent=self.root
+        )
+
+        if new_val and new_val.strip():
+            new_val = new_val.strip()
+            # 更新该目录下所有视频的 sub_dir_name
+            for video in dir_item['videos']:
+                # 替换模板
+                sub_dir = new_val.replace('{name}', Path(video['name']).stem)
+                video['sub_dir_name'] = sub_dir
+
+            # 更新 Treeview 显示
+            self.update_multi_dir_display(dir_index)
 
     def remove_selected_dir(self):
         """删除选中的目录"""
@@ -1673,31 +2066,15 @@ class VideoFrameExtractorApp:
 
         global_count = self.single_total.get()
 
-        # 更新所有目录的uniform_count
+        # 更新所有目录下所有视频的 frame_count
         for dir_item in self.multi_dirs:
-            dir_item['uniform_count'] = global_count
-            # 同时更新所有视频的frame_count
             for video in dir_item.get('videos', []):
                 video['frame_count'] = global_count
 
         # 更新Treeview显示
         for i, item_id in enumerate(self.multi_tree.get_children()):
             if i < len(self.multi_dirs):
-                dir_item = self.multi_dirs[i]
-                values = self.multi_tree.item(item_id, 'values')
-                # 更新切分设置列
-                mode = dir_item.get('split_mode', 'uniform')
-                if mode == 'uniform':
-                    settings_text = f"统一: {global_count}"
-                else:
-                    settings_text = f"单独: {len(dir_item.get('videos', []))}个"
-                self.multi_tree.item(item_id, values=(
-                    values[0],  # path
-                    values[1],  # output
-                    values[2],  # videos
-                    values[3],  # status
-                    settings_text
-                ))
+                self.update_multi_dir_display(i)
 
         messagebox.showinfo("提示", f"已将切分张数 {global_count} 应用到所有目录")
 
@@ -1709,6 +2086,36 @@ class VideoFrameExtractorApp:
     def set_total(self, num: int):
         """设置总数"""
         self.single_total.set(num)
+
+    def random_single_sub_dir(self):
+        """单视频子目录随机名称"""
+        self.single_video_sub_dir.set(f"{random.randint(0, 9999):04d}")
+
+    def random_all_single_dir_sub_dirs(self):
+        """单目录模式批量随机子目录名称"""
+        for video_data in self.single_dir_videos:
+            video_data['sub_dir_name'] = f"{random.randint(0, 9999):04d}"
+
+        for i, item_id in enumerate(self.video_tree.get_children()):
+            values = self.video_tree.item(item_id, 'values')
+            if i < len(self.single_dir_videos):
+                self.video_tree.item(item_id, values=(values[0], values[1], values[2], self.single_dir_videos[i]['sub_dir_name']))
+
+    def random_multi_sub_dirs(self):
+        """多目录模式批量随机子目录名称"""
+        selected = self.multi_tree.selection()
+        if not selected:
+            messagebox.showwarning("提示", "请先选择目录")
+            return
+
+        for item in selected:
+            index = self.multi_tree.index(item)
+            if index < len(self.multi_dirs):
+                dir_item = self.multi_dirs[index]
+                for video in dir_item['videos']:
+                    video['sub_dir_name'] = f"{random.randint(0, 9999):04d}"
+                # 更新显示
+                self.update_multi_dir_display(index)
 
     # ========================================================================
     # 处理逻辑
@@ -1754,12 +2161,17 @@ class VideoFrameExtractorApp:
             self.root.after(0, lambda: self._update_progress(progress, message))
             self.root.after(0, lambda m=message: self.log_message(self.single_log_text, m))
 
+        # 构建子目录
+        sub_dir = self.single_video_sub_dir.get() or Path(video_path).stem
+        video_output = os.path.join(output_dir, sub_dir)
+        os.makedirs(video_output, exist_ok=True)
+
         self.root.after(0, lambda: self.log_message(self.single_log_text, f"开始处理: {video_path}"))
-        self.root.after(0, lambda: self.log_message(self.single_log_text, f"输出目录: {output_dir}"))
+        self.root.after(0, lambda: self.log_message(self.single_log_text, f"输出目录: {video_output}"))
         self.root.after(0, lambda: self.log_message(self.single_log_text, f"切分张数: {config.total_value}, 格式: {config.output_format}"))
 
         success, msg = self.extractor.extract_frames(
-            video_path, output_dir, config,
+            video_path, video_output, config,
             progress_callback, self.stop_event
         )
 
@@ -1864,13 +2276,15 @@ class VideoFrameExtractorApp:
 
             # 每个视频创建子目录
             video_name = Path(video).stem
-            video_output = os.path.join(base_output, video_name)
+            video_data = self.single_dir_videos[idx] if idx < len(self.single_dir_videos) else None
+            sub_dir = video_data['sub_dir_name'] if video_data else video_name
+            video_output = os.path.join(base_output, sub_dir)
             os.makedirs(video_output, exist_ok=True)
 
             self.root.after(0, lambda v=video_name: self.status_label.configure(
                 text=f"处理中... ({idx+1}/{total_videos}) {v}"
             ))
-            self.root.after(0, lambda v=video_name: self.log_message(self.dir_log_text, f"处理: {v}"))
+            self.root.after(0, lambda v=video_name, s=sub_dir: self.log_message(self.dir_log_text, f"处理: {v} -> {s}"))
 
             def progress_callback(progress, message):
                 overall = (idx + progress/100) / total_videos * 100
@@ -1910,6 +2324,181 @@ class VideoFrameExtractorApp:
         if messagebox.askyesno("完成", f"处理完成！共提取 {total_frames} 帧\n\n是否打开输出文件夹？"):
             os.startfile(self.single_dir_output.get())
 
+    def on_fangxinyu_mode_change(self):
+        """方欣雨定制专属模式 - 模式改变时更新UI"""
+        mode = self.fangxinyu_split_mode.get()
+
+        if mode == "uniform":
+            # 统一设置模式：启用全局设置
+            for widget in self.fangxinyu_uniform_frame.winfo_children():
+                if isinstance(widget, ttk.Spinbox) or isinstance(widget, ttk.Button):
+                    widget.configure(state='normal')
+            # 更新列表显示为统一值
+            self.update_fangxinyu_video_list_display()
+        else:
+            # 单独设置模式
+            for widget in self.fangxinyu_uniform_frame.winfo_children():
+                if isinstance(widget, ttk.Spinbox) or isinstance(widget, ttk.Button):
+                    widget.configure(state='disabled')
+
+    def on_fangxinyu_uniform_count_change(self):
+        """方欣雨定制专属模式 - 统一设置张数改变时更新视频列表"""
+        if self.fangxinyu_split_mode.get() == "uniform":
+            self.update_fangxinyu_video_list_display()
+
+    def update_fangxinyu_video_list_display(self):
+        """方欣雨定制专属模式 - 根据当前模式更新视频列表显示"""
+        if self.fangxinyu_split_mode.get() == "uniform":
+            uniform_count = self.fangxinyu_uniform_count.get()
+            # 更新所有视频的frame_count
+            for video_data in self.fangxinyu_videos:
+                video_data['frame_count'] = uniform_count
+
+            # 更新Treeview显示
+            for i, item_id in enumerate(self.fangxinyu_video_tree.get_children()):
+                values = self.fangxinyu_video_tree.item(item_id, 'values')
+                display_output = self._truncate_path(self.fangxinyu_videos[i]['output_dir'], 25)
+                self.fangxinyu_video_tree.item(item_id, values=(values[0], values[1], uniform_count, values[3], display_output))
+
+    def random_fangxinyu_sub_dirs(self):
+        """方欣雨定制专属模式 - 批量随机子目录名称"""
+        for video_data in self.fangxinyu_videos:
+            video_data['sub_dir_name'] = f"{random.randint(0, 9999):04d}"
+
+        for i, item_id in enumerate(self.fangxinyu_video_tree.get_children()):
+            values = self.fangxinyu_video_tree.item(item_id, 'values')
+            if i < len(self.fangxinyu_videos):
+                display_output = self._truncate_path(self.fangxinyu_videos[i]['output_dir'], 25)
+                self.fangxinyu_video_tree.item(item_id, values=(values[0], values[1], values[2], self.fangxinyu_videos[i]['sub_dir_name'], display_output))
+
+    def set_unified_output_for_all(self):
+        """方欣雨定制专属模式 - 统一设置所有视频的输出目录"""
+        new_output = filedialog.askdirectory(
+            title="选择统一输出目录",
+            initialdir=self.single_dir_output.get(),
+            parent=self.root
+        )
+
+        if new_output:
+            # 更新所有视频的 output_dir
+            for video_data in self.fangxinyu_videos:
+                video_data['output_dir'] = new_output
+
+            # 更新Treeview显示
+            for i, item_id in enumerate(self.fangxinyu_video_tree.get_children()):
+                values = self.fangxinyu_video_tree.item(item_id, 'values')
+                display_output = self._truncate_path(new_output, 25)
+                self.fangxinyu_video_tree.item(item_id, values=(values[0], values[1], values[2], values[3], display_output))
+
+            messagebox.showinfo("提示", f"已将所有视频的输出目录设置为:\n{new_output}")
+
+    def _truncate_path(self, path, max_len=30):
+        """截断路径用于显示"""
+        if len(path) <= max_len:
+            return path
+        return "..." + path[-(max_len-3):]
+
+    def start_fangxinyu_directory(self):
+        """方欣雨定制专属模式 - 开始处理"""
+        if not self.ffmpeg_available:
+            messagebox.showerror("错误", "未检测到FFmpeg")
+            return
+
+        directory = self.single_dir_path.get()
+        if not directory:
+            messagebox.showerror("错误", "请选择输入目录")
+            return
+
+        default_output = self.single_dir_output.get()
+        if not default_output:
+            messagebox.showerror("错误", "请选择默认输出目录")
+            return
+
+        videos = self.extractor.scan_videos(directory)
+        if not videos:
+            messagebox.showwarning("提示", "所选目录中没有找到视频文件")
+            return
+
+        # 禁用按钮
+        self.fangxinyu_start_btn.configure(state='disabled', text='⏳ 处理中...')
+        self.is_processing = True
+
+        # 启动处理
+        thread = threading.Thread(
+            target=self._process_fangxinyu_directory,
+            args=(videos, default_output),
+            daemon=True
+        )
+        thread.start()
+
+    def _process_fangxinyu_directory(self, videos: List[str], default_output: str):
+        """方欣雨定制专属模式 - 处理目录（支持每个视频单独设置输出目录）"""
+        self.root.after(0, lambda: self.log_message(self.fangxinyu_log_text, f"[方欣雨定制专属] 开始处理目录，共 {len(videos)} 个视频"))
+
+        total_videos = len(videos)
+        total_frames = 0
+
+        for idx, video in enumerate(videos):
+            if self.stop_event.is_set():
+                self.root.after(0, lambda: self.log_message(self.fangxinyu_log_text, "用户取消处理"))
+                break
+
+            # 获取视频数据
+            video_data = self.fangxinyu_videos[idx] if idx < len(self.fangxinyu_videos) else None
+
+            # 获取该视频的输出目录（优先使用单独设置，否则使用默认）
+            video_output_dir = video_data.get('output_dir') if video_data else default_output
+            sub_dir = video_data.get('sub_dir_name', Path(video).stem) if video_data else Path(video).stem
+
+            # 构建完整输出路径
+            video_output = os.path.join(video_output_dir, sub_dir)
+            os.makedirs(video_output, exist_ok=True)
+
+            video_name = Path(video).stem
+            self.root.after(0, lambda v=video_name: self.status_label.configure(
+                text=f"处理中... ({idx+1}/{total_videos}) {v}"
+            ))
+            self.root.after(0, lambda v=video_name, o=video_output_dir: self.log_message(self.fangxinyu_log_text, f"处理: {v} -> {o}/{sub_dir}"))
+
+            def progress_callback(progress, message):
+                overall = (idx + progress/100) / total_videos * 100
+                self.root.after(0, lambda p=overall: self.progress_var.set(p))
+
+            # 使用当前视频的配置
+            frame_count = video_data.get('frame_count', 100) if video_data else 100
+            video_config = ExtractConfig(
+                total_value=frame_count,
+                output_format=self.output_format.get()
+            )
+
+            success, msg = self.extractor.extract_frames(
+                video, video_output, video_config,
+                progress_callback, self.stop_event
+            )
+
+            if success:
+                # 解析提取的帧数
+                import re
+                match = re.search(r'(\d+)', msg)
+                if match:
+                    total_frames += int(match.group(1))
+                self.root.after(0, lambda m=msg: self.log_message(self.fangxinyu_log_text, f"成功: {m}"))
+            else:
+                self.root.after(0, lambda m=msg: self.log_message(self.fangxinyu_log_text, f"失败: {m}"))
+
+        self.root.after(0, lambda: self.log_message(self.fangxinyu_log_text, f"处理完成，共提取 {total_frames} 帧"))
+        self.root.after(0, lambda: self._on_fangxinyu_complete(total_frames))
+
+    def _on_fangxinyu_complete(self, total_frames: int):
+        """方欣雨定制专属模式 - 处理完成"""
+        self.is_processing = False
+        self.fangxinyu_start_btn.configure(state='normal', text='🚀 开始切分')
+        self.progress_var.set(100)
+        self.status_label.configure(text=f"✅ 完成！共提取 {total_frames} 帧")
+
+        if messagebox.askyesno("完成", f"处理完成！共提取 {total_frames} 帧\n\n是否打开默认输出文件夹？"):
+            os.startfile(self.single_dir_output.get())
+
     def start_multi_directory(self):
         """开始多目录并发处理"""
         if not self.ffmpeg_available:
@@ -1940,8 +2529,6 @@ class VideoFrameExtractorApp:
         total_tasks = 0
         for dir_idx, dir_item in enumerate(self.multi_dirs):
             videos = dir_item.get('videos', [])
-            split_mode = dir_item.get('split_mode', 'uniform')
-            uniform_count = dir_item.get('uniform_count', 100)
 
             for video in videos:
                 video_path = video.get('path', '')
@@ -1949,11 +2536,8 @@ class VideoFrameExtractorApp:
                 if not video_path:
                     continue
 
-                # 根据模式确定切分张数
-                if split_mode == 'uniform':
-                    frame_count = uniform_count
-                else:
-                    frame_count = video.get('frame_count', 100)
+                # 直接使用视频的 frame_count，如果不存在则使用全局 single_total
+                frame_count = video.get('frame_count') or self.single_total.get()
 
                 # 创建该视频的配置
                 config = ExtractConfig(
@@ -1961,7 +2545,8 @@ class VideoFrameExtractorApp:
                     output_format=self.output_format.get()
                 )
 
-                video_output = os.path.join(dir_item['output'], Path(video_name).stem)
+                sub_dir = video.get('sub_dir_name', '') or Path(video_name).stem
+                video_output = os.path.join(dir_item['output'], sub_dir)
 
                 task = TaskItem(
                     id=f"{dir_idx}_{video_name}",
@@ -2151,470 +2736,104 @@ class VideoFrameExtractorApp:
         self.root.after(50, self.process_ui_queue)
 
     # ========================================================================
-    # 自定义对话框类
+    # 视频列表预览窗口
     # ========================================================================
-    class MultiDirectoryDialog(tk.Toplevel):
-        """多目录选择对话框"""
-
-        def __init__(self, parent, extractor):
-            super().__init__(parent)
-            self.parent = parent
-            self.extractor = extractor
-            self.selected_dirs = []
-
-            self.title("选择多个目录")
-            self.geometry("600x500")
-            self.transient(parent)
-            self.grab_set()
-
-            self.create_ui()
-            self.center_window()
-
-        def center_window(self):
-            """窗口居中"""
-            self.update_idletasks()
-            width = self.winfo_width()
-            height = self.winfo_height()
-            x = (self.winfo_screenwidth() // 2) - (width // 2)
-            y = (self.winfo_screenheight() // 2) - (height // 2)
-            self.geometry(f'{width}x{height}+{x}+{y}')
-
-        def create_ui(self):
-            """创建UI"""
-            # 提示标签
-            ttk.Label(
-                self,
-                text="点击\"添加目录\"选择目录，已选目录会显示在下方列表中",
-                wraplength=550
-            ).pack(pady=10)
-
-            # 按钮区域
-            btn_frame = ttk.Frame(self)
-            btn_frame.pack(fill=X, padx=20, pady=5)
-
-            ttk.Button(
-                btn_frame,
-                text="➕ 添加目录",
-                command=self.add_directory,
-                bootstyle="info"
-            ).pack(side=LEFT, padx=5)
-
-            ttk.Button(
-                btn_frame,
-                text="🗑️ 删除选中",
-                command=self.remove_selected,
-                bootstyle="danger-outline"
-            ).pack(side=LEFT, padx=5)
-
-            ttk.Button(
-                btn_frame,
-                text="🧹 清空全部",
-                command=self.clear_all,
-                bootstyle="warning-outline"
-            ).pack(side=LEFT, padx=5)
-
-            # 已选目录列表
-            list_frame = ttk.LabelFrame(self, text="已选目录")
-            list_frame.pack(fill=BOTH, expand=True, padx=20, pady=10)
-
-            # Treeview显示目录
-            columns = ('path', 'videos')
-            self.tree = ttk.Treeview(list_frame, columns=columns, show='headings', height=12)
-            self.tree.heading('path', text='目录路径')
-            self.tree.heading('videos', text='视频数')
-            self.tree.column('path', width=450, stretch=True)
-            self.tree.column('videos', width=80, stretch=False)
-
-            scrollbar = ttk.Scrollbar(list_frame, orient=VERTICAL, command=self.tree.yview)
-            self.tree.configure(yscrollcommand=scrollbar.set)
-
-            self.tree.pack(side=LEFT, fill=BOTH, expand=True)
-            scrollbar.pack(side=RIGHT, fill=Y)
-
-            # 底部按钮
-            bottom_frame = ttk.Frame(self)
-            bottom_frame.pack(fill=X, padx=20, pady=15)
-
-            self.status_label = ttk.Label(bottom_frame, text="已选 0 个目录")
-            self.status_label.pack(side=LEFT)
-
-            ttk.Button(
-                bottom_frame,
-                text="取消",
-                command=self.cancel,
-                bootstyle="outline",
-                width=10
-            ).pack(side=RIGHT, padx=5)
-
-            ttk.Button(
-                bottom_frame,
-                text="确定",
-                command=self.confirm,
-                bootstyle="success",
-                width=10
-            ).pack(side=RIGHT, padx=5)
-
-        def add_directory(self):
-            """添加目录"""
-            path = filedialog.askdirectory(title="选择目录", parent=self)
-            if not path:
-                return
-
-            # 检查是否已存在
-            if any(d['path'] == path for d in self.selected_dirs):
-                messagebox.showwarning("提示", "该目录已存在", parent=self)
-                return
-
-            # 扫描视频（非递归）
-            videos = self.extractor.scan_videos(path, recursive=False)
-
-            dir_info = {
-                'path': path,
-                'videos': len(videos),
-                'video_list': videos
-            }
-            self.selected_dirs.append(dir_info)
-
-            self.tree.insert('', 'end', values=(path, len(videos)))
-            self.update_status()
-
-        def remove_selected(self):
-            """删除选中的目录"""
-            selected = self.tree.selection()
-            if not selected:
-                return
-
-            index = self.tree.index(selected[0])
-            self.selected_dirs.pop(index)
-            self.tree.delete(selected[0])
-            self.update_status()
-
-        def clear_all(self):
-            """清空全部"""
-            if not self.selected_dirs:
-                return
-
-            if messagebox.askyesno("确认", "确定要清空所有已选目录吗？", parent=self):
-                self.selected_dirs.clear()
-                for item in self.tree.get_children():
-                    self.tree.delete(item)
-                self.update_status()
-
-        def update_status(self):
-            """更新状态标签"""
-            total = len(self.selected_dirs)
-            total_videos = sum(d['videos'] for d in self.selected_dirs)
-            self.status_label.configure(text=f"已选 {total} 个目录，共 {total_videos} 个视频")
-
-        def confirm(self):
-            """确认选择"""
-            self.destroy()
-
-        def cancel(self):
-            """取消选择"""
-            self.selected_dirs = []
-            self.destroy()
-
-    class DirectorySettingsDialog(ttk.Toplevel):
-        """目录切分设置对话框"""
-
-        def __init__(self, parent, dir_item, extractor):
-            """
-            初始化设置对话框
-
-            Args:
-                parent: 父窗口
-                dir_item: 目录项数据字典
-                extractor: 视频提取器实例
-            """
-            super().__init__(parent)
-            self.dir_item = dir_item
-            self.extractor = extractor
-            self.result = None
-            self._mousewheel_bind_id = None  # 用于存储鼠标滚轮绑定ID
-
-            self.title("目录切分设置")
-            self.geometry("550x600")
-            self.minsize(550, 500)
-            self.transient(parent)
-            self.grab_set()
-
-            # 居中显示
-            self.update_idletasks()
-            x = (self.winfo_screenwidth() - self.winfo_width()) // 2
-            y = (self.winfo_screenheight() - self.winfo_height()) // 2
-            self.geometry(f"+{x}+{y}")
-
-            self.create_ui()
-
-            # 绑定关闭事件
-            self.protocol("WM_DELETE_WINDOW", self.cancel)
-
-        def create_ui(self):
-            """创建UI - 使用固定底部按钮布局"""
-            # 主容器 - 使用grid布局
-            self.grid_columnconfigure(0, weight=1)
-            self.grid_rowconfigure(0, weight=1)
-
-            # 主内容容器
-            main_container = ttk.Frame(self)
-            main_container.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
-            main_container.columnconfigure(0, weight=1)
-            main_container.rowconfigure(0, weight=0)  # 标题
-            main_container.rowconfigure(1, weight=0)  # 分隔线
-            main_container.rowconfigure(2, weight=0)  # 模式选择
-            main_container.rowconfigure(3, weight=1)  # 视频列表（可扩展）
-
-            # 标题区域
-            header = ttk.Frame(main_container)
-            header.grid(row=0, column=0, sticky="ew", padx=20, pady=(20, 10))
-
-            ttk.Label(
-                header,
-                text=f"目录: {os.path.basename(self.dir_item['path'])}",
-                font=("Microsoft YaHei UI", 12, "bold")
-            ).pack(anchor=W)
-
-            ttk.Label(
-                header,
-                text=self.dir_item['path'],
-                font=("Microsoft YaHei UI", 9),
-                foreground="gray"
-            ).pack(anchor=W, pady=(5, 0))
-
-            # 分隔线
-            ttk.Separator(main_container, orient=HORIZONTAL).grid(row=1, column=0, sticky="ew", padx=20, pady=10)
-
-            # 模式选择区域
-            mode_frame = ttk.LabelFrame(main_container, text="切分模式")
-            mode_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=10)
-
-            self.split_mode = tk.StringVar(value=self.dir_item.get('split_mode', 'uniform'))
-
-            # 统一设置选项
-            uniform_frame = ttk.Frame(mode_frame)
-            uniform_frame.pack(fill=X, padx=15, pady=(10, 5))
-
-            ttk.Radiobutton(
-                uniform_frame,
-                text="统一设置 (所有视频相同张数)",
-                variable=self.split_mode,
-                value="uniform",
-                command=self.on_mode_change
-            ).pack(side=LEFT)
-
-            # 统一设置输入框
-            self.uniform_frame = ttk.Frame(mode_frame)
-            self.uniform_frame.pack(fill=X, padx=15, pady=5)
-
-            ttk.Label(self.uniform_frame, text="切分张数:").pack(side=LEFT, padx=(20, 5))
-            self.uniform_count = tk.IntVar(value=self.dir_item.get('uniform_count', 100))
-            ttk.Spinbox(
-                self.uniform_frame,
-                from_=1,
-                to=1000,
-                textvariable=self.uniform_count,
-                width=10
-            ).pack(side=LEFT)
-
-            # 快捷按钮
-            quick_frame = ttk.Frame(self.uniform_frame)
-            quick_frame.pack(side=LEFT, padx=(20, 0))
-            for num in [50, 100, 150, 200]:
-                ttk.Button(
-                    quick_frame,
-                    text=str(num),
-                    width=4,
-                    command=lambda n=num: self.uniform_count.set(n),
-                    bootstyle="outline"
-                ).pack(side=LEFT, padx=2)
-
-            ttk.Separator(mode_frame, orient=HORIZONTAL).pack(fill=X, padx=15, pady=10)
-
-            # 单独设置选项
-            individual_frame = ttk.Frame(mode_frame)
-            individual_frame.pack(fill=X, padx=15, pady=5)
-
-            ttk.Radiobutton(
-                individual_frame,
-                text="单独设置 (为每个视频指定张数)",
-                variable=self.split_mode,
-                value="individual",
-                command=self.on_mode_change
-            ).pack(side=LEFT)
-
-            # 视频列表区域 - 使用滚动Canvas
-            self.video_list_frame = ttk.LabelFrame(main_container, text="视频列表")
-            self.video_list_frame.grid(row=3, column=0, sticky="nsew", padx=20, pady=10)
-            self.video_list_frame.columnconfigure(0, weight=1)
-            self.video_list_frame.rowconfigure(1, weight=1)  # 可滚动区域
-
-            # 表头
-            header_frame = ttk.Frame(self.video_list_frame)
-            header_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
-
-            ttk.Label(header_frame, text="视频名称", width=40).pack(side=LEFT, padx=5)
-            ttk.Label(header_frame, text="切分张数", width=12).pack(side=LEFT, padx=5)
-
-            # 滚动区域
-            canvas_frame = ttk.Frame(self.video_list_frame)
-            canvas_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
-            canvas_frame.columnconfigure(0, weight=1)
-            canvas_frame.rowconfigure(0, weight=1)
-
-            self.canvas = tk.Canvas(canvas_frame, highlightthickness=0)
-            scrollbar = ttk.Scrollbar(canvas_frame, orient=VERTICAL, command=self.canvas.yview)
-
-            self.video_container = ttk.Frame(self.canvas)
-            self.video_container.bind(
-                "<Configure>",
-                lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-            )
-
-            self.canvas.create_window((0, 0), window=self.video_container, anchor="nw", width=480)
-            self.canvas.configure(yscrollcommand=scrollbar.set)
-
-            self.canvas.grid(row=0, column=0, sticky="nsew")
-            scrollbar.grid(row=0, column=1, sticky="ns")
-
-            # 鼠标滚轮支持
-            self.canvas.bind("<MouseWheel>", self._on_mousewheel)
-
-            # 创建视频条目
-            self.video_vars = []
-            self.create_video_entries()
-
-            # 底部按钮区域 - 固定在窗口底部
-            btn_frame = ttk.Frame(self)
-            btn_frame.grid(row=1, column=0, sticky="ew", padx=20, pady=15)
-
-            ttk.Button(
-                btn_frame,
-                text="取消",
-                command=self.cancel,
-                bootstyle="outline",
-                width=10
-            ).pack(side=RIGHT, padx=5)
-
-            ttk.Button(
-                btn_frame,
-                text="确定",
-                command=self.confirm,
-                bootstyle="success",
-                width=10
-            ).pack(side=RIGHT, padx=5)
-
-            # 初始化状态
-            self.on_mode_change()
-
-        def _on_mousewheel(self, event):
-            """鼠标滚轮事件"""
-            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-        def create_video_entries(self):
-            """创建视频条目输入框"""
-            videos = self.dir_item.get('videos', [])
-
-            for i, video in enumerate(videos):
-                frame = ttk.Frame(self.video_container)
-                frame.pack(fill=X, pady=2)
-
-                # 视频名称
-                name_label = ttk.Label(
-                    frame,
-                    text=video.get('name', ''),
-                    width=40,
-                    anchor=W
-                )
-                name_label.pack(side=LEFT, padx=5)
-                name_label.bind("<Enter>", lambda e, p=video.get('path', ''): self._show_tooltip(e, p))
-                name_label.bind("<Leave>", lambda e: self._hide_tooltip())
-
-                # 切分张数输入
-                var = tk.IntVar(value=video.get('frame_count', 100))
-                self.video_vars.append({
-                    'path': video.get('path', ''),
-                    'name': video.get('name', ''),
-                    'var': var
-                })
-
-                spinbox = ttk.Spinbox(
-                    frame,
-                    from_=1,
-                    to=1000,
-                    textvariable=var,
-                    width=12
-                )
-                spinbox.pack(side=LEFT, padx=5)
-
-        def _show_tooltip(self, event, text):
-            """显示工具提示"""
-            self.tooltip = tk.Toplevel(self)
-            self.tooltip.wm_overrideredirect(True)
-            self.tooltip.wm_geometry(f"+{event.x_root + 10}+{event.y_root + 10}")
-            ttk.Label(
-                self.tooltip,
-                text=text,
-                background="#ffffe0",
-                relief=SOLID,
-                borderwidth=1
-            ).pack()
-
-        def _hide_tooltip(self):
-            """隐藏工具提示"""
-            if hasattr(self, 'tooltip'):
-                self.tooltip.destroy()
-
-        def on_mode_change(self):
-            """模式改变时更新UI状态"""
-            mode = self.split_mode.get()
-
-            if mode == "uniform":
-                # 统一设置模式
-                for widget in self.video_container.winfo_children():
-                    for child in widget.winfo_children():
-                        if isinstance(child, ttk.Spinbox):
-                            child.configure(state='disabled')
-            else:
-                # 单独设置模式
-                for widget in self.video_container.winfo_children():
-                    for child in widget.winfo_children():
-                        if isinstance(child, ttk.Spinbox):
-                            child.configure(state='normal')
-
-        def confirm(self):
-            """确认设置"""
-            mode = self.split_mode.get()
-
-            # 更新视频数据
-            if mode == "uniform":
-                # 统一设置：所有视频使用相同的张数
-                uniform_count = self.uniform_count.get()
-                for video_var in self.video_vars:
-                    video_var['var'].set(uniform_count)
-
-            # 构建结果
-            videos_result = []
-            for video_var in self.video_vars:
-                videos_result.append({
-                    'path': video_var['path'],
-                    'name': video_var['name'],
-                    'frame_count': video_var['var'].get(),
-                    'status': '等待'
-                })
-
-            self.result = {
-                'split_mode': mode,
-                'uniform_count': self.uniform_count.get() if mode == "uniform" else None,
-                'videos': videos_result
-            }
-
-            self.destroy()
-
-        def cancel(self):
-            """取消设置"""
-            self.result = None
-            self.destroy()
+    def show_video_preview(self, dir_index):
+        """显示视频列表预览窗口"""
+        from tkinter.simpledialog import askinteger, askstring
+        dir_item = self.multi_dirs[dir_index]
+
+        # 创建新窗口
+        preview_window = tk.Toplevel(self.root)
+        preview_window.title(f"视频列表 - {os.path.basename(dir_item['path'])}")
+        preview_window.geometry("600x400")
+        preview_window.transient(self.root)
+
+        # 视频列表 Treeview
+        columns = ('name', 'frame_count', 'sub_dir')
+        tree = ttk.Treeview(preview_window, columns=columns, show='headings', height=10)
+        tree.heading('name', text='视频名称')
+        tree.heading('frame_count', text='切分张数')
+        tree.heading('sub_dir', text='子目录名称')
+        tree.column('name', width=250)
+        tree.column('frame_count', width=80)
+        tree.column('sub_dir', width=150)
+
+        # 插入数据
+        for i, video in enumerate(dir_item['videos']):
+            tree.insert('', 'end', iid=str(i), values=(
+                video['name'],
+                video['frame_count'],
+                video['sub_dir_name']
+            ))
+
+        tree.pack(fill=BOTH, expand=True, padx=10, pady=10)
+
+        # 双击编辑
+        def on_edit(event):
+            item = tree.selection()[0]
+            col = tree.identify_column(event.x)
+            video_idx = int(item)
+
+            if col == '#2':  # frame_count
+                current = dir_item['videos'][video_idx]['frame_count']
+                new_val = askinteger("设置切分张数", "切分张数:", initialvalue=current, minvalue=1, parent=preview_window)
+                if new_val:
+                    dir_item['videos'][video_idx]['frame_count'] = new_val
+                    tree.item(item, values=(
+                        dir_item['videos'][video_idx]['name'],
+                        new_val,
+                        dir_item['videos'][video_idx]['sub_dir_name']
+                    ))
+                    # 更新主列表显示
+                    self.update_multi_dir_display(dir_index)
+            elif col == '#3':  # sub_dir
+                current = dir_item['videos'][video_idx]['sub_dir_name']
+                new_val = askstring("设置子目录", "子目录名称:", initialvalue=current, parent=preview_window)
+                if new_val and new_val.strip():
+                    dir_item['videos'][video_idx]['sub_dir_name'] = new_val.strip()
+                    tree.item(item, values=(
+                        dir_item['videos'][video_idx]['name'],
+                        dir_item['videos'][video_idx]['frame_count'],
+                        new_val.strip()
+                    ))
+                    # 更新主列表显示
+                    self.update_multi_dir_display(dir_index)
+
+        tree.bind('<Double-Button-1>', on_edit)
+
+        # 关闭按钮
+        ttk.Button(preview_window, text="关闭", command=preview_window.destroy).pack(pady=10)
+
+    def update_multi_dir_display(self, dir_index):
+        """更新目录在multi_tree中的显示"""
+        if dir_index < 0 or dir_index >= len(self.multi_dirs):
+            return
+        dir_item = self.multi_dirs[dir_index]
+        item_id = self.multi_tree.get_children()[dir_index]
+
+        # 计算显示的张数（如果所有视频相同则显示该值，否则显示"混合"）
+        frame_counts = [v['frame_count'] for v in dir_item['videos']]
+        if len(set(frame_counts)) == 1:
+            frame_text = str(frame_counts[0])
+        else:
+            frame_text = f"{min(frame_counts)}-{max(frame_counts)}"
+
+        # 子目录显示（第一个视频的，或"多个"）
+        sub_dirs = [v['sub_dir_name'] for v in dir_item['videos']]
+        if len(set(sub_dirs)) == 1:
+            sub_dir_text = sub_dirs[0]
+        else:
+            sub_dir_text = "多个"
+
+        self.multi_tree.item(item_id, values=(
+            dir_item['path'],
+            dir_item['video_count'],
+            frame_text,
+            sub_dir_text,
+            dir_item['output'],
+            dir_item['status']
+        ))
 def main():
     """主函数"""
     # 创建窗口 - 使用浅色主题
