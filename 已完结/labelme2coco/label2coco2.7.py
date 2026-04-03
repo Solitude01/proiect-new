@@ -20,6 +20,13 @@ try:
 except ImportError:
     send2trash = None
 
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller."""
+    import sys
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath(os.path.dirname(__file__)), relative_path)
+
 class SimpleLabelme2COCO:
     def __init__(self):
         self.label_to_num = {}
@@ -326,6 +333,12 @@ class MaterialDesignGUI:
             # 先隐藏窗口，待布局完成后再显示，避免窗口闪烁或尺寸跳变
             self.root.withdraw()
             self.root.title("Labelme to COCO 转换器 - 多文件夹数据集切分版")
+            # 设置窗口图标（任务栏 + 窗口左上角）
+            try:
+                icon_path = resource_path("ICO\\COCO.ico")
+                self.root.iconbitmap(icon_path)
+            except Exception as e:
+                print(f"图标加载失败: {e}")
             self.root.geometry("1200x800")
             self.root.minsize(1000, 650)
             print("窗口创建成功")
@@ -6590,6 +6603,11 @@ def main():
     app.run()
 
 if __name__ == '__main__':
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('Labelme2COCO.App.1')
+    except Exception:
+        pass
     main()
 
 

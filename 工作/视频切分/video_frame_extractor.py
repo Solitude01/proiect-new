@@ -384,6 +384,12 @@ class VideoFrameExtractorApp:
         self.is_processing = False
         self.stop_event = threading.Event()
 
+        # Trace ID 管理（防止trace累加）
+        self._single_dir_path_trace_id = None
+        self._single_dir_uniform_count_trace_id = None
+        self._fangxinyu_path_trace_id = None
+        self._fangxinyu_uniform_count_trace_id = None
+
         # 模式数据
         self.single_video_path = ttk.StringVar()
         self.single_output_path = ttk.StringVar()
@@ -396,6 +402,10 @@ class VideoFrameExtractorApp:
         self.single_dir_split_mode = ttk.StringVar(value="uniform")  # uniform / individual
         self.single_dir_uniform_count = ttk.IntVar(value=100)
         self.single_dir_videos: List[Dict] = []  # 存储视频数据
+
+        # 方欣雨定制模式变量
+        self.fangxinyu_split_mode = ttk.StringVar(value="uniform")
+        self.fangxinyu_uniform_count = ttk.IntVar(value=100)
 
         self.multi_dirs: List[Dict] = []  # [{path, output, videos, status, split_mode, uniform_count}]
 
@@ -461,7 +471,11 @@ class VideoFrameExtractorApp:
 
         # 鼠标滚轮支持
         def on_mousewheel(event):
-            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            try:
+                if canvas.winfo_exists():
+                    canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            except tk.TclError:
+                pass
         canvas.bind_all("<MouseWheel>", on_mousewheel)
 
         # 窗口大小变化时调整内容宽度
@@ -634,6 +648,8 @@ class VideoFrameExtractorApp:
 
     def clear_content(self):
         """清空内容区"""
+        # 解绑鼠标滚轮事件，避免对已销毁控件的引用
+        self.content_frame.unbind_all("<MouseWheel>")
         for widget in self.content_frame.winfo_children():
             widget.destroy()
 
@@ -1040,11 +1056,15 @@ class VideoFrameExtractorApp:
         # 存储视频数据
         self.single_dir_videos = []
 
-        # 绑定目录变化更新列表
-        self.single_dir_path.trace_add('write', lambda *args: self.update_video_list())
+        # 绑定目录变化更新列表 - 先移除旧的再添加新的
+        if self._single_dir_path_trace_id:
+            self.single_dir_path.trace_remove('write', self._single_dir_path_trace_id)
+        self._single_dir_path_trace_id = self.single_dir_path.trace_add('write', lambda *args: self.update_video_list())
 
-        # 绑定统一设置张数变化更新列表
-        self.single_dir_uniform_count.trace_add('write', lambda *args: self.on_uniform_count_change())
+        # 绑定统一设置张数变化更新列表 - 先移除旧的再添加新的
+        if self._single_dir_uniform_count_trace_id:
+            self.single_dir_uniform_count.trace_remove('write', self._single_dir_uniform_count_trace_id)
+        self._single_dir_uniform_count_trace_id = self.single_dir_uniform_count.trace_add('write', lambda *args: self.on_uniform_count_change())
 
         # 执行按钮
         btn_frame = ttk.Frame(content_frame)
@@ -1196,8 +1216,6 @@ class VideoFrameExtractorApp:
         split_mode_inner = ttk.Frame(split_mode_frame)
         split_mode_inner.pack(fill=X, expand=True, padx=10, pady=10)
 
-        self.fangxinyu_split_mode = ttk.StringVar(value="uniform")
-
         mode_select_frame = ttk.Frame(split_mode_inner)
         mode_select_frame.pack(fill=X)
 
@@ -1222,7 +1240,6 @@ class VideoFrameExtractorApp:
         self.fangxinyu_uniform_frame.pack(fill=X, pady=(10, 0))
 
         ttk.Label(self.fangxinyu_uniform_frame, text="切分张数:").pack(side=LEFT, padx=(20, 5))
-        self.fangxinyu_uniform_count = ttk.IntVar(value=100)
         ttk.Spinbox(
             self.fangxinyu_uniform_frame,
             from_=1,
@@ -1293,11 +1310,15 @@ class VideoFrameExtractorApp:
         # 存储视频数据
         self.fangxinyu_videos = []
 
-        # 绑定目录变化更新列表
-        self.single_dir_path.trace_add('write', lambda *args: self.update_fangxinyu_video_list())
+        # 绑定目录变化更新列表 - 先移除旧的再添加新的
+        if self._fangxinyu_path_trace_id:
+            self.single_dir_path.trace_remove('write', self._fangxinyu_path_trace_id)
+        self._fangxinyu_path_trace_id = self.single_dir_path.trace_add('write', lambda *args: self.update_fangxinyu_video_list())
 
-        # 绑定统一设置张数变化更新列表
-        self.fangxinyu_uniform_count.trace_add('write', lambda *args: self.on_fangxinyu_uniform_count_change())
+        # 绑定统一设置张数变化更新列表 - 先移除旧的再添加新的
+        if self._fangxinyu_uniform_count_trace_id:
+            self.fangxinyu_uniform_count.trace_remove('write', self._fangxinyu_uniform_count_trace_id)
+        self._fangxinyu_uniform_count_trace_id = self.fangxinyu_uniform_count.trace_add('write', lambda *args: self.on_fangxinyu_uniform_count_change())
 
         # 执行按钮
         btn_frame = ttk.Frame(content_frame)
@@ -1630,16 +1651,27 @@ class VideoFrameExtractorApp:
         """选择输入目录"""
         path = filedialog.askdirectory(title="选择包含视频的目录")
         if path:
-            self.single_dir_path.set(path)
-            # 自动设置输出目录
+            # 先设置输出目录，再设置输入目录（避免trace触发时输出目录还未设置）
             default_output = os.path.join(path, "切分图片")
             self.single_dir_output.set(default_output)
+            self.single_dir_path.set(path)
 
     def select_dir_output(self):
         """选择目录输出路径"""
         path = filedialog.askdirectory(title="选择输出目录")
         if path:
             self.single_dir_output.set(path)
+            # 同步更新方欣雨定制专属模式的视频输出目录
+            if hasattr(self, 'fangxinyu_videos') and self.fangxinyu_videos:
+                for video_data in self.fangxinyu_videos:
+                    video_data['output_dir'] = path
+                for i, item_id in enumerate(self.fangxinyu_video_tree.get_children()):
+                    if i < len(self.fangxinyu_videos):
+                        values = self.fangxinyu_video_tree.item(item_id, 'values')
+                        display_output = self._truncate_path(path, 25)
+                        self.fangxinyu_video_tree.item(item_id, values=(
+                            values[0], values[1], values[2], values[3], display_output
+                        ))
 
     def update_video_list(self):
         """更新视频列表"""
@@ -1729,22 +1761,27 @@ class VideoFrameExtractorApp:
             display_output = self._truncate_path(default_output, 25)
             self.fangxinyu_video_tree.insert('', 'end', values=(filename, size_str, default_count, Path(video).stem, display_output))
 
+    def _set_widget_state_recursive(self, parent, state):
+        """递归设置控件状态"""
+        for widget in parent.winfo_children():
+            if isinstance(widget, (ttk.Spinbox, ttk.Button, ttk.Entry)):
+                widget.configure(state=state)
+            # 递归处理子容器
+            if widget.winfo_children():
+                self._set_widget_state_recursive(widget, state)
+
     def on_single_dir_mode_change(self):
         """单目录模式改变时更新UI"""
         mode = self.single_dir_split_mode.get()
 
         if mode == "uniform":
             # 统一设置模式：启用全局设置，禁用列表编辑
-            for widget in self.uniform_settings_frame.winfo_children():
-                if isinstance(widget, ttk.Spinbox) or isinstance(widget, ttk.Button):
-                    widget.configure(state='normal')
+            self._set_widget_state_recursive(self.uniform_settings_frame, 'normal')
             # 更新列表显示为统一值
             self.update_video_list_display()
         else:
-            # 单独设置模式：允许编辑列表
-            for widget in self.uniform_settings_frame.winfo_children():
-                if isinstance(widget, ttk.Spinbox) or isinstance(widget, ttk.Button):
-                    widget.configure(state='disabled')
+            # 单独设置模式：允许编辑列表，禁用统一设置控件
+            self._set_widget_state_recursive(self.uniform_settings_frame, 'disabled')
 
     def update_video_list_display(self):
         """根据当前模式更新视频列表显示"""
@@ -2047,9 +2084,12 @@ class VideoFrameExtractorApp:
         if not selected:
             return
 
-        index = self.multi_tree.index(selected[0])
-        self.multi_dirs.pop(index)
-        self.multi_tree.delete(selected[0])
+        # 逆序遍历，避免索引错位
+        for item in reversed(selected):
+            index = self.multi_tree.index(item)
+            if 0 <= index < len(self.multi_dirs):
+                self.multi_dirs.pop(index)
+                self.multi_tree.delete(item)
 
     def clear_all_dirs(self):
         """清空所有目录"""
@@ -2157,26 +2197,32 @@ class VideoFrameExtractorApp:
 
     def _process_single_video(self, video_path: str, output_dir: str, config: ExtractConfig):
         """处理单个视频（后台线程）"""
-        def progress_callback(progress, message):
-            self.root.after(0, lambda: self._update_progress(progress, message))
-            self.root.after(0, lambda m=message: self.log_message(self.single_log_text, m))
+        video_output = ""  # 用于异常处理时传递给回调
+        try:
+            def progress_callback(progress, message):
+                self.root.after(0, lambda: self._update_progress(progress, message))
+                self.root.after(0, lambda m=message: self.log_message(self.single_log_text, m))
 
-        # 构建子目录
-        sub_dir = self.single_video_sub_dir.get() or Path(video_path).stem
-        video_output = os.path.join(output_dir, sub_dir)
-        os.makedirs(video_output, exist_ok=True)
+            # 构建子目录
+            sub_dir = self.single_video_sub_dir.get() or Path(video_path).stem
+            video_output = os.path.join(output_dir, sub_dir)
+            os.makedirs(video_output, exist_ok=True)
 
-        self.root.after(0, lambda: self.log_message(self.single_log_text, f"开始处理: {video_path}"))
-        self.root.after(0, lambda: self.log_message(self.single_log_text, f"输出目录: {video_output}"))
-        self.root.after(0, lambda: self.log_message(self.single_log_text, f"切分张数: {config.total_value}, 格式: {config.output_format}"))
+            self.root.after(0, lambda: self.log_message(self.single_log_text, f"开始处理: {video_path}"))
+            self.root.after(0, lambda: self.log_message(self.single_log_text, f"输出目录: {video_output}"))
+            self.root.after(0, lambda: self.log_message(self.single_log_text, f"切分张数: {config.total_value}, 格式: {config.output_format}"))
 
-        success, msg = self.extractor.extract_frames(
-            video_path, video_output, config,
-            progress_callback, self.stop_event
-        )
+            success, msg = self.extractor.extract_frames(
+                video_path, video_output, config,
+                progress_callback, self.stop_event
+            )
 
-        self.root.after(0, lambda: self.log_message(self.single_log_text, f"处理结果: {msg}"))
-        self.root.after(0, lambda: self._on_process_complete(success, msg))
+            self.root.after(0, lambda: self.log_message(self.single_log_text, f"处理结果: {msg}"))
+            self.root.after(0, lambda: self._on_process_complete(success, msg, video_output))
+        except Exception as e:
+            error_msg = str(e)
+            self.root.after(0, lambda: self.log_message(self.single_log_text, f"错误: {error_msg}"))
+            self.root.after(0, lambda: self._on_process_complete(False, error_msg, video_output))
 
     def _update_progress(self, progress: float, message: str):
         """更新进度"""
@@ -2184,22 +2230,34 @@ class VideoFrameExtractorApp:
         self.status_label.configure(text=f"处理中... {progress:.1f}%")
         self.current_file_label.configure(text=message)
 
-    def _on_process_complete(self, success: bool, message: str):
+    def _on_process_complete(self, success: bool, message: str, video_output: str = ""):
         """处理完成"""
         self.is_processing = False
-        self.start_btn.configure(state='normal', text='🚀 开始切分')
+        if self.start_btn.winfo_exists():
+            self.start_btn.configure(state='normal', text='🚀 开始切分')
 
         if success:
             self.progress_var.set(100)
-            self.status_label.configure(text=f"✅ {message}")
+            if self.status_label.winfo_exists():
+                self.status_label.configure(text=f"✅ {message}")
             if messagebox.askyesno("完成", f"{message}\n\n是否打开输出文件夹？"):
-                os.startfile(self.single_output_path.get())
+                # 使用实际的视频输出目录
+                output_path = video_output if video_output else self.single_output_path.get()
+                if output_path:
+                    if not os.path.exists(output_path):
+                        os.makedirs(output_path, exist_ok=True)
+                    if os.path.exists(output_path):
+                        os.startfile(output_path)
         else:
-            self.status_label.configure(text=f"❌ {message}")
+            if self.status_label.winfo_exists():
+                self.status_label.configure(text=f"❌ {message}")
             messagebox.showerror("错误", message)
 
     def start_single_directory(self):
         """开始单目录处理"""
+        # 重置停止事件
+        self.stop_event.clear()
+
         if not self.ffmpeg_available:
             messagebox.showerror("错误", "未检测到FFmpeg")
             return
@@ -2214,10 +2272,12 @@ class VideoFrameExtractorApp:
             messagebox.showerror("错误", "请选择输出目录")
             return
 
-        videos = self.extractor.scan_videos(directory)
-        if not videos:
+        # 使用已缓存的视频列表，避免重新扫描导致索引错位
+        if not self.single_dir_videos:
             messagebox.showwarning("提示", "所选目录中没有找到视频文件")
             return
+
+        videos = [v['path'] for v in self.single_dir_videos]
 
         # 禁用按钮
         self.dir_start_btn.configure(state='disabled', text='⏳ 处理中...')
@@ -2281,13 +2341,13 @@ class VideoFrameExtractorApp:
             video_output = os.path.join(base_output, sub_dir)
             os.makedirs(video_output, exist_ok=True)
 
-            self.root.after(0, lambda v=video_name: self.status_label.configure(
-                text=f"处理中... ({idx+1}/{total_videos}) {v}"
+            self.root.after(0, lambda v=video_name, i=idx, t=total_videos: self.status_label.configure(
+                text=f"处理中... ({i+1}/{t}) {v}"
             ))
             self.root.after(0, lambda v=video_name, s=sub_dir: self.log_message(self.dir_log_text, f"处理: {v} -> {s}"))
 
-            def progress_callback(progress, message):
-                overall = (idx + progress/100) / total_videos * 100
+            def progress_callback(progress, message, _idx=idx):
+                overall = (_idx + progress/100) / total_videos * 100
                 self.root.after(0, lambda p=overall: self.progress_var.set(p))
 
             # 使用当前视频的配置
@@ -2317,12 +2377,18 @@ class VideoFrameExtractorApp:
     def _on_dir_complete(self, total_frames: int):
         """目录处理完成"""
         self.is_processing = False
-        self.dir_start_btn.configure(state='normal', text='🚀 开始切分')
+        if self.dir_start_btn.winfo_exists():
+            self.dir_start_btn.configure(state='normal', text='🚀 开始切分')
         self.progress_var.set(100)
-        self.status_label.configure(text=f"✅ 完成！共提取 {total_frames} 帧")
+        if self.status_label.winfo_exists():
+            self.status_label.configure(text=f"✅ 完成！共提取 {total_frames} 帧")
 
         if messagebox.askyesno("完成", f"处理完成！共提取 {total_frames} 帧\n\n是否打开输出文件夹？"):
-            os.startfile(self.single_dir_output.get())
+            default_output = self.single_dir_output.get()
+            if default_output and not os.path.exists(default_output):
+                os.makedirs(default_output, exist_ok=True)
+            if default_output and os.path.exists(default_output):
+                os.startfile(default_output)
 
     def on_fangxinyu_mode_change(self):
         """方欣雨定制专属模式 - 模式改变时更新UI"""
@@ -2330,16 +2396,12 @@ class VideoFrameExtractorApp:
 
         if mode == "uniform":
             # 统一设置模式：启用全局设置
-            for widget in self.fangxinyu_uniform_frame.winfo_children():
-                if isinstance(widget, ttk.Spinbox) or isinstance(widget, ttk.Button):
-                    widget.configure(state='normal')
+            self._set_widget_state_recursive(self.fangxinyu_uniform_frame, 'normal')
             # 更新列表显示为统一值
             self.update_fangxinyu_video_list_display()
         else:
             # 单独设置模式
-            for widget in self.fangxinyu_uniform_frame.winfo_children():
-                if isinstance(widget, ttk.Spinbox) or isinstance(widget, ttk.Button):
-                    widget.configure(state='disabled')
+            self._set_widget_state_recursive(self.fangxinyu_uniform_frame, 'disabled')
 
     def on_fangxinyu_uniform_count_change(self):
         """方欣雨定制专属模式 - 统一设置张数改变时更新视频列表"""
@@ -2380,6 +2442,7 @@ class VideoFrameExtractorApp:
         )
 
         if new_output:
+            self.single_dir_output.set(new_output)
             # 更新所有视频的 output_dir
             for video_data in self.fangxinyu_videos:
                 video_data['output_dir'] = new_output
@@ -2414,10 +2477,12 @@ class VideoFrameExtractorApp:
             messagebox.showerror("错误", "请选择默认输出目录")
             return
 
-        videos = self.extractor.scan_videos(directory)
-        if not videos:
+        # 使用已缓存的视频列表，避免重新扫描导致索引错位
+        if not self.fangxinyu_videos:
             messagebox.showwarning("提示", "所选目录中没有找到视频文件")
             return
+
+        videos = [v['path'] for v in self.fangxinyu_videos]
 
         # 禁用按钮
         self.fangxinyu_start_btn.configure(state='disabled', text='⏳ 处理中...')
@@ -2455,13 +2520,13 @@ class VideoFrameExtractorApp:
             os.makedirs(video_output, exist_ok=True)
 
             video_name = Path(video).stem
-            self.root.after(0, lambda v=video_name: self.status_label.configure(
-                text=f"处理中... ({idx+1}/{total_videos}) {v}"
+            self.root.after(0, lambda v=video_name, i=idx, t=total_videos: self.status_label.configure(
+                text=f"处理中... ({i+1}/{t}) {v}"
             ))
             self.root.after(0, lambda v=video_name, o=video_output_dir: self.log_message(self.fangxinyu_log_text, f"处理: {v} -> {o}/{sub_dir}"))
 
-            def progress_callback(progress, message):
-                overall = (idx + progress/100) / total_videos * 100
+            def progress_callback(progress, message, _idx=idx):
+                overall = (_idx + progress/100) / total_videos * 100
                 self.root.after(0, lambda p=overall: self.progress_var.set(p))
 
             # 使用当前视频的配置
@@ -2492,12 +2557,18 @@ class VideoFrameExtractorApp:
     def _on_fangxinyu_complete(self, total_frames: int):
         """方欣雨定制专属模式 - 处理完成"""
         self.is_processing = False
-        self.fangxinyu_start_btn.configure(state='normal', text='🚀 开始切分')
+        if self.fangxinyu_start_btn.winfo_exists():
+            self.fangxinyu_start_btn.configure(state='normal', text='🚀 开始切分')
         self.progress_var.set(100)
-        self.status_label.configure(text=f"✅ 完成！共提取 {total_frames} 帧")
+        if self.status_label.winfo_exists():
+            self.status_label.configure(text=f"✅ 完成！共提取 {total_frames} 帧")
 
         if messagebox.askyesno("完成", f"处理完成！共提取 {total_frames} 帧\n\n是否打开默认输出文件夹？"):
-            os.startfile(self.single_dir_output.get())
+            default_output = self.single_dir_output.get()
+            if default_output and not os.path.exists(default_output):
+                os.makedirs(default_output, exist_ok=True)
+            if default_output and os.path.exists(default_output):
+                os.startfile(default_output)
 
     def start_multi_directory(self):
         """开始多目录并发处理"""
@@ -2516,6 +2587,10 @@ class VideoFrameExtractorApp:
             self.config.save()
         except:
             pass
+
+        # 重置处理器前先停止旧的
+        if hasattr(self, 'processor') and self.processor:
+            self.processor.stop()
 
         # 重置处理器
         self.processor = BatchProcessor(self.config.thread_count)
@@ -2567,6 +2642,13 @@ class VideoFrameExtractorApp:
         )
         monitor_thread.start()
 
+    def _update_multi_status_safe(self, completed, errors, total):
+        """安全更新多目录状态标签"""
+        if self.multi_status_label.winfo_exists():
+            self.multi_status_label.configure(
+                text=f"处理中... 完成: {completed} 失败: {errors} / 总计: {total}"
+            )
+
     def _monitor_multi_progress(self, total_tasks: int):
         """监控多目录进度"""
         completed = 0
@@ -2588,9 +2670,7 @@ class VideoFrameExtractorApp:
 
                     progress = (completed + errors) / total_tasks * 100
                     self.root.after(0, lambda p=progress: self.multi_progress_var.set(p))
-                    self.root.after(0, lambda c=completed, e=errors: self.multi_status_label.configure(
-                        text=f"处理中... 完成: {c} 失败: {e} / 总计: {total_tasks}"
-                    ))
+                    self.root.after(0, lambda c=completed, e=errors, t=total_tasks: self._update_multi_status_safe(c, e, t))
             except queue.Empty:
                 if not self.is_processing:
                     break
@@ -2601,11 +2681,18 @@ class VideoFrameExtractorApp:
     def _on_multi_complete(self, completed: int, errors: int):
         """多目录处理完成"""
         self.is_processing = False
-        self.multi_start_btn.configure(state='normal', text='🚀 开始并发切分')
+
+        # 停止处理器
+        if hasattr(self, 'processor') and self.processor:
+            self.processor.stop()
+
+        if self.multi_start_btn.winfo_exists():
+            self.multi_start_btn.configure(state='normal', text='🚀 开始并发切分')
         self.multi_progress_var.set(100)
-        self.multi_status_label.configure(
-            text=f"✅ 完成！成功: {completed} 失败: {errors}"
-        )
+        if self.multi_status_label.winfo_exists():
+            self.multi_status_label.configure(
+                text=f"✅ 完成！成功: {completed} 失败: {errors}"
+            )
 
         messagebox.showinfo("完成", f"批量处理完成！\n成功: {completed}\n失败: {errors}")
 
@@ -2724,15 +2811,8 @@ class VideoFrameExtractorApp:
             self.open_directory(values[0])
 
     def process_ui_queue(self):
-        if hasattr(self, 'processor') and self.processor:
-            try:
-                while True:
-                    msg = self.processor.ui_queue.get_nowait()
-                    # 处理UI更新
-                    pass
-            except queue.Empty:
-                pass
-
+        """UI更新循环 - 保留定时器以维持UI更新"""
+        # 注意：各模式自行处理消息队列，避免消息被窃取
         self.root.after(50, self.process_ui_queue)
 
     # ========================================================================
@@ -2771,6 +2851,8 @@ class VideoFrameExtractorApp:
 
         # 双击编辑
         def on_edit(event):
+            if not tree.selection():
+                return
             item = tree.selection()[0]
             col = tree.identify_column(event.x)
             video_idx = int(item)
