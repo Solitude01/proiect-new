@@ -35,6 +35,21 @@ pip install -r requirements.txt
 python start_instance.py line1 8001
 ```
 
+### Build Executables
+
+```bash
+# Build LAdmin.exe (console) and LView.exe (business view)
+pyinstaller LAdmin.spec
+pyinstaller LView.spec
+
+# Or use the batch file
+build_exe.bat
+```
+
+### Testing
+
+This project has no automated test suite. Test manually via the API endpoints or browser.
+
 ## Architecture
 
 ### Multi-Instance Data Isolation
@@ -111,6 +126,24 @@ logs_manager.add_log(instance_id, {
     "timestamp": "..."
 })
 ```
+
+## Dependencies
+
+- **fastapi** + **uvicorn** - Web framework and ASGI server
+- **jinja2** - Template engine
+- **aiofiles** - Async file I/O
+- **httpx** - Async HTTP client (for forwarding commands to LA)
+- **python-multipart** - Form data parsing
+
+## Key Implementation Details
+
+### Webhook Decoding
+
+LA sends data with RFC 2047 encoded headers (GBK charset but may claim UTF-8). The webhook handler in `main.py` decodes these headers before broadcasting.
+
+### WebSocket Heartbeat
+
+The frontend sends a ping every 5 seconds; if no pong is received within 30 seconds, it reconnects with exponential backoff (capped at 30s). This keeps connections alive through network middleware that drops idle TCP connections.
 
 ## Code Patterns
 

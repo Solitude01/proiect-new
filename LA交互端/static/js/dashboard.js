@@ -571,7 +571,7 @@ class DashboardManager {
     }
 
     handleDataUpdate(payload) {
-        const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        const timestamp = new Date().toLocaleString('zh-CN', { hour12: false });
         this.lastUpdateEl.textContent = `最后更新: ${timestamp}`;
 
         // Update metrics
@@ -824,7 +824,7 @@ class DashboardManager {
     addLog(type, message, skipBatch = false) {
         if (this.isPaused) return;
 
-        const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        const timestamp = new Date().toLocaleString('zh-CN', { hour12: false });
 
         const log = {
             id: Date.now() + Math.random(),
