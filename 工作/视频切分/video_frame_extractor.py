@@ -650,6 +650,11 @@ class VideoFrameExtractorApp:
         """清空内容区"""
         # 解绑鼠标滚轮事件，避免对已销毁控件的引用
         self.content_frame.unbind_all("<MouseWheel>")
+        # 重置 trace ID，避免对已销毁变量的操作
+        self._single_dir_path_trace_id = None
+        self._single_dir_uniform_count_trace_id = None
+        self._fangxinyu_path_trace_id = None
+        self._fangxinyu_uniform_count_trace_id = None
         for widget in self.content_frame.winfo_children():
             widget.destroy()
 
@@ -1058,12 +1063,18 @@ class VideoFrameExtractorApp:
 
         # 绑定目录变化更新列表 - 先移除旧的再添加新的
         if self._single_dir_path_trace_id:
-            self.single_dir_path.trace_remove('write', self._single_dir_path_trace_id)
+            try:
+                self.single_dir_path.trace_remove('write', self._single_dir_path_trace_id)
+            except Exception:
+                pass
         self._single_dir_path_trace_id = self.single_dir_path.trace_add('write', lambda *args: self.update_video_list())
 
         # 绑定统一设置张数变化更新列表 - 先移除旧的再添加新的
         if self._single_dir_uniform_count_trace_id:
-            self.single_dir_uniform_count.trace_remove('write', self._single_dir_uniform_count_trace_id)
+            try:
+                self.single_dir_uniform_count.trace_remove('write', self._single_dir_uniform_count_trace_id)
+            except Exception:
+                pass
         self._single_dir_uniform_count_trace_id = self.single_dir_uniform_count.trace_add('write', lambda *args: self.on_uniform_count_change())
 
         # 执行按钮
@@ -1312,12 +1323,18 @@ class VideoFrameExtractorApp:
 
         # 绑定目录变化更新列表 - 先移除旧的再添加新的
         if self._fangxinyu_path_trace_id:
-            self.single_dir_path.trace_remove('write', self._fangxinyu_path_trace_id)
+            try:
+                self.single_dir_path.trace_remove('write', self._fangxinyu_path_trace_id)
+            except Exception:
+                pass
         self._fangxinyu_path_trace_id = self.single_dir_path.trace_add('write', lambda *args: self.update_fangxinyu_video_list())
 
         # 绑定统一设置张数变化更新列表 - 先移除旧的再添加新的
         if self._fangxinyu_uniform_count_trace_id:
-            self.fangxinyu_uniform_count.trace_remove('write', self._fangxinyu_uniform_count_trace_id)
+            try:
+                self.fangxinyu_uniform_count.trace_remove('write', self._fangxinyu_uniform_count_trace_id)
+            except Exception:
+                pass
         self._fangxinyu_uniform_count_trace_id = self.fangxinyu_uniform_count.trace_add('write', lambda *args: self.on_fangxinyu_uniform_count_change())
 
         # 执行按钮
