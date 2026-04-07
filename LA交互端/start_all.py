@@ -43,7 +43,9 @@ def main():
             sys.executable, "-m", "uvicorn",
             "main:app",
             "--host", "0.0.0.0",
-            "--port", "6010"
+            "--port", "6010",
+            "--ws-ping-interval", "20",
+            "--ws-ping-timeout", "10"
         ])
         processes.append(p1)
 
@@ -55,7 +57,9 @@ def main():
             sys.executable, "-m", "uvicorn",
             "main:app",
             "--host", "0.0.0.0",
-            "--port", "8000"
+            "--port", "8000",
+            "--ws-ping-interval", "20",
+            "--ws-ping-timeout", "10"
         ])
         processes.append(p2)
 

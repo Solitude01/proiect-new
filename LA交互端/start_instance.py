@@ -54,6 +54,8 @@ def main():
         "main:app",
         "--host", "0.0.0.0",
         "--port", port,
+        "--ws-ping-interval", "20",
+        "--ws-ping-timeout", "10",
         "--reload" if env.get("RELOAD", "").lower() == "true" else ""
     ]
 

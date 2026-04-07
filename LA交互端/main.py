@@ -1253,7 +1253,9 @@ if __name__ == "__main__":
             port=port,
             reload=reload,
             log_level="info",
-            access_log=True
+            access_log=True,
+            ws_ping_interval=20,
+            ws_ping_timeout=10
         )
     except Exception as e:
         print(f"\n[错误] 服务启动失败: {e}")

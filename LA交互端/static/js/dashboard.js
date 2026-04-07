@@ -241,6 +241,7 @@ class DashboardManager {
                 console.log('[WebSocket] Connected');
                 this.isConnected = true;
                 this.reconnectAttempts = 0;
+                this.lastPongTime = Date.now();
                 this.updateConnectionStatus('connected');
                 this.hideConnectionGate();
                 this.startPingInterval();
@@ -315,15 +316,18 @@ class DashboardManager {
 
     startPingInterval() {
         this.pingInterval = setInterval(() => {
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                this.ws.send(JSON.stringify({ type: 'ping' }));
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
-                // Check for pong timeout (30 seconds)
-                if (Date.now() - this.lastPongTime > 30000) {
-                    console.log('[WebSocket] Pong timeout, reconnecting...');
-                    this.ws.close();
-                }
+            // Check for pong timeout first
+            const timeSinceLastPong = Date.now() - this.lastPongTime;
+            if (timeSinceLastPong > 30000) {
+                console.log(`[WebSocket] Pong timeout (${Math.round(timeSinceLastPong / 1000)}s), reconnecting...`);
+                this.ws.close();
+                return;
             }
+
+            // Send ping
+            this.ws.send(JSON.stringify({ type: 'ping' }));
         }, 5000);  // 每5秒发送一次心跳，避免Windows空闲超时
     }
 
