@@ -90,23 +90,27 @@ class SimpleLabelme2COCO:
         return annotation
     
     def get_bbox(self, height, width, points):
-        polygons = points
-        mask = np.zeros([height, width], dtype=np.uint8)
-        mask = Image.fromarray(mask)
-        xy = list(map(tuple, polygons))
-        ImageDraw.Draw(mask).polygon(xy=xy, outline=1, fill=1)
-        mask = np.array(mask, dtype=bool)
-        index = np.argwhere(mask == 1)
-        rows = index[:, 0]
-        clos = index[:, 1]
-        left_top_r = np.min(rows)
-        left_top_c = np.min(clos)
-        right_bottom_r = np.max(rows)
-        right_bottom_c = np.max(clos)
-        return [
-            left_top_c, left_top_r, right_bottom_c - left_top_c,
-            right_bottom_r - left_top_r
-        ]
+        """从点坐标计算边界框"""
+        if not points or len(points) < 1:
+            return None
+
+        # 直接从点坐标计算bbox，避免mask方法的浮点精度问题
+        xs = [p[0] for p in points]
+        ys = [p[1] for p in points]
+        x_min = min(xs)
+        y_min = min(ys)
+        x_max = max(xs)
+        y_max = max(ys)
+
+        # 确保坐标在合理范围内
+        x_min = max(0, min(x_min, width))
+        y_min = max(0, min(y_min, height))
+        x_max = max(0, min(x_max, width))
+        y_max = max(0, min(y_max, height))
+
+        result = [x_min, y_min, x_max - x_min, y_max - y_min]
+        # 四舍五入到2位小数，避免浮点精度问题
+        return [round(v, 2) for v in result]
 
 class DatasetSplitter:
     """数据集切分类"""
@@ -434,6 +438,9 @@ class MaterialDesignGUI:
         self.folder_labels = {}  # 文件夹路径 -> 标签集合的映射
         self.quality_check_results = {}  # 数据质量检查结果
         self.problem_files = {}  # 问题文件列表
+        self.expanded_types = set()  # 当前展开的错误类型
+        self.current_filter = None   # 当前过滤类型，None表示显示全部
+        self.stat_widgets = {}       # 保存统计行widget引用 {error_type: (frame, btn, count, icon_var)}
         print("多文件夹管理变量初始化完成")
         
         # 全局进度与按钮集合
@@ -1406,11 +1413,11 @@ class MaterialDesignGUI:
         self.settings_summary_label.pack(anchor=tk.W)
         
         # 绑定变量变化事件以更新摘要
-        self.train_ratio_var.trace('w', self.update_settings_summary)
-        self.test_ratio_var.trace('w', self.update_settings_summary)
-        self.verify_ratio_var.trace('w', self.update_settings_summary)
-        self.max_images_per_folder_var.trace('w', self.update_settings_summary)
-        self.auto_split_var.trace('w', self.update_settings_summary)
+        self.train_ratio_var.trace_add('write', self.update_settings_summary)
+        self.test_ratio_var.trace_add('write', self.update_settings_summary)
+        self.verify_ratio_var.trace_add('write', self.update_settings_summary)
+        self.max_images_per_folder_var.trace_add('write', self.update_settings_summary)
+        self.auto_split_var.trace_add('write', self.update_settings_summary)
     
     def create_action_section(self, parent):
         """创建操作按钮区域"""
@@ -1734,7 +1741,7 @@ class MaterialDesignGUI:
 
         # 错误统计区域
         stats_frame = ttk.Frame(results_frame, style='MaterialCard.TFrame')
-        stats_frame.pack(fill=tk.X, pady=(0, 16))
+        stats_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 16))
 
         stats_label = ttk.Label(stats_frame,
                                text="📊 错误统计",
@@ -1745,6 +1752,8 @@ class MaterialDesignGUI:
         # 创建错误统计网格
         self.error_stats_frame = ttk.Frame(stats_frame, style='MaterialCard.TFrame')
         self.error_stats_frame.pack(fill=tk.X)
+        # 设置列权重，让内容可以正确扩展
+        self.error_stats_frame.grid_columnconfigure(0, weight=1)
 
         # 详细问题列表区域
         details_frame = ttk.Frame(results_frame, style='MaterialCard.TFrame')
@@ -2703,9 +2712,14 @@ class MaterialDesignGUI:
             
     def log_message(self, message):
         """添加日志消息"""
-        self.log_text.insert(tk.END, f"{message}\n")
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        formatted = f"[{timestamp}] {message}"
+        self.log_text.insert(tk.END, f"{formatted}\n")
         self.log_text.see(tk.END)
         self.root.update_idletasks()
+        # 同时在控制台打印日志
+        print(formatted)
 
     def start_quality_check(self):
         """开始数据质量检查"""
@@ -2751,9 +2765,13 @@ class MaterialDesignGUI:
                 # 检查该文件夹中的所有文件
                 folder_problems = self.check_folder_quality(folder_path, json_files, selected_checks)
                 all_problems.extend(folder_problems)
-                total_scanned += len(json_files)
+                # 统计扫描的JSON文件数量
+                all_files = os.listdir(folder_path)
+                json_file_count = len([f for f in all_files if f.lower().endswith('.json')])
+                total_scanned += json_file_count
 
-                self.log_message(f"  扫描了 {len(json_files)} 个文件，发现 {len([p for p in folder_problems if p['error_type'] not in ['图片JSON对应', '标注数量匹配']])} 个问题")
+                problem_count = len([p for p in folder_problems if p['error_type'] not in ['图片JSON对应', '标注数量匹配']])
+                self.log_message(f"  扫描了 {json_file_count} 个JSON文件，发现 {problem_count} 个问题")
 
             # 如果选择了图片JSON对应检查，执行额外检查
             if '图片JSON对应' in selected_checks:
@@ -2767,8 +2785,16 @@ class MaterialDesignGUI:
             # 更新界面显示
             self.root.after(0, self.update_quality_ui)
 
+            # 在控制台打印错误摘要
+            if all_problems:
+                from collections import Counter
+                error_counts = Counter(p['error_type'] for p in all_problems)
+                print(f"\n=== 错误统计 ===")
+                for error_type, count in sorted(error_counts.items(), key=lambda x: -x[1]):
+                    print(f"  {error_type}: {count} 个")
+
             self.log_message(f"\n=== 检查完成 ===")
-            self.log_message(f"总计扫描: {total_scanned} 个文件")
+            self.log_message(f"总计扫描: {total_scanned} 个JSON文件")
             self.log_message(f"发现问题: {len(all_problems)} 个")
 
         except Exception as e:
@@ -2920,19 +2946,42 @@ class MaterialDesignGUI:
 
         return valid_json_files, skipped_files
 
-    def check_folder_quality(self, folder_path, json_files, selected_checks):
+    def check_folder_quality(self, folder_path, image_files, selected_checks):
         """检查单个文件夹的数据质量"""
+        # 扫描文件夹中的所有JSON文件（注意：image_files参数实际存储的是图片文件列表）
+        all_files = os.listdir(folder_path)
+        json_files = [f for f in all_files if f.lower().endswith('.json')]
+
         # 首先过滤出真正的JSON文件
         valid_json_files, skipped_files = self.filter_valid_json_files(folder_path, json_files)
 
+        # 只显示跳过的文件数量，不逐个列出（减少冗余输出）
         if skipped_files:
-            self.log_message(f"  跳过 {len(skipped_files)} 个非JSON文件:")
-            for file, reason in skipped_files[:10]:  # 最多显示10个
-                self.log_message(f"    - {file} ({reason})")
-            if len(skipped_files) > 10:
-                self.log_message(f"    ... 还有 {len(skipped_files) - 10} 个文件")
+            self.log_message(f"  自动跳过 {len(skipped_files)} 个非JSON文件")
 
         problems = []
+
+        # 1.5 检查图片文件是否有对应的JSON标注文件
+        if '缺json' in selected_checks:
+            # 获取文件夹中的所有图片文件
+            all_files = os.listdir(folder_path)
+            image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff', '.JPG', '.JPEG', '.PNG')
+            image_files = [f for f in all_files if f.endswith(image_extensions)]
+            json_file_names = set(f for f in all_files if f.lower().endswith('.json'))
+
+            # 对每个图片文件检查是否有对应的JSON
+            for image_file in image_files:
+                base_name = os.path.splitext(image_file)[0]
+                possible_json_names = [f"{base_name}.json", f"{base_name}.JSON"]
+                json_exists = any(json_name in json_file_names for json_name in possible_json_names)
+
+                if not json_exists:
+                    problems.append({
+                        'folder': folder_path,
+                        'file': image_file,
+                        'error_type': '缺json',
+                        'description': f'图片文件缺少对应的JSON标注文件'
+                    })
 
         for json_file in valid_json_files:
             json_path = os.path.join(folder_path, json_file)
@@ -2956,21 +3005,19 @@ class MaterialDesignGUI:
                 if data is None:
                     continue  # 跳过无法读取的文件
 
-            # 成功读取JSON，记录编码信息（可选）
-            if isinstance(read_result, str) and not read_result.startswith(('文件', 'JSON')):
-                self.log_message(f"  使用 {read_result} 编码成功读取: {json_file}")
-
             # 2. 检查图片文件是否存在
             if '缺图片' in selected_checks:
                 image_path = data.get('imagePath', '')
                 if image_path:
-                    full_image_path = os.path.join(folder_path, image_path)
+                    # 只取文件名检查，避免绝对路径和路径分隔符混合问题
+                    image_name = os.path.basename(image_path)
+                    full_image_path = os.path.normpath(os.path.join(folder_path, image_name))
                     if not os.path.exists(full_image_path):
                         problems.append({
                             'folder': folder_path,
                             'file': json_file,
                             'error_type': '缺图片',
-                            'description': f'图片文件不存在: {image_path}'
+                            'description': f'图片文件不存在: {image_name}'
                         })
 
             # 3. 检查是否有标注
@@ -2986,7 +3033,7 @@ class MaterialDesignGUI:
                     continue
 
             # 4. 检查每个标注
-            if any(check in selected_checks for check in ['标注越界', '无效多边形', '无效矩形', '空标签名', '面积为0']):
+            if any(check in selected_checks for check in ['标注越界', '无效多边形', '无效矩形', '空标签名', '面积为0', '无效bbox']):
                 shapes = data.get('shapes', [])
                 for i, shape in enumerate(shapes):
                     shape_problems = self.check_shape_quality(shape, data, i, selected_checks)
@@ -3015,12 +3062,15 @@ class MaterialDesignGUI:
 
         # 获取点坐标
         points = shape.get('points', [])
-        if '无效多边形' in selected_checks and len(points) < 2:
+        shape_type = shape.get('shape_type', 'polygon')
+
+        # 无效多边形检查：只对polygon类型检查点数是否少于3个（rectangle只有2个点，不应报错）
+        if '无效多边形' in selected_checks and shape_type == 'polygon' and len(points) < 3:
             problems.append({
                 'error_type': '无效多边形',
-                'description': f'标注 {shape_index + 1}: 点数少于2个'
+                'description': f'标注 {shape_index + 1}: 点数少于3个'
             })
-            return problems
+        # 注意：不使用return，让后续检查（如标注越界、无效bbox）继续执行
 
         # 检查坐标是否越界
         if '标注越界' in selected_checks:
@@ -3033,10 +3083,10 @@ class MaterialDesignGUI:
                     continue
 
                 x, y = point
-                if x < 0 or x > img_width or y < 0 or y > img_height:
+                if x < 0 or x >= img_width or y < 0 or y >= img_height:
                     problems.append({
                         'error_type': '标注越界',
-                        'description': f'标注 {shape_index + 1} 第{j+1}个点: 坐标({x:.1f}, {y:.1f})越界(0-{img_width}, 0-{img_height})'
+                        'description': f'标注 {shape_index + 1} 第{j+1}个点: 坐标({x:.1f}, {y:.1f})越界(0-{img_width-1}, 0-{img_height-1})'
                     })
 
         # 检查形状类型
@@ -3078,6 +3128,39 @@ class MaterialDesignGUI:
                             'error_type': '面积为0',
                             'description': f'标注 {shape_index + 1}: 多边形面积为0'
                         })
+
+        # 检查bbox有效性：验证bbox的宽高是否为正，坐标是否在合理范围内
+        if '无效bbox' in selected_checks:
+            try:
+                points = shape.get('points', [])
+                if points and len(points) >= 2:
+                    # 直接计算bbox（不依赖SimpleLabelme2COCO类）
+                    xs = [p[0] for p in points]
+                    ys = [p[1] for p in points]
+                    x_min = max(0, round(min(xs), 2))
+                    y_min = max(0, round(min(ys), 2))
+                    x_max = min(img_width, round(max(xs), 2))
+                    y_max = min(img_height, round(max(ys), 2))
+                    bbox = [x_min, y_min, round(max(x_max - x_min, 0), 2), round(max(y_max - y_min, 0), 2)]
+                    if bbox is not None:
+                        x, y, w, h = bbox
+                        # get_bbox已经钳制了负值，这里主要检查宽高是否为正
+                        if w <= 0 or h <= 0:
+                            problems.append({
+                                'error_type': '无效bbox',
+                                'description': f'标注 {shape_index + 1}: bbox无效 [{x:.2f}, {y:.2f}, {w:.2f}, {h:.2f}]（宽高非正，标注可能退化为线或点）'
+                            })
+                        # 检查bbox是否超出图片边界
+                        elif x + w > img_width or y + h > img_height:
+                            problems.append({
+                                'error_type': '无效bbox',
+                                'description': f'标注 {shape_index + 1}: bbox超出图片边界 [{x:.2f}, {y:.2f}, {w:.2f}, {h:.2f}]，图片尺寸 {img_width}x{img_height}'
+                            })
+            except (TypeError, ValueError, IndexError):
+                problems.append({
+                    'error_type': '无效bbox',
+                    'description': f'标注 {shape_index + 1}: 无法计算bbox（点坐标格式错误）'
+                })
 
         return problems
 
@@ -3174,7 +3257,8 @@ class MaterialDesignGUI:
             '无效多边形': [],
             '无效矩形': [],
             '空标签名': [],
-            '面积为0': []
+            '面积为0': [],
+            '无效bbox': []
         }
 
         for problem in all_problems:
@@ -3194,8 +3278,9 @@ class MaterialDesignGUI:
         # 清空之前的统计显示
         for widget in self.error_stats_frame.winfo_children():
             widget.destroy()
+        self.stat_widgets.clear()
 
-        # 显示错误统计
+        # 显示错误统计（可点击）
         row = 0
         for error_type, problems in self.problem_files.items():
             if not problems:  # 跳过没有问题的类型
@@ -3205,39 +3290,49 @@ class MaterialDesignGUI:
             stat_frame = tk.Frame(self.error_stats_frame, bg=self.colors['surface'])
             stat_frame.grid(row=row, column=0, sticky='w', pady=2)
 
-            # 错误类型标签
-            type_label = tk.Label(stat_frame,
-                                text=f"• {error_type}",
-                                bg=self.colors['surface'],
-                                fg=self.colors['on_surface'],
-                                font=('Segoe UI', 10, 'bold'))
-            type_label.pack(side=tk.LEFT)
+            # 展开/折叠图标
+            is_expanded = error_type in self.expanded_types
+            icon_var = tk.StringVar(value="▼" if is_expanded else "▶")
+
+            # 错误类型标签（改为按钮，可点击）
+            type_btn = tk.Button(
+                stat_frame,
+                text=f"• {error_type}",
+                bg=self.colors['surface'],
+                fg=self.colors['primary'] if is_expanded else self.colors['on_surface'],
+                font=('Segoe UI', 10, 'bold'),
+                bd=0,
+                cursor="hand2",
+                command=lambda et=error_type: self.toggle_error_type(et)
+            )
+            type_btn.pack(side=tk.LEFT)
 
             # 问题数量标签
-            count_label = tk.Label(stat_frame,
-                                 text=f" ({len(problems)} 个)",
-                                 bg=self.colors['surface'],
-                                 fg=self.colors['error'],
-                                 font=('Segoe UI', 10))
+            count_label = tk.Label(
+                stat_frame,
+                text=f" ({len(problems)} 个)",
+                bg=self.colors['surface'],
+                fg=self.colors['error'],
+                font=('Segoe UI', 10)
+            )
             count_label.pack(side=tk.LEFT, padx=(4, 0))
 
+            # 保存引用
+            self.stat_widgets[error_type] = (stat_frame, type_btn, count_label, icon_var)
             row += 1
 
-        # 清空并重新填充问题文件列表
-        for item in self.problem_tree.get_children():
-            self.problem_tree.delete(item)
+        # 添加总计行
+        total_problems = sum(len(problems) for problems in self.problem_files.values())
+        if total_problems > 0:
+            total_frame = tk.Frame(self.error_stats_frame, bg=self.colors['error_container'])
+            total_frame.grid(row=row, column=0, sticky='w', pady=(8, 2))
+            tk.Label(total_frame, text=f"📊 总计: {total_problems} 个问题",
+                     bg=self.colors['error_container'],
+                     fg=self.colors['on_error_container'],
+                     font=('Segoe UI', 10, 'bold')).pack(side=tk.LEFT)
 
-        # 添加问题文件到列表
-        for error_type, problems in self.problem_files.items():
-            for problem in problems:
-                folder_name = self.folder_names.get(problem['folder'],
-                                                  os.path.basename(problem['folder']))
-                self.problem_tree.insert('', tk.END, values=(
-                    folder_name,
-                    problem['file'],
-                    problem['error_type'],
-                    problem['description']
-                ))
+        # 根据当前过滤状态更新问题列表
+        self.filter_problem_tree(self.current_filter)
 
         # 更新状态
         total_problems = sum(len(problems) for problems in self.problem_files.values())
@@ -3245,6 +3340,56 @@ class MaterialDesignGUI:
             self.log_message(f"✅ 扫描完成，发现 {total_problems} 个问题")
         else:
             self.log_message("✅ 扫描完成，未发现质量问题")
+
+    def toggle_error_type(self, error_type):
+        """切换错误类型的展开/折叠状态"""
+        if error_type in self.expanded_types:
+            self.expanded_types.remove(error_type)
+            self.current_filter = None  # 折叠后显示全部
+        else:
+            self.expanded_types.clear()  # 只允许展开一个
+            self.expanded_types.add(error_type)
+            self.current_filter = error_type
+
+        # 更新所有统计行的图标和颜色
+        for et, (frame, btn, count, icon_var) in self.stat_widgets.items():
+            if et in self.expanded_types:
+                icon_var.set("▼")
+                btn.config(fg=self.colors['primary'])  # 高亮当前选中的类型
+            else:
+                icon_var.set("▶")
+                btn.config(fg=self.colors['on_surface'])
+
+        # 更新问题列表
+        self.filter_problem_tree(self.current_filter)
+
+    def filter_problem_tree(self, filter_type=None):
+        """根据过滤类型更新问题树显示"""
+        # 清空当前列表
+        for item in self.problem_tree.get_children():
+            self.problem_tree.delete(item)
+
+        if filter_type is None:
+            # 显示全部
+            for error_type, problems in self.problem_files.items():
+                for problem in problems:
+                    self._insert_problem_item(problem)
+        else:
+            # 只显示指定类型
+            if filter_type in self.problem_files:
+                for problem in self.problem_files[filter_type]:
+                    self._insert_problem_item(problem)
+
+    def _insert_problem_item(self, problem):
+        """向问题树插入一条记录"""
+        folder_name = self.folder_names.get(problem['folder'],
+                                            os.path.basename(problem['folder']))
+        self.problem_tree.insert('', tk.END, values=(
+            folder_name,
+            problem['file'],
+            problem['error_type'],
+            problem['description']
+        ))
 
     def show_no_scan_results(self):
         """显示未扫描状态"""
@@ -3496,37 +3641,56 @@ class MaterialDesignGUI:
         if not confirm:
             return
 
-        # 执行删除操作
-        deleted_count = 0
-        error_count = 0
+        # 收集需要删除的文件（去重）
+        files_to_delete = set()
 
         for error_type in selected_types:
             if error_type not in self.problem_files:
                 continue
 
             for file_info in self.problem_files[error_type]:
-                try:
-                    # 删除JSON文件
-                    json_path = os.path.join(file_info['folder'], file_info['file'])
-                    self.delete_file_safely(json_path)
+                folder = file_info['folder']
+                filename = file_info['file']
 
-                    # 尝试删除对应的图片文件
+                if error_type == '缺json':
+                    # "缺json"问题：file字段是图片文件，不需要删除（图片本身没错）
+                    # 这类问题无法通过删除修复，跳过
+                    continue
+
+                elif error_type in ['缺图片', '图片JSON对应']:
+                    # "缺图片"问题：file字段是JSON文件，只删除JSON文件
+                    file_path = os.path.normpath(os.path.join(folder, filename))
+                    files_to_delete.add(file_path)
+
+                else:
+                    # 其他问题（标注越界、无效多边形等）：file字段是JSON文件
+                    # 需要先读取JSON获取图片名，然后删除JSON+图片
+                    file_path = os.path.normpath(os.path.join(folder, filename))
+                    files_to_delete.add(file_path)
+
+                    # 先读取JSON获取图片路径（在删除前！）
                     try:
-                        with open(json_path, 'r', encoding='utf-8') as f:
+                        with open(file_path, 'r', encoding='utf-8') as f:
                             data = json.load(f)
                         image_path = data.get('imagePath', '')
                         if image_path:
-                            full_image_path = os.path.join(file_info['folder'], image_path)
-                            if os.path.exists(full_image_path):
-                                self.delete_file_safely(full_image_path)
+                            image_name = os.path.basename(image_path)
+                            image_full_path = os.path.normpath(os.path.join(folder, image_name))
+                            if os.path.exists(image_full_path):
+                                files_to_delete.add(image_full_path)
                     except:
-                        pass  # 图片文件删除失败不影响JSON文件删除
+                        pass  # 读取失败不影响JSON文件删除
 
-                    deleted_count += 1
-
-                except Exception as e:
-                    self.log_message(f"❌ 删除文件失败 {file_info['file']}: {e}")
-                    error_count += 1
+        # 执行删除
+        deleted_count = 0
+        error_count = 0
+        for file_path in files_to_delete:
+            try:
+                self.delete_file_safely(file_path)
+                deleted_count += 1
+            except Exception as e:
+                self.log_message(f"❌ 删除文件失败 {os.path.basename(file_path)}: {e}")
+                error_count += 1
 
         # 更新界面和数据
         self.log_message(f"✅ 修复完成: 删除 {deleted_count} 个文件, 失败 {error_count} 个")
@@ -3572,7 +3736,8 @@ class MaterialDesignGUI:
             '空标签名': {'description': '检查标注的label字段是否为空', 'default': True},
             '面积为0': {'description': '检查标注区域面积是否为0', 'default': True},
             '图片JSON对应': {'description': '检查图片和JSON文件是否一一对应', 'default': True},
-            '标注数量匹配': {'description': '检查图片和标注数量是否匹配', 'default': True}
+            '标注数量匹配': {'description': '检查图片和标注数量是否匹配', 'default': True},
+            '无效bbox': {'description': '检查生成的bbox是否有效（无负值、宽高为正）', 'default': True}
         }
 
         # 创建检查选项的变量
@@ -4126,20 +4291,22 @@ class MaterialDesignGUI:
     
     def create_split_output_directories(self, output_dir, split_subsets, max_images_per_folder):
         """为分割后的子集创建输出目录结构"""
+        # 规范化输出目录路径，避免混合路径分隔符
+        output_dir = os.path.normpath(output_dir)
         self.log_message("创建分割后的输出目录结构...")
-        
+
         for subset_name, parts_list in split_subsets.items():
             if len(parts_list) == 1:
                 # 未分割的子集，创建标准目录
                 subset_dir = osp.join(output_dir, subset_name)
                 os.makedirs(subset_dir, exist_ok=True)
-                
+
                 images_dir = osp.join(subset_dir, 'images')
                 annotations_dir = osp.join(subset_dir, 'annotations')
-                
+
                 os.makedirs(images_dir, exist_ok=True)
                 os.makedirs(annotations_dir, exist_ok=True)
-                
+
                 self.log_message(f"创建目录: {subset_dir}")
             else:
                 # 分割后的子集，为每个部分创建目录
@@ -4147,15 +4314,15 @@ class MaterialDesignGUI:
                     part_name = f"{subset_name}_part{i+1:02d}"
                     part_dir = osp.join(output_dir, part_name)
                     os.makedirs(part_dir, exist_ok=True)
-                    
+
                     images_dir = osp.join(part_dir, 'images')
                     annotations_dir = osp.join(part_dir, 'annotations')
-                    
+
                     os.makedirs(images_dir, exist_ok=True)
                     os.makedirs(annotations_dir, exist_ok=True)
-                    
+
                     self.log_message(f"创建分割目录: {part_dir} ({len(part_files)} 张图片)")
-        
+
         # 创建分割信息文件
         self.create_subset_split_info_file(output_dir, split_subsets, max_images_per_folder)
     
@@ -4611,14 +4778,21 @@ class MaterialDesignGUI:
                         x1, x2 = sorted([x1, x2])
                         y1, y2 = sorted([y1, y2])
                         temp_points = [[x1, y1], [x2, y2]]  # 只需要对角线两点
-                        temp_bbox = [float(x1), float(y1), float(x2 - x1), float(y2 - y1)]
+                        # 修复bbox的浮点精度问题：钳制负值并四舍五入
+                        temp_bbox = [
+                            round(max(float(x1), 0), 2),
+                            round(max(float(y1), 0), 2),
+                            round(max(float(x2 - x1), 0), 2),
+                            round(max(float(y2 - y1), 0), 2)
+                        ]
                     else:
                         continue
                     
                     # 校验bbox有效性
-                    if temp_bbox is None or temp_bbox[2] <= 0 or temp_bbox[3] <= 0:
+                    if temp_bbox is None or temp_bbox[0] < 0 or temp_bbox[1] < 0 or temp_bbox[2] <= 0 or temp_bbox[3] <= 0:
+                        self.log_message(f"警告: 无效的bbox {temp_bbox}，跳过该标注")
                         continue
-                    
+
                     # 去重
                     rounded_bbox = tuple(round(v, 2) for v in temp_bbox)
                     category_id = converter.label_to_num[label]
@@ -4760,7 +4934,7 @@ class MaterialDesignGUI:
                         continue
                     
                     # 校验bbox有效性
-                    if temp_bbox is None or temp_bbox[2] <= 0 or temp_bbox[3] <= 0:
+                    if temp_bbox is None or temp_bbox[0] < 0 or temp_bbox[1] < 0 or temp_bbox[2] <= 0 or temp_bbox[3] <= 0:
                         self.log_message(f"警告: 无效的bbox {temp_bbox}，跳过该标注")
                         continue
                     
@@ -6494,14 +6668,21 @@ class MaterialDesignGUI:
                         x1, x2 = sorted([x1, x2])
                         y1, y2 = sorted([y1, y2])
                         temp_points = [[x1, y1], [x2, y2]]  # 只需要对角线两点
-                        temp_bbox = [float(x1), float(y1), float(x2 - x1), float(y2 - y1)]
+                        # 修复bbox的浮点精度问题：钳制负值并四舍五入
+                        temp_bbox = [
+                            round(max(float(x1), 0), 2),
+                            round(max(float(y1), 0), 2),
+                            round(max(float(x2 - x1), 0), 2),
+                            round(max(float(y2 - y1), 0), 2)
+                        ]
                     else:
                         continue
                     
                     # 校验bbox有效性
-                    if temp_bbox is None or temp_bbox[2] <= 0 or temp_bbox[3] <= 0:
+                    if temp_bbox is None or temp_bbox[0] < 0 or temp_bbox[1] < 0 or temp_bbox[2] <= 0 or temp_bbox[3] <= 0:
+                        self.log_message(f"警告: 无效的bbox {temp_bbox}，跳过该标注")
                         continue
-                    
+
                     # 去重
                     rounded_bbox = tuple(round(v, 2) for v in temp_bbox)
                     category_id = converter.label_to_num[label]

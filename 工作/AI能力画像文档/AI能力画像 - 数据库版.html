@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI能力画像助手 - 数据库版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .spinner { border-top-color: #3498db; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        th, td { @apply px-4 py-3 text-left text-sm; }
+        th { @apply font-semibold bg-gray-100 sticky top-0 z-10; }
+        td { @apply border-b border-gray-200; }
+        .tab-active { @apply border-b-2 border-blue-500 text-blue-600 font-semibold; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-8">
+
+    <div class="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-2xl p-6 md:p-10">
+
+        <!-- 标题 -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">AI能力画像文档管理系统</h1>
+            <p class="text-gray-600">从数据库加载项目数据，支持AI自动分析和手动处理</p>
+        </div>
+
+        <!-- 选项卡导航 -->
+        <div class="flex border-b border-gray-200 mb-6">
+            <button id="tab-data" class="px-6 py-3 text-gray-600 hover:text-gray-900 tab-active" onclick="switchTab('data')">
+                📊 项目数据
+            </button>
+            <button id="tab-sync" class="px-6 py-3 text-gray-600 hover:text-gray-900" onclick="switchTab('sync')">
+                🔄 数据同步
+            </button>
+            <button id="tab-analyze" class="px-6 py-3 text-gray-600 hover:text-gray-900" onclick="switchTab('analyze')">
+                🤖 AI分析
+            </button>
+            <button id="tab-manual" class="px-6 py-3 text-gray-600 hover:text-gray-900" onclick="switchTab('manual')">
+                ✏️ 手动处理
+            </button>
+        </div>
+
+        <!-- 项目数据标签页 -->
+        <div id="panel-data" class="tab-panel">
+            <!-- 筛选栏 -->
+            <div class="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                <select id="filter-factory" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">所有工厂</option>
+                </select>
+                <select id="filter-status" class="px-4 py-2 border border-gray-300 rounded-lg">
+                    <option value="">所有状态</option>
+                    <option value="synced">已同步</option>
+                    <option value="pending">待处理</option>
+                    <option value="failed">失败</option>
+                </select>
+                <input type="text" id="search-keyword" placeholder="搜索项目名称..." class="px-4 py-2 border border-gray-300 rounded-lg flex-1 min-w-[200px]">
+                <button onclick="loadProjects()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    刷新
+                </button>
+                <button onclick="exportToExcel()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    导出Excel
+                </button>
+            </div>
+
+            <!-- 统计信息 -->
+            <div id="stats-container" class="grid grid-cols-4 gap-4 mb-6"></div>
+
+            <!-- 数据表格 -->
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th>项目名称</th>
+                            <th>工厂名称</th>
+                            <th>项目目标</th>
+                            <th>应用场景</th>
+                            <th>核心功能</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projects-body" class="bg-white divide-y divide-gray-200">
+                        <tr><td colspan="7" class="text-center py-8 text-gray-500">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            <div class="flex justify-between items-center mt-4">
+                <span id="pagination-info" class="text-sm text-gray-600"></span>
+                <div class="flex gap-2">
+                    <button id="prev-page" onclick="changePage(-1)" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" disabled>上一页</button>
+                    <span id="page-info" class="px-4 py-2 text-gray-600">第 1 页</span>
+                    <button id="next-page" onclick="changePage(1)" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">下一页</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据同步标签页 -->
+        <div id="panel-sync" class="tab-panel hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-6 bg-blue-50 rounded-lg">
+                    <h3 class="text-lg font-semibold mb-4">Excel导入</h3>
+                    <input type="file" id="excel-file" accept=".xlsx,.xls" class="mb-4">
+                    <button onclick="uploadExcel()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        上传并导入
+                    </button>
+                </div>
+                <div class="p-6 bg-green-50 rounded-lg">
+                    <h3 class="text-lg font-semibold mb-4">数据库同步</h3>
+                    <p class="text-sm text-gray-600 mb-4">将南通数据库的项目同步到无锡数据库</p>
+                    <button onclick="syncDatabases()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        开始同步
+                    </button>
+                </div>
+            </div>
+
+            <!-- 同步任务列表 -->
+            <div class="mt-8">
+                <h3 class="text-lg font-semibold mb-4">同步任务历史</h3>
+                <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th>任务ID</th>
+                                <th>类型</th>
+                                <th>状态</th>
+                                <th>进度</th>
+                                <th>创建时间</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sync-tasks-body" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI分析标签页 -->
+        <div id="panel-analyze" class="tab-panel hidden">
+            <div class="p-6 bg-purple-50 rounded-lg mb-6">
+                <h3 class="text-lg font-semibold mb-4">批量AI分析</h3>
+                <p class="text-sm text-gray-600 mb-4">对数据库中待分析的项目进行AI能力画像分析</p>
+                <div class="flex gap-4">
+                    <button onclick="batchAnalyze()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                        开始批量分析
+                    </button>
+                    <button onclick="loadAnalysisQueue()" class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                        查看待分析队列
+                    </button>
+                </div>
+            </div>
+
+            <div id="analysis-status" class="hidden p-4 bg-white rounded-lg border border-gray-200">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium">分析进度</span>
+                    <span id="analysis-progress" class="text-sm text-blue-600">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="analysis-progress-bar" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 手动处理标签页（保留原有功能） -->
+        <div id="panel-manual" class="tab-panel hidden">
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">粘贴表格数据</label>
+                <textarea id="manual-input" rows="6" class="w-full p-4 border border-gray-300 rounded-lg"
+                    placeholder="项目名称	工厂名称	项目目标&#10;项目A	工厂B	目标C"></textarea>
+            </div>
+            <button onclick="processManual()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mb-6">
+                开始处理
+            </button>
+            <div id="manual-results" class="overflow-x-auto rounded-lg border border-gray-200"></div>
+        </div>
+
+    </div>
+
+    <script>
+        // API基础URL
+        const API_BASE = window.location.origin + '/api';
+
+        // 当前状态
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentTab = 'data';
+
+        // 切换标签页
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`panel-${tab}`).classList.remove('hidden');
+            document.querySelectorAll('[id^="tab-"]').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById(`tab-${tab}`).classList.add('tab-active');
+
+            if (tab === 'data') loadProjects();
+            if (tab === 'sync') loadSyncTasks();
+            if (tab === 'analyze') loadAnalysisQueue();
+        }
+
+        // 加载项目列表
+        async function loadProjects() {
+            const factory = document.getElementById('filter-factory').value;
+            const status = document.getElementById('filter-status').value;
+            const keyword = document.getElementById('search-keyword').value;
+
+            const params = new URLSearchParams({
+                page: currentPage,
+                page_size: 20,
+                ...(factory && { factory }),
+                ...(status && { status }),
+                ...(keyword && { keyword }),
+            });
+
+            try {
+                const response = await fetch(`${API_BASE}/projects?${params}`);
+                const data = await response.json();
+
+                renderProjects(data.items);
+                updatePagination(data.page, data.total_pages, data.total);
+                updateStats();
+                updateFactoryFilter(data.items);
+            } catch (error) {
+                console.error('加载项目失败:', error);
+            }
+        }
+
+        function renderProjects(projects) {
+            const tbody = document.getElementById('projects-body');
+            if (projects.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-500">暂无数据</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = projects.map(p => `
+                <tr class="hover:bg-gray-50">
+                    <td class="font-medium">${escapeHtml(p.project_name)}</td>
+                    <td>${escapeHtml(p.factory_name || '-')}</td>
+                    <td class="max-w-xs truncate" title="${escapeHtml(p.project_goal || '')}">${escapeHtml(p.project_goal || '-')}</td>
+                    <td class="max-w-xs truncate" title="${escapeHtml(p.application_scenario || '')}">${escapeHtml(p.application_scenario || '-')}</td>
+                    <td class="max-w-xs truncate">${p.core_functions ? (JSON.parse(p.core_functions) || []).slice(0, 2).join('; ') + (JSON.parse(p.core_functions).length > 2 ? '...' : '') : '-'}</td>
+                    <td>
+                        <span class="px-2 py-1 text-xs rounded-full ${p.sync_status === 'synced' ? 'bg-green-100 text-green-700' : p.sync_status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">
+                            ${p.sync_status}
+                        </span>
+                    </td>
+                    <td>
+                        <button onclick="viewProject(${p.id})" class="text-blue-600 hover:text-blue-800 text-sm">查看</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updatePagination(page, total, count) {
+            totalPages = total;
+            currentPage = page;
+            document.getElementById('pagination-info').textContent = `共 ${count} 条记录`;
+            document.getElementById('page-info').textContent = `第 ${page} / ${total} 页`;
+            document.getElementById('prev-page').disabled = page <= 1;
+            document.getElementById('next-page').disabled = page >= total;
+        }
+
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                loadProjects();
+            }
+        }
+
+        async function updateStats() {
+            try {
+                const response = await fetch(`${API_BASE}/projects/stats/summary`);
+                const data = await response.json();
+                document.getElementById('stats-container').innerHTML = `
+                    <div class="p-4 bg-white rounded-lg shadow">
+                        <div class="text-2xl font-bold text-blue-600">${data.total_projects || 0}</div>
+                        <div class="text-sm text-gray-600">总项目数</div>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg shadow">
+                        <div class="text-2xl font-bold text-green-600">${data.synced_projects || 0}</div>
+                        <div class="text-sm text-gray-600">已同步</div>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg shadow">
+                        <div class="text-2xl font-bold text-yellow-600">${data.pending_projects || 0}</div>
+                        <div class="text-sm text-gray-600">待处理</div>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg shadow">
+                        <div class="text-2xl font-bold text-purple-600">${data.factory_count || 0}</div>
+                        <div class="text-sm text-gray-600">工厂数</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('加载统计失败:', error);
+            }
+        }
+
+        async function updateFactoryFilter(projects) {
+            const factories = [...new Set(projects.map(p => p.factory_name).filter(Boolean))];
+            const select = document.getElementById('filter-factory');
+            const current = select.value;
+            select.innerHTML = '<option value="">所有工厂</option>' +
+                factories.map(f => `<option value="${f}" ${f === current ? 'selected' : ''}>${f}</option>`).join('');
+        }
+
+        async function loadSyncTasks() {
+            try {
+                const response = await fetch(`${API_BASE}/sync/tasks?limit=20`);
+                const tasks = await response.json();
+                document.getElementById('sync-tasks-body').innerHTML = tasks.map(t => `
+                    <tr>
+                        <td>${t.id}</td>
+                        <td>${t.task_type}</td>
+                        <td>
+                            <span class="px-2 py-1 text-xs rounded-full ${t.status === 'completed' ? 'bg-green-100 text-green-700' : t.status === 'running' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}">
+                                ${t.status}
+                            </span>
+                        </td>
+                        <td>${t.processed_count} / ${t.total_count}</td>
+                        <td>${new Date(t.created_at).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('加载同步任务失败:', error);
+            }
+        }
+
+        async function uploadExcel() {
+            const fileInput = document.getElementById('excel-file');
+            if (!fileInput.files.length) {
+                alert('请选择Excel文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${API_BASE}/sync/upload?region=nantong`, {
+                    method: 'POST',
+                    body: formData,
+                });
+                const result = await response.json();
+                alert(result.message);
+                loadProjects();
+            } catch (error) {
+                alert('上传失败: ' + error.message);
+            }
+        }
+
+        async function syncDatabases() {
+            if (!confirm('确定要同步数据库吗？')) return;
+            try {
+                const response = await fetch(`${API_BASE}/sync/sync-all?from_region=nantong&to_region=wuxi`, { method: 'POST' });
+                const result = await response.json();
+                alert(result.message);
+                loadSyncTasks();
+            } catch (error) {
+                alert('同步失败: ' + error.message);
+            }
+        }
+
+        async function batchAnalyze() {
+            try {
+                const response = await fetch(`${API_BASE}/analyze/batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                const result = await response.json();
+                alert(result.message);
+                document.getElementById('analysis-status').classList.remove('hidden');
+            } catch (error) {
+                alert('分析失败: ' + error.message);
+            }
+        }
+
+        async function loadAnalysisQueue() {
+            try {
+                const response = await fetch(`${API_BASE}/analyze/queue`);
+                const queue = await response.json();
+                alert(`待分析队列: ${queue.length} 个项目`);
+            } catch (error) {
+                console.error('加载队列失败:', error);
+            }
+        }
+
+        async function exportToExcel() {
+            try {
+                const response = await fetch(`${API_BASE}/sync/trigger?task_type=export_excel&source_file=output.xlsx`, { method: 'POST' });
+                const result = await response.json();
+                alert('导出任务已启动');
+            } catch (error) {
+                alert('导出失败: ' + error.message);
+            }
+        }
+
+        function processManual() {
+            // 保留原有手动处理逻辑（调用Gemini API）
+            alert('手动处理功能请使用原有的 AI能力画像助手 (Pro).html 页面');
+        }
+
+        function viewProject(id) {
+            window.open(`${API_BASE}/projects/${id}`, '_blank');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProjects();
+            updateStats();
+        });
+    </script>
+</body>
+</html>
