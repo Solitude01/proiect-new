@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ':*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -E \"\\\\.\\(py|html|js\\)$\")",
+      "Bash(python -m py_compile \"calude code GUI.py\")"
+    ]
+  }
+}

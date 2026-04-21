@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import py_compile; py_compile.compile\\('coco_validator_gui.py', doraise=True\\); print\\('✅ 语法检查通过'\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('coco_validator_gui.py', doraise=True\\); print\\('Syntax OK'\\)\")"
+    ]
+  }
+}

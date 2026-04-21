@@ -1,81 +1,273 @@
 {
-  "test_time": "2026-03-27 10:14:55",
-  "total": 3,
-  "success": 2,
+  "test_time": "2026-04-14 19:21:50",
+  "total": 2,
   "results": [
-    {
-      "name": "qwen3-8b",
-      "model": "qwen3-8b",
-      "note": "DeepSeek 域名 - Qwen3 8B",
-      "url": "http://ds.scc.com.cn/v1/chat/completions",
-      "status": "成功",
-      "response_time": 2.41,
-      "error": null,
-      "response": {
-        "id": "gd-bxs37sndan",
-        "object": "chat.completion",
-        "created": 1774577678,
-        "model": "qwen3-8b-pro",
-        "choices": [
-          {
-            "message": {
-              "role": "assistant",
-              "content": "\n\nHello! How can I assist you today? 😊",
-              "reasoning_content": "\nOkay, the user said \"Hello, test.\" I need to respond appropriately. Let me think. Since they mentioned \"test,\" maybe they're checking if I'm working or testing my responses. I should acknowledge their greeting and ask how I can assist them. Keep it friendly and open-ended. Let me make sure the response is natural and not too robotic. Alright, something like, \"Hello! How can I assist you today?\" That should work.\n"
-            },
-            "finish_reason": "stop",
-            "index": 0
-          }
-        ],
-        "usage": {
-          "prompt_tokens": 12,
-          "completion_tokens": 107,
-          "total_tokens": 119
-        }
-      },
-      "timestamp": "2026-03-27 10:14:51"
-    },
     {
       "name": "ds-v3",
       "model": "ds-v3",
       "note": "DeepSeek 域名 - DeepSeek v3",
       "url": "http://ds.scc.com.cn/v1/chat/completions",
       "status": "成功",
-      "response_time": 0.6,
+      "response_time": 1.5,
       "error": null,
-      "response": {
-        "id": "gd-n7zzjek921",
-        "object": "chat.completion",
-        "created": 1774577681,
-        "model": "ds-v3",
-        "choices": [
-          {
-            "message": {
-              "role": "assistant",
-              "content": "This is a test."
-            },
-            "finish_reason": "stop",
-            "index": 0
-          }
-        ],
-        "usage": {
-          "prompt_tokens": 6,
-          "completion_tokens": 6,
-          "total_tokens": 12
-        }
-      },
-      "timestamp": "2026-03-27 10:14:54"
+      "response": "Hello! I'm here and ready to help. If you have any questions or need assistance with anything, feel free to ask! 😊",
+      "timestamp": "2026-04-14 19:21:19"
     },
     {
-      "name": "glm",
-      "model": "glm",
-      "note": "DeepSeek 域名 - GLM 4.7 Flash",
-      "url": "http://ds.scc.com.cn/v1/chat/completions",
-      "status": "HTTP错误 404",
-      "response_time": 0.12,
-      "error": "",
-      "response": null,
-      "timestamp": "2026-03-27 10:14:55"
+      "name": "ds-v3",
+      "model": "ds-v3",
+      "note": "DeepSeek 域名 - DeepSeek v3",
+      "test_type": "rate_limit",
+      "status": "完成",
+      "total_sent": 30,
+      "total_ok": 30,
+      "total_429": 0,
+      "total_other_error": 0,
+      "first_429_at": null,
+      "details": [
+        {
+          "request_num": 1,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.67,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 2,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.67,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 3,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.62,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 4,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.65,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 5,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.65,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 6,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.64,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 7,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.65,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 8,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.66,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 9,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.69,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 10,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.77,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 11,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.68,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 12,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.63,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 13,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.68,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 14,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.73,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 15,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.67,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 16,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.71,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 17,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.69,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 18,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.64,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 19,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.67,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 20,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.69,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 21,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.7,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 22,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.76,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 23,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.68,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 24,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.66,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 25,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.71,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 26,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.65,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 27,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.68,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 28,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.68,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 29,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.69,
+          "rate_limited": false,
+          "info": ""
+        },
+        {
+          "request_num": 30,
+          "success": true,
+          "status_code": 200,
+          "elapsed": 0.64,
+          "rate_limited": false,
+          "info": ""
+        }
+      ],
+      "timestamp": "2026-04-14 19:21:21",
+      "elapsed_total": 23.33
     }
   ]
 }

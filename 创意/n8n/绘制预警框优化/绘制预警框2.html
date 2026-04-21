@@ -312,7 +312,63 @@
         .layer-btn:active {
             transform: translateY(0);
         }
-        
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 15px;
+            padding-left: 15px;
+            border-left: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .slider-label {
+            color: rgba(255,255,255,0.9);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .card-slider {
+            width: 80px;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .card-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.5);
+            border: 2px solid rgba(255,255,255,0.8);
+        }
+
+        .card-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.5);
+        }
+
+        .slider-value {
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 36px;
+            text-align: center;
+        }
+
         .file-name {
             margin-top: 10px;
             font-size: 14px;
@@ -473,6 +529,11 @@
                 <button class="layer-btn active" id="btnAll">🎯 全部展示</button>
                 <button class="layer-btn" id="btnTargets">📦 仅展示目标</button>
                 <button class="layer-btn" id="btnAlerts">⚠️ 仅展示预警</button>
+                <div class="slider-group">
+                    <label class="slider-label">卡片大小</label>
+                    <input type="range" id="cardSizeSlider" min="50" max="150" value="100" step="5" class="card-slider">
+                    <span id="cardSizeValue" class="slider-value">100%</span>
+                </div>
             </div>
             <div class="canvas-container">
                 <canvas id="canvas"></canvas>
@@ -531,6 +592,11 @@
         const btnAll = document.getElementById('btnAll');
         const btnTargets = document.getElementById('btnTargets');
         const btnAlerts = document.getElementById('btnAlerts');
+        const cardSizeSlider = document.getElementById('cardSizeSlider');
+        const cardSizeValue = document.getElementById('cardSizeValue');
+
+        // 卡片大小缩放比例 (1.0 = 100%)
+        let cardScale = 1.0;
         
         // 颜色配置 - 移除红色
         const colors = [
@@ -583,19 +649,47 @@
             drawCanvas();
         });
 
+        // 卡片大小滑块
+        cardSizeSlider.addEventListener('input', (e) => {
+            cardScale = parseInt(e.target.value) / 100;
+            cardSizeValue.textContent = `${e.target.value}%`;
+            drawCanvas();
+        });
+
         // 键盘导航支持
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' && currentImageIndex > 0) {
-                currentImageIndex--;
-                updateThumbnails();
+            // 模态框打开时，只处理 Escape 键
+            if (modal.style.display === 'block') {
+                if (e.key === 'Escape') {
+                    closeModalWindow();
+                }
+                return;
+            }
+
+            // 图片导航
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                if (currentImageIndex > 0) {
+                    currentImageIndex--;
+                    updateThumbnails();
+                    drawCanvas();
+                    e.preventDefault();
+                }
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                if (currentImageIndex < imageDataList.length - 1) {
+                    currentImageIndex++;
+                    updateThumbnails();
+                    drawCanvas();
+                    e.preventDefault();
+                }
+            } else if (e.key === 'w' || e.key === 'W') {
+                // 切换显示模式
+                const modes = ['all', 'targets', 'alerts'];
+                const currentIdx = modes.indexOf(displayMode);
+                displayMode = modes[(currentIdx + 1) % modes.length];
+                updateButtonStates();
                 drawCanvas();
                 e.preventDefault();
-            } else if (e.key === 'ArrowRight' && currentImageIndex < imageDataList.length - 1) {
-                currentImageIndex++;
-                updateThumbnails();
-                drawCanvas();
-                e.preventDefault();
-            } else if (e.key === 'Escape' && modal.style.display === 'block') {
+            } else if (e.key === 'Escape') {
                 closeModalWindow();
             }
         });
@@ -779,8 +873,272 @@
             statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
         }
 
-        // 在 canvas 上绘制多边形
-        function drawPolygonOnCanvas(context, polygon, width, height, color, label) {
+        // 检测两个矩形是否重叠（含间距）
+        function rectsOverlap(x1, y1, w1, h1, x2, y2, w2, h2, gap) {
+            return !(x1 + w1 + gap < x2 || x2 + w2 + gap < x1 ||
+                     y1 + h1 + gap < y2 || y2 + h2 + gap < y1);
+        }
+
+        // 解析所有标签位置，解决重叠问题
+        function resolveLabelPositions(items, canvasWidth, canvasHeight) {
+            // 基于 cardScale 的参数化尺寸
+            const BASE = {
+                padding: 12,
+                height: 56,
+                titleSize: 14,
+                confSize: 12,
+                offset: 90,
+                gap: 8,
+                cardOffsetY: 6,
+                boundaryMargin: 10,
+                fallbackOffset: 20
+            };
+            const CARD_PADDING = Math.round(BASE.padding * cardScale);
+            const CARD_HEIGHT = Math.round(BASE.height * cardScale);
+            const OFFSET = Math.round(BASE.offset * cardScale);
+            const GAP = Math.round(BASE.gap * cardScale);
+            const MAX_ITER = 5;
+
+            // 使用离屏 canvas 测量文字
+            const measureCanvas = document.createElement('canvas');
+            const measureCtx = measureCanvas.getContext('2d');
+
+            // 第一轮：计算每个标签的候选位置
+            const positions = items.map(item => {
+                measureCtx.font = `bold ${Math.round(BASE.titleSize * cardScale)}px "Microsoft YaHei", Arial`;
+                const nameWidth = measureCtx.measureText(item.label).width;
+                measureCtx.font = `${Math.round(BASE.confSize * cardScale)}px "Microsoft YaHei", Arial`;
+                const confWidth = measureCtx.measureText(item.confidence).width;
+                const cardWidth = Math.max(nameWidth, confWidth) + CARD_PADDING * 2;
+
+                let dirX = 1;
+                if (item.anchorX + OFFSET > canvasWidth - 140 * cardScale) dirX = -1;
+
+                const endX = item.anchorX + dirX * OFFSET;
+                const endY = item.anchorY - OFFSET * 0.5;
+                let cardX = endX - cardWidth / 2;
+                let cardY = endY - CARD_HEIGHT - BASE.cardOffsetY * cardScale;
+
+                if (cardX < 0) cardX = BASE.boundaryMargin * cardScale;
+                if (cardX + cardWidth > canvasWidth) cardX = canvasWidth - cardWidth - BASE.boundaryMargin * cardScale;
+                if (cardY < 0) cardY = endY + BASE.fallbackOffset * cardScale;
+
+                return {
+                    ...item, cardWidth, cardHeight: CARD_HEIGHT,
+                    endX, endY, cardX, cardY, dirX, adjusted: false
+                };
+            });
+
+            // 第二轮：检测重叠并调整（多次迭代）
+            for (let iter = 0; iter < MAX_ITER; iter++) {
+                let hasOverlap = false;
+                for (let i = 0; i < positions.length; i++) {
+                    for (let j = i + 1; j < positions.length; j++) {
+                        const a = positions[i], b = positions[j];
+                        if (rectsOverlap(a.cardX, a.cardY, a.cardWidth, a.cardHeight,
+                                         b.cardX, b.cardY, b.cardWidth, b.cardHeight, GAP)) {
+                            hasOverlap = true;
+                            // 策略：将后绘制的标签(b)向上移动
+                            const overlapAmount = Math.min(
+                                a.cardY + a.cardHeight + GAP - b.cardY,
+                                b.cardY + b.cardHeight - a.cardY + GAP
+                            );
+                            b.cardY -= overlapAmount + GAP;
+                            b.endY = b.cardY + 10 * cardScale;
+                            b.adjusted = true;
+
+                            if (b.cardY < 0) {
+                                // 上方空间不够，改为向下
+                                b.cardY = a.cardY + a.cardHeight + GAP;
+                                b.endY = b.cardY - b.cardHeight + 10 * cardScale;
+                            }
+                        }
+                    }
+                }
+                if (!hasOverlap) break;
+            }
+
+            return positions;
+        }
+
+        // 使用预计算位置绘制标注标签
+        function drawCalloutLabelWithPosition(context, pos, canvasWidth, canvasHeight) {
+            const { anchorX, anchorY, label, confidence, color,
+                    endX, endY, cardX, cardY, cardWidth, cardHeight, adjusted } = pos;
+
+            // 基于 cardScale 的参数化尺寸
+            const BASE = {
+                lineWidth: 2,
+                dotRadius: 4,
+                radius: 6,
+                titleSize: 14,
+                confSize: 12,
+                curveOffset: 15,
+                titleY: 20,
+                confY: 42
+            };
+
+            const lineW = BASE.lineWidth * cardScale;
+            const dotR = BASE.dotRadius * cardScale;
+            const radius = BASE.radius * cardScale;
+            const curveOffset = BASE.curveOffset * cardScale;
+            const titleY = BASE.titleY * cardScale;
+            const confY = BASE.confY * cardScale;
+
+            // 绘制斜线（调整过的标签使用曲线）
+            context.beginPath();
+            if (adjusted) {
+                const cpx = (anchorX + endX) / 2;
+                const cpy = Math.min(anchorY, endY) - curveOffset;
+                context.moveTo(anchorX, anchorY);
+                context.quadraticCurveTo(cpx, cpy, endX, endY);
+            } else {
+                context.moveTo(anchorX, anchorY);
+                context.lineTo(endX, endY);
+            }
+            context.strokeStyle = color.stroke;
+            context.lineWidth = lineW;
+            context.stroke();
+
+            // 斜线终点小圆点
+            context.beginPath();
+            context.arc(endX, endY, dotR, 0, Math.PI * 2);
+            context.fillStyle = color.stroke;
+            context.fill();
+
+            // 卡片背景
+            context.fillStyle = 'rgba(0, 0, 0, 0.85)';
+            context.strokeStyle = color.stroke;
+            context.lineWidth = 1.5 * cardScale;
+
+            context.beginPath();
+            context.moveTo(cardX + radius, cardY);
+            context.lineTo(cardX + cardWidth - radius, cardY);
+            context.quadraticCurveTo(cardX + cardWidth, cardY, cardX + cardWidth, cardY + radius);
+            context.lineTo(cardX + cardWidth, cardY + cardHeight - radius);
+            context.quadraticCurveTo(cardX + cardWidth, cardY + cardHeight, cardX + cardWidth - radius, cardY + cardHeight);
+            context.lineTo(cardX + radius, cardY + cardHeight);
+            context.quadraticCurveTo(cardX, cardY + cardHeight, cardX, cardY + cardHeight - radius);
+            context.lineTo(cardX, cardY + radius);
+            context.quadraticCurveTo(cardX, cardY, cardX + radius, cardY);
+            context.closePath();
+            context.fill();
+            context.stroke();
+
+            // 卡片文字
+            context.font = `bold ${Math.round(BASE.titleSize * cardScale)}px "Microsoft YaHei", Arial`;
+            context.fillStyle = '#ffffff';
+            context.textAlign = 'center';
+            context.fillText(label, cardX + cardWidth / 2, cardY + titleY);
+
+            context.font = `${Math.round(BASE.confSize * cardScale)}px "Microsoft YaHei", Arial`;
+            context.fillStyle = '#BBBBBB';
+            context.fillText(confidence, cardX + cardWidth / 2, cardY + confY);
+            context.textAlign = 'left';
+        }
+
+        // 绘制斜线引出式标注标签（独立调用版本，兼容旧代码）
+        function drawCalloutLabel(context, anchorX, anchorY, label, confidence, color, canvasWidth, canvasHeight) {
+            const offset = 90; // 斜线长度 - 更远的距离
+
+            // 自动调整方向，避免超出边界
+            let dirX = 1; // 1 = 向右, -1 = 向左
+            if (anchorX + offset > canvasWidth - 140) {
+                dirX = -1;
+            }
+
+            const endX = anchorX + dirX * offset;
+            const endY = anchorY - offset * 0.5; // 更平缓的角度
+
+            // 绘制斜线
+            context.beginPath();
+            context.moveTo(anchorX, anchorY);
+            context.lineTo(endX, endY);
+            context.strokeStyle = color.stroke;
+            context.lineWidth = 2;
+            context.stroke();
+
+            // 斜线终点小圆点
+            context.beginPath();
+            context.arc(endX, endY, 4, 0, Math.PI * 2);
+            context.fillStyle = color.stroke;
+            context.fill();
+
+            // 信息卡片尺寸 - 更大的卡片
+            const cardPadding = 12;
+            const cardLineHeight = 22;
+            const cardHeight = 56;
+            context.font = 'bold 14px "Microsoft YaHei", Arial';
+            const nameWidth = context.measureText(label).width;
+            context.font = '12px "Microsoft YaHei", Arial';
+            const confWidth = context.measureText(confidence).width;
+            const cardWidth = Math.max(nameWidth, confWidth) + cardPadding * 2;
+
+            // 卡片位置（确保不超出边界）
+            let cardX = endX - cardWidth / 2;
+            let cardY = endY - cardHeight - 6;
+            if (cardX < 0) cardX = 10;
+            if (cardX + cardWidth > canvasWidth) cardX = canvasWidth - cardWidth - 10;
+            if (cardY < 0) cardY = endY + 20;
+
+            // 卡片背景 - 更深的背景色
+            context.fillStyle = 'rgba(0, 0, 0, 0.85)';
+            context.strokeStyle = color.stroke;
+            context.lineWidth = 1.5;
+
+            const radius = 6;
+            context.beginPath();
+            context.moveTo(cardX + radius, cardY);
+            context.lineTo(cardX + cardWidth - radius, cardY);
+            context.quadraticCurveTo(cardX + cardWidth, cardY, cardX + cardWidth, cardY + radius);
+            context.lineTo(cardX + cardWidth, cardY + cardHeight - radius);
+            context.quadraticCurveTo(cardX + cardWidth, cardY + cardHeight, cardX + cardWidth - radius, cardY + cardHeight);
+            context.lineTo(cardX + radius, cardY + cardHeight);
+            context.quadraticCurveTo(cardX, cardY + cardHeight, cardX, cardY + cardHeight - radius);
+            context.lineTo(cardX, cardY + radius);
+            context.quadraticCurveTo(cardX, cardY, cardX + radius, cardY);
+            context.closePath();
+            context.fill();
+            context.stroke();
+
+            // 卡片文字
+            context.font = 'bold 14px "Microsoft YaHei", Arial';
+            context.fillStyle = '#ffffff';
+            context.textAlign = 'center';
+            context.fillText(label, cardX + cardWidth / 2, cardY + 20);
+
+            context.font = '12px "Microsoft YaHei", Arial';
+            context.fillStyle = '#BBBBBB';
+            context.fillText(confidence, cardX + cardWidth / 2, cardY + 42);
+            context.textAlign = 'left';
+        }
+
+        // 获取多边形顶边中点（用于标注锚点）
+        function getPolygonTopEdge(polygon, width, height) {
+            let topY = Infinity;
+            polygon.forEach(point => {
+                const py = parseFloat(point.y);
+                if (py < topY) topY = py;
+            });
+
+            let minX = Infinity, maxX = -Infinity;
+            polygon.forEach(point => {
+                const py = parseFloat(point.y);
+                if (Math.abs(py - topY) < 0.05) {
+                    const px = parseFloat(point.x);
+                    if (px < minX) minX = px;
+                    if (px > maxX) maxX = px;
+                }
+            });
+
+            return {
+                x: ((minX + maxX) / 2) * width,
+                y: topY * height
+            };
+        }
+
+        // 绘制多边形框体（无标签）
+        function drawPolygonFrame(context, polygon, width, height, color) {
             if (!polygon || polygon.length < 3) return;
 
             context.beginPath();
@@ -795,35 +1153,36 @@
             });
             context.closePath();
 
-            // 填充
             context.fillStyle = color.fill;
             context.fill();
 
-            // 边框
             context.strokeStyle = color.stroke;
             context.lineWidth = 3;
             context.stroke();
+        }
 
-            // 标签
+        // 绘制矩形框体（无标签）
+        function drawRectFrame(context, rect, width, height, color) {
+            const x = parseFloat(rect.x) * width;
+            const y = parseFloat(rect.y) * height;
+            const w = parseFloat(rect.w) * width;
+            const h = parseFloat(rect.h) * height;
+
+            context.strokeStyle = color.stroke;
+            context.lineWidth = 3;
+            context.strokeRect(x, y, w, h);
+
+            context.fillStyle = color.fill;
+            context.fillRect(x, y, w, h);
+        }
+
+        // 在 canvas 上绘制多边形（兼容旧调用）
+        function drawPolygonOnCanvas(context, polygon, width, height, color, label, confidence) {
+            drawPolygonFrame(context, polygon, width, height, color);
             if (label) {
-                // 计算多边形的中心点用于放置标签
-                let centerX = 0, centerY = 0;
-                polygon.forEach(point => {
-                    centerX += parseFloat(point.x);
-                    centerY += parseFloat(point.y);
-                });
-                centerX = (centerX / polygon.length) * width;
-                centerY = (centerY / polygon.length) * height;
-
-                context.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                context.font = 'bold 16px Arial';
-                const textMetrics = context.measureText(label);
-                context.fillRect(centerX - textMetrics.width / 2 - 5, centerY - 20, textMetrics.width + 10, 25);
-
-                context.fillStyle = '#ffffff';
-                context.textAlign = 'center';
-                context.fillText(label, centerX, centerY - 3);
-                context.textAlign = 'left';
+                const topResult = getPolygonTopEdge(polygon, width, height);
+                const confText = confidence ? `${confidence}%` : '';
+                drawCalloutLabel(context, topResult.x, topResult.y, label, confText, color, width, height);
             }
         }
 
@@ -871,6 +1230,9 @@
                 });
             }
 
+            // 收集所有标签项（用于防遮挡计算）
+            const labelItems = [];
+
             // 根据显示模式绘制
             if (displayMode === 'all' || displayMode === 'targets') {
                 // 绘制所有目标框
@@ -880,13 +1242,36 @@
                             // 动态获取规则名称
                             const typeName = getTargetTypeName(target.obj.id, jsonData);
                             const label = `目标${target.obj.id} (${typeName})`;
+                            const confidence = target.obj.confidence !== undefined
+                                ? (target.obj.confidence / 10).toFixed(1)
+                                : null;
                             const color = colors[index % colors.length];
 
-                            // 优先绘制多边形，如不存在则绘制矩形
+                            // 计算锚点
+                            let anchorX, anchorY;
                             if (target.obj.polygon) {
-                                drawPolygonOnCanvas(ctx, target.obj.polygon, canvas.width, canvas.height, color, label);
+                                const topResult = getPolygonTopEdge(target.obj.polygon, canvas.width, canvas.height);
+                                anchorX = topResult.x;
+                                anchorY = topResult.y;
                             } else if (target.obj.rect) {
-                                drawRectOnCanvas(ctx, target.obj.rect, canvas.width, canvas.height, color, label);
+                                anchorX = parseFloat(target.obj.rect.x) * canvas.width + parseFloat(target.obj.rect.w) * canvas.width / 2;
+                                anchorY = parseFloat(target.obj.rect.y) * canvas.height;
+                            }
+
+                            // 收集标签项
+                            if (anchorX !== undefined) {
+                                labelItems.push({
+                                    anchorX, anchorY, label,
+                                    confidence: confidence || '',
+                                    color, type: 'target'
+                                });
+                            }
+
+                            // 绘制框体
+                            if (target.obj.polygon) {
+                                drawPolygonFrame(ctx, target.obj.polygon, canvas.width, canvas.height, color);
+                            } else if (target.obj.rect) {
+                                drawRectFrame(ctx, target.obj.rect, canvas.width, canvas.height, color);
                             }
                         }
                     });
@@ -902,17 +1287,46 @@
                             const color = { stroke: '#ff0000', fill: 'rgba(255, 0, 0, 0.3)' };
                             const childTargetIds = target.childTargets ? target.childTargets.map(t => t.id).join(',') : '';
                             const label = `⚠️ ${alert.ruleInfo.ruleName} (目标${childTargetIds})`;
+                            const confidence = target.confidence !== undefined
+                                ? (target.confidence / 10).toFixed(1)
+                                : null;
 
-                            // 优先绘制多边形，如不存在则绘制矩形
+                            // 计算锚点
+                            let anchorX, anchorY;
                             if (target.region.polygon) {
-                                drawPolygonOnCanvas(ctx, target.region.polygon, canvas.width, canvas.height, color, label);
+                                const topResult = getPolygonTopEdge(target.region.polygon, canvas.width, canvas.height);
+                                anchorX = topResult.x;
+                                anchorY = topResult.y;
                             } else if (target.region.rect) {
-                                drawRectOnCanvas(ctx, target.region.rect, canvas.width, canvas.height, color, label);
+                                anchorX = parseFloat(target.region.rect.x) * canvas.width + parseFloat(target.region.rect.w) * canvas.width / 2;
+                                anchorY = parseFloat(target.region.rect.y) * canvas.height;
+                            }
+
+                            // 收集标签项
+                            if (anchorX !== undefined) {
+                                labelItems.push({
+                                    anchorX, anchorY, label,
+                                    confidence: confidence || '',
+                                    color, type: 'alert'
+                                });
+                            }
+
+                            // 绘制框体
+                            if (target.region.polygon) {
+                                drawPolygonFrame(ctx, target.region.polygon, canvas.width, canvas.height, color);
+                            } else if (target.region.rect) {
+                                drawRectFrame(ctx, target.region.rect, canvas.width, canvas.height, color);
                             }
                         }
                     });
                 }
             }
+
+            // 解析标签位置（防遮挡）并绘制
+            const resolvedPositions = resolveLabelPositions(labelItems, canvas.width, canvas.height);
+            resolvedPositions.forEach(pos => {
+                drawCalloutLabelWithPosition(ctx, pos, canvas.width, canvas.height);
+            });
 
             displayInfo();
             const alertCount = jsonData.events && jsonData.events.alertInfo ? jsonData.events.alertInfo.length : 0;
@@ -1070,7 +1484,7 @@
             infoPanel.innerHTML = html;
         }
         
-        function drawRectOnCanvas(context, rect, width, height, color, label) {
+        function drawRectOnCanvas(context, rect, width, height, color, label, confidence) {
             const x = parseFloat(rect.x) * width;
             const y = parseFloat(rect.y) * height;
             const w = parseFloat(rect.w) * width;
@@ -1083,17 +1497,13 @@
             context.fillStyle = color.fill;
             context.fillRect(x, y, w, h);
 
-            context.fillStyle = color.stroke;
-            context.font = 'bold 16px Arial';
-            const text = label || '预警';
-
-            // 文字背景
-            const textMetrics = context.measureText(text);
-            context.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            context.fillRect(x, y - 25, textMetrics.width + 10, 25);
-
-            context.fillStyle = '#ffffff';
-            context.fillText(text, x + 5, y - 7);
+            // 标签
+            if (label) {
+                const anchorX = x + w / 2;
+                const anchorY = y;
+                const confText = confidence ? `${confidence}%` : '';
+                drawCalloutLabel(context, anchorX, anchorY, label, confText, color, width, height);
+            }
         }
         
         // 模态框控制
@@ -1195,17 +1605,8 @@
 
             modalCtx.drawImage(imageData, 0, 0);
 
-            // 获取所有预警关联的目标ID
-            const alertTargetIds = new Set();
-            if (jsonData.events && jsonData.events.alertInfo) {
-                jsonData.events.alertInfo.forEach(alert => {
-                    if (alert.unionTargets && alert.unionTargets.childTargets) {
-                        alert.unionTargets.childTargets.forEach(child => {
-                            alertTargetIds.add(child.id);
-                        });
-                    }
-                });
-            }
+            // 收集所有标签项（用于防遮挡计算）
+            const labelItems = [];
 
             // 根据显示模式绘制
             if (displayMode === 'all' || displayMode === 'targets') {
@@ -1213,16 +1614,35 @@
                 if (jsonData.targets) {
                     jsonData.targets.forEach((target, index) => {
                         if (target.obj) {
-                            // 动态获取规则名称
                             const typeName = getTargetTypeName(target.obj.id, jsonData);
                             const label = `目标${target.obj.id} (${typeName})`;
+                            const confidence = target.obj.confidence !== undefined
+                                ? (target.obj.confidence / 10).toFixed(1)
+                                : null;
                             const color = colors[index % colors.length];
 
-                            // 优先绘制多边形，如不存在则绘制矩形
+                            let anchorX, anchorY;
                             if (target.obj.polygon) {
-                                drawPolygonOnCanvas(modalCtx, target.obj.polygon, modalCanvas.width, modalCanvas.height, color, label);
+                                const topResult = getPolygonTopEdge(target.obj.polygon, modalCanvas.width, modalCanvas.height);
+                                anchorX = topResult.x;
+                                anchorY = topResult.y;
                             } else if (target.obj.rect) {
-                                drawRectOnCanvas(modalCtx, target.obj.rect, modalCanvas.width, modalCanvas.height, color, label);
+                                anchorX = parseFloat(target.obj.rect.x) * modalCanvas.width + parseFloat(target.obj.rect.w) * modalCanvas.width / 2;
+                                anchorY = parseFloat(target.obj.rect.y) * modalCanvas.height;
+                            }
+
+                            if (anchorX !== undefined) {
+                                labelItems.push({
+                                    anchorX, anchorY, label,
+                                    confidence: confidence || '',
+                                    color, type: 'target'
+                                });
+                            }
+
+                            if (target.obj.polygon) {
+                                drawPolygonFrame(modalCtx, target.obj.polygon, modalCanvas.width, modalCanvas.height, color);
+                            } else if (target.obj.rect) {
+                                drawRectFrame(modalCtx, target.obj.rect, modalCanvas.width, modalCanvas.height, color);
                             }
                         }
                     });
@@ -1238,17 +1658,43 @@
                             const color = { stroke: '#ff0000', fill: 'rgba(255, 0, 0, 0.3)' };
                             const childTargetIds = target.childTargets ? target.childTargets.map(t => t.id).join(',') : '';
                             const label = `⚠️ ${alert.ruleInfo.ruleName} (目标${childTargetIds})`;
+                            const confidence = target.confidence !== undefined
+                                ? (target.confidence / 10).toFixed(1)
+                                : null;
 
-                            // 优先绘制多边形，如不存在则绘制矩形
+                            let anchorX, anchorY;
                             if (target.region.polygon) {
-                                drawPolygonOnCanvas(modalCtx, target.region.polygon, modalCanvas.width, modalCanvas.height, color, label);
+                                const topResult = getPolygonTopEdge(target.region.polygon, modalCanvas.width, modalCanvas.height);
+                                anchorX = topResult.x;
+                                anchorY = topResult.y;
                             } else if (target.region.rect) {
-                                drawRectOnCanvas(modalCtx, target.region.rect, modalCanvas.width, modalCanvas.height, color, label);
+                                anchorX = parseFloat(target.region.rect.x) * modalCanvas.width + parseFloat(target.region.rect.w) * modalCanvas.width / 2;
+                                anchorY = parseFloat(target.region.rect.y) * modalCanvas.height;
+                            }
+
+                            if (anchorX !== undefined) {
+                                labelItems.push({
+                                    anchorX, anchorY, label,
+                                    confidence: confidence || '',
+                                    color, type: 'alert'
+                                });
+                            }
+
+                            if (target.region.polygon) {
+                                drawPolygonFrame(modalCtx, target.region.polygon, modalCanvas.width, modalCanvas.height, color);
+                            } else if (target.region.rect) {
+                                drawRectFrame(modalCtx, target.region.rect, modalCanvas.width, modalCanvas.height, color);
                             }
                         }
                     });
                 }
             }
+
+            // 解析标签位置（防遮挡）并绘制
+            const resolvedPositions = resolveLabelPositions(labelItems, modalCanvas.width, modalCanvas.height);
+            resolvedPositions.forEach(pos => {
+                drawCalloutLabelWithPosition(modalCtx, pos, modalCanvas.width, modalCanvas.height);
+            });
         }
     </script>
 </body>

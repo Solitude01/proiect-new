@@ -48,6 +48,7 @@ class Stats:
         self.log = deque(maxlen=200)
         # 每分钟请求数（最近60分钟）
         self.rpm_buckets  = defaultdict(int)   # minute_ts -> count
+        self.tpm_buckets  = defaultdict(int)   # minute_ts -> total_tokens
 
     def record(self, user_id: str, ok: bool, in_tok: int, out_tok: int, latency: float, error: str = ""):
         ts = datetime.now()
@@ -58,6 +59,7 @@ class Stats:
             self.total_out_tok+= out_tok
             self.total_latency+= latency
             self.rpm_buckets[minute_key] += 1
+            self.tpm_buckets[minute_key] += (in_tok + out_tok)
             if ok:
                 self.total_ok += 1
             else:
@@ -82,10 +84,14 @@ class Stats:
     def snapshot(self):
         with self._lock:
             uptime = int(time.time() - self.start_time)
+            uptime_min = max(uptime // 60, 1)
             avg_lat = (self.total_latency / self.total_ok) if self.total_ok else 0
+            avg_rpm = self.total_reqs / uptime_min
+            avg_tpm = (self.total_in_tok + self.total_out_tok) / uptime_min
             # 最近10分钟 RPM
             now_min = datetime.now().strftime("%H:%M")
             recent_rpm = list(self.rpm_buckets.items())[-10:]
+            recent_tpm = list(self.tpm_buckets.items())[-10:]
             return {
                 "uptime_s":    uptime,
                 "total_reqs":  self.total_reqs,
@@ -94,9 +100,12 @@ class Stats:
                 "total_in_tok":self.total_in_tok,
                 "total_out_tok":self.total_out_tok,
                 "avg_latency": round(avg_lat, 2),
+                "avg_rpm":     round(avg_rpm, 2),
+                "avg_tpm":     round(avg_tpm, 2),
                 "users":       dict(self.user_stats),
                 "recent_log":  list(reversed(self.log)),
                 "rpm_chart":   recent_rpm,
+                "tpm_chart":   recent_tpm,
             }
 
 stats = Stats()
@@ -311,7 +320,17 @@ async def stream_anthropic(body: dict, user_id: str):
         stats.record(user_id, True, input_tokens, output_tokens, time.time()-t0)
 
     except httpx.HTTPStatusError as e:
-        error_msg = f"Backend {e.response.status_code}: {e.response.text[:200]}"
+        try:
+            error_text = e.response.text
+        except httpx.ResponseNotRead:
+            try:
+                e.response.read()
+                error_text = e.response.text
+            except Exception:
+                error_text = f"<streaming response, status={e.response.status_code}>"
+        except Exception:
+            error_text = "<unable to read response>"
+        error_msg = f"Backend {e.response.status_code}: {error_text[:200]}"
         stats.record(user_id, False, input_tokens_est, 0, time.time()-t0, error_msg)
         yield sse("error",{"type":"error","error":{"type":"api_error","message":error_msg}})
         return
@@ -411,6 +430,11 @@ async def list_models():
     return JSONResponse({"object":"list","data":[{"id":DEFAULT_MODEL,"object":"model","created":int(time.time()),"owned_by":"local"}]})
 
 
+@app.get("/")
+async def root():
+    return {"status":"ok","service":"claude-code-proxy","version":"v4"}
+
+
 @app.get("/health")
 async def health():
     return {"status":"ok","backend":BACKEND_URL,"port":LISTEN_PORT}
@@ -436,38 +460,63 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <title>Claude Code Proxy 监控</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
-.header{background:linear-gradient(135deg,#1a1f2e,#252b3b);padding:20px 32px;border-bottom:1px solid #2d3748;display:flex;align-items:center;gap:16px}
-.header h1{font-size:1.4rem;font-weight:600;color:#a78bfa}
-.header .sub{font-size:.85rem;color:#64748b;margin-top:2px}
-.badge{background:#a78bfa22;color:#a78bfa;padding:3px 10px;border-radius:99px;font-size:.78rem;border:1px solid #a78bfa44}
+:root{
+--bg:#0f1117;--card-bg:#1a1f2e;--border:#2d3748;--text:#e2e8f0;
+--text-dim:#64748b;--text-mid:#94a3b8;--purple:#a78bfa;--purple-dim:#a78bfa22;
+--purple-border:#a78bfa44;--green:#34d399;--green-dim:#34d39922;
+--red:#f87171;--red-dim:#f8717122;--blue:#60a5fa;--warn:#fbbf24;
+--row-hover:#1e2433;--bar-bg:#1e2433;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.header{background:linear-gradient(135deg,#1a1f2e,#252b3b);padding:20px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.header h1{font-size:1.4rem;font-weight:600;color:var(--purple)}
+.header .sub{font-size:.85rem;color:var(--text-dim);margin-top:2px}
+.badge{background:var(--purple-dim);color:var(--purple);padding:3px 10px;border-radius:99px;font-size:.78rem;border:1px solid var(--purple-border)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;padding:24px 32px 0}
-.card{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:20px}
-.card .label{font-size:.78rem;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
-.card .value{font-size:2rem;font-weight:700;color:#e2e8f0}
-.card .value.green{color:#34d399}
-.card .value.red{color:#f87171}
-.card .value.blue{color:#60a5fa}
-.card .value.purple{color:#a78bfa}
-.card .sub{font-size:.8rem;color:#64748b;margin-top:4px}
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:20px}
+.card .label{font-size:.78rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.card .value{font-size:2rem;font-weight:700;color:var(--text)}
+.card .value.green{color:var(--green)}
+.card .value.red{color:var(--red)}
+.card .value.blue{color:var(--blue)}
+.card .value.purple{color:var(--purple)}
+.card .sub{font-size:.8rem;color:var(--text-dim);margin-top:4px}
 .section{padding:24px 32px}
-.section h2{font-size:1rem;font-weight:600;color:#94a3b8;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.section h2::before{content:'';display:inline-block;width:3px;height:1em;background:#a78bfa;border-radius:2px}
+.section h2{font-size:1rem;font-weight:600;color:var(--text-mid);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.section h2::before{content:'';display:inline-block;width:3px;height:1em;background:var(--purple);border-radius:2px}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
-th{text-align:left;padding:8px 12px;color:#64748b;font-weight:500;border-bottom:1px solid #2d3748;font-size:.78rem;text-transform:uppercase}
-td{padding:9px 12px;border-bottom:1px solid #1e2433;color:#cbd5e1}
-tr:hover td{background:#1e2433}
-.ok{color:#34d399}.err{color:#f87171}.warn{color:#fbbf24}
+th{text-align:left;padding:8px 12px;color:var(--text-dim);font-weight:500;border-bottom:1px solid var(--border);font-size:.78rem;text-transform:uppercase}
+td{padding:9px 12px;border-bottom:1px solid var(--row-hover);color:var(--text-mid)}
+tr:hover td{background:var(--row-hover)}
+.ok{color:var(--green)}.err{color:var(--red)}.warn{color:var(--warn)}
 .bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.bar-label{width:48px;font-size:.78rem;color:#64748b;text-align:right;flex-shrink:0}
-.bar-bg{flex:1;height:18px;background:#1e2433;border-radius:4px;overflow:hidden}
-.bar-fill{height:100%;background:linear-gradient(90deg,#6366f1,#a78bfa);border-radius:4px;transition:width .5s}
-.bar-val{width:48px;font-size:.78rem;color:#94a3b8;flex-shrink:0}
+.bar-label{width:48px;font-size:.78rem;color:var(--text-dim);text-align:right;flex-shrink:0}
+.bar-bg{flex:1;height:18px;background:var(--bar-bg);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#6366f1,var(--purple));border-radius:4px;transition:width .5s}
+.bar-wrap:hover .bar-fill{filter:brightness(1.2)}
+.bar-val{width:48px;font-size:.78rem;color:var(--text-mid);flex-shrink:0}
+@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
 .refresh{font-size:.78rem;color:#475569;padding:0 32px 16px;display:flex;align-items:center;gap:8px}
 .dot{width:7px;height:7px;background:#34d399;border-radius:50%;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:500}
 .tag.ok{background:#34d39922;color:#34d399}.tag.err{background:#f8717122;color:#f87171}
+@media(max-width:768px){
+.header{padding:16px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:1.1rem;width:100%}
+.grid{padding:16px;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.card{padding:14px}
+.card .value{font-size:1.4rem}
+.section{padding:16px}
+table{font-size:.75rem}
+th,td{padding:6px 8px}
+.bar-label{width:36px;font-size:.7rem}
+.bar-val{width:36px;font-size:.7rem}
+}
+@media(max-width:480px){
+.grid{grid-template-columns:1fr}
+.header button{font-size:.75rem;padding:5px 10px}
+}
 </style>
 </head>
 <body>
@@ -477,19 +526,31 @@ tr:hover td{background:#1e2433}
     <div class="sub">实时 API 使用统计 · 本地模型代理</div>
   </div>
   <div class="badge" id="backend-url">加载中...</div>
+  <button onclick="refresh()" style="margin-left:auto;background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;gap:6px;transition:all .2s" onmouseover="this.style.background='#a78bfa33'" onmouseout="this.style.background='#a78bfa22'">⟳ 刷新</button>
+  <button onclick="exportData()" style="background:#34d39922;color:#34d399;border:1px solid #34d39944;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;gap:6px;transition:all .2s" onmouseover="this.style.background='#34d39933'" onmouseout="this.style.background='#34d39922'">↓ 导出</button>
 </div>
 <div class="refresh"><span class="dot"></span>每 5 秒自动刷新 · 最后更新: <span id="last-update">-</span></div>
 
 <div class="grid" id="cards"></div>
 
 <div class="section">
-  <h2>最近10分钟 请求量趋势</h2>
-  <div id="rpm-chart"></div>
+  <h2>最近10分钟 请求量与Token趋势</h2>
+  <div id="rpm-chart" role="img" aria-label="最近10分钟请求量与Token趋势图"></div>
+</div>
+
+<div class="section">
+  <h2>Token 消耗分布</h2>
+  <div id="token-pie-chart" role="img" aria-label="Token消耗分布饼图"></div>
+</div>
+
+<div class="section">
+  <h2>用户活跃度排行</h2>
+  <div id="user-rank-chart" role="img" aria-label="用户活跃度排行图"></div>
 </div>
 
 <div class="section">
   <h2>用户统计（按 IP / API Key）</h2>
-  <table><thead><tr>
+  <table role="table" aria-label="用户统计数据"><thead><tr>
     <th>用户标识</th><th>请求数</th><th>成功</th><th>失败</th>
     <th>输入 Tokens</th><th>输出 Tokens</th><th>最后活跃</th>
   </tr></thead><tbody id="user-table"></tbody></table>
@@ -497,61 +558,168 @@ tr:hover td{background:#1e2433}
 
 <div class="section">
   <h2>最近请求日志</h2>
-  <table><thead><tr>
+  <table role="table" aria-label="最近请求日志"><thead><tr>
     <th>时间</th><th>用户</th><th>状态</th>
     <th>输入 Token</th><th>输出 Token</th><th>耗时(s)</th><th>错误</th>
   </tr></thead><tbody id="log-table"></tbody></table>
 </div>
 
 <script>
+let refreshInProgress = false;
+
+function esc(s){
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function exportData(){
+  fetch('/stats').then(r=>r.json()).then(d=>{
+    const ts = new Date().toISOString().replace(/[:.]/g,'-');
+    // 导出 JSON
+    const blob = new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'proxy-stats-' + ts + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }).catch(e=>showError('导出失败: '+e.message));
+}
+
+function showError(msg){
+  const existing = document.getElementById('error-banner');
+  if(existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.id = 'error-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f87171;color:#fff;padding:12px 32px;text-align:center;font-size:.85rem;z-index:9999;animation:slideDown .3s ease';
+  banner.textContent = '⚠ 数据加载失败: ' + msg;
+  document.body.insertBefore(banner, document.body.firstChild);
+  setTimeout(()=>{ if(banner.parentNode) banner.remove(); }, 5000);
+}
+
 async function refresh(){
+  if(refreshInProgress) return;
+  refreshInProgress = true;
+
+  // 显示加载状态
+  const refreshBtn = document.querySelector('.header button');
+  if(refreshBtn){
+    refreshBtn.disabled = true;
+    refreshBtn.style.opacity = '0.5';
+  }
+
   try{
-    const r=await fetch('/stats');
-    const d=await r.json();
+    const response = await fetch('/stats');
+    if(!response.ok) throw new Error('HTTP ' + response.status);
+    const statsData = await response.json();
     document.getElementById('last-update').textContent=new Date().toLocaleTimeString();
     document.getElementById('backend-url').textContent='后端: '+location.host;
 
-    const upH=Math.floor(d.uptime_s/3600),upM=Math.floor((d.uptime_s%3600)/60);
-    const errRate=d.total_reqs?((d.total_err/d.total_reqs)*100).toFixed(1):0;
+    const upH=Math.floor(statsData.uptime_s/3600),upM=Math.floor((statsData.uptime_s%3600)/60);
+    const errRate=statsData.total_reqs?((statsData.total_err/statsData.total_reqs)*100).toFixed(1):0;
     document.getElementById('cards').innerHTML=`
-      <div class="card"><div class="label">总请求数</div><div class="value blue">${d.total_reqs.toLocaleString()}</div><div class="sub">成功 ${d.total_ok} / 失败 ${d.total_err}</div></div>
-      <div class="card"><div class="label">输入 Tokens</div><div class="value purple">${d.total_in_tok.toLocaleString()}</div><div class="sub">累计消耗</div></div>
-      <div class="card"><div class="label">输出 Tokens</div><div class="value purple">${d.total_out_tok.toLocaleString()}</div><div class="sub">累计生成</div></div>
-      <div class="card"><div class="label">总 Tokens</div><div class="value">${(d.total_in_tok+d.total_out_tok).toLocaleString()}</div><div class="sub">输入+输出</div></div>
-      <div class="card"><div class="label">平均延迟</div><div class="value ${d.avg_latency>30?'red':d.avg_latency>10?'warn':'green'}">${d.avg_latency}s</div><div class="sub">成功请求</div></div>
-      <div class="card"><div class="label">错误率</div><div class="value ${errRate>10?'red':errRate>5?'warn':'green'}">${errRate}%</div><div class="sub">共 ${d.total_err} 次错误</div></div>
-      <div class="card"><div class="label">活跃用户</div><div class="value green">${Object.keys(d.users).length}</div><div class="sub">累计接入</div></div>
+      <div class="card"><div class="label">总请求数</div><div class="value blue">${statsData.total_reqs.toLocaleString()}</div><div class="sub">成功 ${statsData.total_ok} / 失败 ${statsData.total_err}</div></div>
+      <div class="card"><div class="label">输入 Tokens</div><div class="value purple">${statsData.total_in_tok.toLocaleString()}</div><div class="sub">累计消耗</div></div>
+      <div class="card"><div class="label">输出 Tokens</div><div class="value purple">${statsData.total_out_tok.toLocaleString()}</div><div class="sub">累计生成</div></div>
+      <div class="card"><div class="label">总 Tokens</div><div class="value">${(statsData.total_in_tok+statsData.total_out_tok).toLocaleString()}</div><div class="sub">输入+输出</div></div>
+      <div class="card"><div class="label">平均延迟</div><div class="value ${statsData.avg_latency>30?'red':statsData.avg_latency>10?'warn':'green'}">${statsData.avg_latency}s</div><div class="sub">成功请求</div></div>
+      <div class="card"><div class="label">错误率</div><div class="value ${errRate>10?'red':errRate>5?'warn':'green'}">${errRate}%</div><div class="sub">共 ${statsData.total_err} 次错误</div></div>
+      <div class="card"><div class="label">活跃用户</div><div class="value green">${Object.keys(statsData.users).length}</div><div class="sub">累计接入</div></div>
       <div class="card"><div class="label">运行时长</div><div class="value">${upH}h ${upM}m</div><div class="sub">启动后持续运行</div></div>
+      <div class="card"><div class="label">平均 RPM</div><div class="value blue">${statsData.avg_rpm.toFixed(1)}</div><div class="sub">每分钟平均请求数</div></div>
+      <div class="card"><div class="label">平均 TPM</div><div class="value purple">${statsData.avg_tpm.toFixed(1)}</div><div class="sub">每分钟平均 Token 数</div></div>
     `;
 
-    // RPM 图表
-    const maxRPM=Math.max(...d.rpm_chart.map(x=>x[1]),1);
-    document.getElementById('rpm-chart').innerHTML=d.rpm_chart.map(([t,v])=>`
-      <div class="bar-wrap">
-        <div class="bar-label">${t}</div>
-        <div class="bar-bg"><div class="bar-fill" style="width:${(v/maxRPM*100).toFixed(1)}%"></div></div>
-        <div class="bar-val">${v}次</div>
-      </div>`).join('');
+    // RPM + TPM 双指标图表
+    const maxRPM=Math.max(...statsData.rpm_chart.map(x=>x[1]),1);
+    const maxTPM=Math.max(...statsData.tpm_chart.map(x=>x[1]),1);
+    const allTimes=new Set([...statsData.rpm_chart.map(x=>x[0]),...statsData.tpm_chart.map(x=>x[0])]);
+    const sortedTimes=[...allTimes].sort();
+    const rpmMap=new Map(statsData.rpm_chart);
+    const tpmMap=new Map(statsData.tpm_chart);
+    let chartHTML='<div style="margin-bottom:16px"><div style="font-size:.75rem;color:var(--text-dim);margin-bottom:6px">▸ RPM（每分钟请求数）</div>';
+    sortedTimes.forEach(t=>{
+      const rv=rpmMap.get(t)||0;
+      chartHTML+=`<div class="bar-wrap" title="${t} · ${rv} 次请求" style="cursor:default"><div class="bar-label">${t}</div><div class="bar-bg"><div class="bar-fill" style="width:${(rv/maxRPM*100).toFixed(1)}%;background:linear-gradient(90deg,#60a5fa,#3b82f6)"></div></div><div class="bar-val">${rv}</div></div>`;
+    });
+    chartHTML+='</div><div><div style="font-size:.75rem;color:var(--text-dim);margin-bottom:6px">▸ TPM（每分钟Token数）</div>';
+    sortedTimes.forEach(t=>{
+      const tv=tpmMap.get(t)||0;
+      chartHTML+=`<div class="bar-wrap" title="${t} · ${tv} Tokens" style="cursor:default"><div class="bar-label">${t}</div><div class="bar-bg"><div class="bar-fill" style="width:${(tv/maxTPM*100).toFixed(1)}%"></div></div><div class="bar-val">${tv}</div></div>`;
+    });
+    chartHTML+='</div>';
+    document.getElementById('rpm-chart').innerHTML=chartHTML;
+
+    // Token 消耗分布饼图
+    const inT=statsData.total_in_tok||0, outT=statsData.total_out_tok||0, totalT=inT+outT;
+    if(totalT>0){
+      const inPct=(inT/totalT*100).toFixed(1), outPct=(outT/totalT*100).toFixed(1);
+      const size=160, cx=size/2, cy=size/2, r=60;
+      const circum=2*Math.PI*r;
+      const inLen=(inT/totalT*circum).toFixed(2);
+      const outLen=(outT/totalT*circum).toFixed(2);
+      document.getElementById('token-pie-chart').innerHTML=`
+        <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap">
+          <div style="position:relative;width:${size}px;height:${size}px;flex-shrink:0">
+            <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">
+              <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#2d3748" stroke-width="32"/>
+              <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#6366f1" stroke-width="32" stroke-dasharray="${inLen} ${circum}" stroke-dashoffset="0"/>
+              <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#a78bfa" stroke-width="32" stroke-dasharray="${outLen} ${circum}" stroke-dashoffset="-${inLen}"/>
+            </svg>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+              <div style="font-size:1.1rem;font-weight:700">${totalT>1000000?(totalT/1000000).toFixed(1)+'M':totalT>1000?(totalT/1000).toFixed(1)+'K':totalT}</div>
+              <div style="font-size:.7rem;color:var(--text-dim)">总 Tokens</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:3px;background:#6366f1"></div><span style="font-size:.85rem;color:var(--text-mid)">输入 Token <strong style="color:var(--text)">${inT.toLocaleString()}</strong> (${inPct}%)</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:3px;background:#a78bfa"></div><span style="font-size:.85rem;color:var(--text-mid)">输出 Token <strong style="color:var(--text)">${outT.toLocaleString()}</strong> (${outPct}%)</span></div>
+          </div>
+        </div>`;
+    }
+
+    // 用户活跃度排行
+    const sortedUsers=Object.entries(statsData.users).sort((a,b)=>b[1].reqs-a[1].reqs).slice(0,10);
+    if(sortedUsers.length>0){
+      const maxReqs=Math.max(...sortedUsers.map(x=>x[1].reqs),1);
+      document.getElementById('user-rank-chart').innerHTML=sortedUsers.map(([uid,u])=>`
+        <div class="bar-wrap" title="${esc(uid)} · ${u.reqs} 次请求" style="cursor:default">
+          <div class="bar-label" style="width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left" title="${esc(uid)}">${esc(uid)}</div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${(u.reqs/maxReqs*100).toFixed(1)}%;background:linear-gradient(90deg,#34d399,#10b981)"></div></div>
+          <div class="bar-val">${u.reqs}次</div>
+        </div>`).join('');
+    } else {
+      document.getElementById('user-rank-chart').innerHTML='<div style="color:var(--text-dim);font-size:.85rem;padding:16px 0">暂无用户数据</div>';
+    }
 
     // 用户表
-    document.getElementById('user-table').innerHTML=Object.entries(d.users).sort((a,b)=>b[1].reqs-a[1].reqs).map(([uid,u])=>`
+    document.getElementById('user-table').innerHTML=Object.entries(statsData.users).sort((a,b)=>b[1].reqs-a[1].reqs).map(([uid,u])=>`
       <tr>
-        <td>${uid}</td><td>${u.reqs}</td>
+        <td>${esc(uid)}</td><td>${u.reqs}</td>
         <td class="ok">${u.ok}</td><td class="err">${u.err}</td>
         <td>${u.in_tok.toLocaleString()}</td><td>${u.out_tok.toLocaleString()}</td>
-        <td>${u.last_seen}</td>
+        <td>${esc(u.last_seen)}</td>
       </tr>`).join('');
 
     // 日志表
-    document.getElementById('log-table').innerHTML=d.recent_log.slice(0,50).map(l=>`
+    document.getElementById('log-table').innerHTML=statsData.recent_log.slice(0,50).map(l=>`
       <tr>
-        <td>${l.time}</td><td>${l.user}</td>
+        <td>${esc(l.time)}</td><td>${esc(l.user)}</td>
         <td><span class="tag ${l.ok?'ok':'err'}">${l.ok?'OK':'ERR'}</span></td>
         <td>${l.in_tok}</td><td>${l.out_tok}</td>
         <td>${l.latency}</td>
-        <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;color:#f87171">${l.error||''}</td>
+        <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;color:#f87171">${esc(l.error||'')}</td>
       </tr>`).join('');
-  }catch(e){console.error(e)}
+  }catch(e){
+    console.error(e);
+    showError(e.message || '未知错误');
+  }finally{
+    refreshInProgress = false;
+    if(refreshBtn){
+      refreshBtn.disabled = false;
+      refreshBtn.style.opacity = '1';
+    }
+  }
 }
 refresh();
 setInterval(refresh,5000);
