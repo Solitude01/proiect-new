@@ -4,7 +4,11 @@
       "Bash(pip list:*)",
       "Bash(python:*)",
       "Bash(d:/proiect/.venv/Scripts/python.exe -m PyInstaller --onefile --noconsole --name \"时钟源配置工具\" --clean --noconfirm --collect-all ttkbootstrap sync_clock_gui.py)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(pyinstaller --clean \"时钟源配置工具.spec\")",
+      "Bash(w32tm:*)",
+      "Bash(powershell:*)",
+      "Bash(reg query:*)"
     ]
   }
 }

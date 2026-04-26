@@ -441,6 +441,8 @@ class MaterialDesignGUI:
         self.expanded_types = set()  # 当前展开的错误类型
         self.current_filter = None   # 当前过滤类型，None表示显示全部
         self.stat_widgets = {}       # 保存统计行widget引用 {error_type: (frame, btn, count, icon_var)}
+        self.seen_filenames = {}     # 全局文件名去重追踪：basename -> set(已使用的完整文件名)
+        self.filename_mapping = {}   # 文件名映射表：(subset_name, original_basename) -> deduplicated_basename
         print("多文件夹管理变量初始化完成")
         
         # 全局进度与按钮集合
@@ -1116,7 +1118,9 @@ class MaterialDesignGUI:
                                      relief='flat',
                                      borderwidth=1)
         self.edit_id_entry.pack(side=tk.LEFT, padx=(8, 16))
-        
+
+        self.new_label_name_var = tk.StringVar()
+
         self.update_label_btn = tk.Button(edit_row1,
                                          text="更新ID",
                                          command=self.update_label_id,
@@ -1720,6 +1724,19 @@ class MaterialDesignGUI:
                               pady=8)
         refresh_btn.pack(side=tk.LEFT, padx=(16, 0))
 
+        # 日志按钮
+        log_btn = tk.Button(control_frame,
+                          text="📋 查看日志",
+                          command=self.show_quality_log,
+                          bg=self.colors['secondary'],
+                          fg=self.colors['on_secondary'],
+                          font=('Segoe UI', 10, 'bold'),
+                          relief='flat',
+                          cursor='hand2',
+                          padx=16,
+                          pady=8)
+        log_btn.pack(side=tk.LEFT, padx=(16, 0))
+
         # 检查选项区域
         options_frame = ttk.Frame(main_frame, style='MaterialCard.TFrame')
         options_frame.pack(fill=tk.X, pady=(0, 16))
@@ -1741,7 +1758,7 @@ class MaterialDesignGUI:
 
         # 错误统计区域
         stats_frame = ttk.Frame(results_frame, style='MaterialCard.TFrame')
-        stats_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 16))
+        stats_frame.pack(fill=tk.X, pady=(0, 16))
 
         stats_label = ttk.Label(stats_frame,
                                text="📊 错误统计",
@@ -1759,17 +1776,26 @@ class MaterialDesignGUI:
         details_frame = ttk.Frame(results_frame, style='MaterialCard.TFrame')
         details_frame.pack(fill=tk.BOTH, expand=True)
 
-        details_label = ttk.Label(details_frame,
+        # 标题区域（独立容器，避免与Treeview争夺空间）
+        details_title_frame = ttk.Frame(details_frame, style='MaterialCard.TFrame')
+        details_title_frame.pack(fill=tk.X)
+
+        details_label = ttk.Label(details_title_frame,
                                  text="📋 问题文件详情",
                                  style='MaterialBody.TLabel',
                                  font=('Segoe UI', 12, 'bold'))
         details_label.pack(anchor=tk.W, pady=(0, 8))
 
+        # 问题文件列表区域（独立容器）
+        tree_container = ttk.Frame(details_frame, style='MaterialCard.TFrame')
+        tree_container.pack(fill=tk.BOTH, expand=True)
+
         # 问题文件列表
-        self.problem_tree = ttk.Treeview(details_frame,
+        self.problem_tree = ttk.Treeview(tree_container,
                                        columns=('folder', 'file', 'error_type', 'description'),
                                        show='headings',
-                                       selectmode='extended')
+                                       selectmode='extended',
+                                       height=15)
 
         # 设置列标题
         self.problem_tree.heading('folder', text='文件夹')
@@ -1784,7 +1810,7 @@ class MaterialDesignGUI:
         self.problem_tree.column('description', width=300)
 
         # 滚动条
-        tree_scrollbar = ttk.Scrollbar(details_frame, orient=tk.VERTICAL, command=self.problem_tree.yview)
+        tree_scrollbar = ttk.Scrollbar(tree_container, orient=tk.VERTICAL, command=self.problem_tree.yview)
         self.problem_tree.configure(yscrollcommand=tree_scrollbar.set)
 
         self.problem_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -2779,6 +2805,23 @@ class MaterialDesignGUI:
                     correspondence_problems = self.check_image_json_correspondence(folder_path, json_files)
                     all_problems.extend(correspondence_problems)
 
+            # 如果选择了文件名重复检查，执行全局检查（支持单个和多个文件夹）
+            if '文件名重复' in selected_checks:
+                duplicate_problems = self.check_filename_duplicates(self.input_folders)
+                all_problems.extend(duplicate_problems)
+
+                # 统计每个文件夹涉及的文件名重复问题数量
+                if duplicate_problems:
+                    from collections import defaultdict
+                    folder_dup_counts = defaultdict(int)
+                    for p in duplicate_problems:
+                        folder_dup_counts[p['folder']] += 1
+                    for folder_path, json_files in self.input_folders.items():
+                        folder_name = self.folder_names.get(folder_path, os.path.basename(folder_path))
+                        dup_count = folder_dup_counts.get(folder_path, 0)
+                        if dup_count > 0:
+                            self.log_message(f"  └─ 其中 {folder_name} 涉及 {dup_count} 个文件名重复问题")
+
             # 分类统计问题
             self.problem_files = self.categorize_problems(all_problems)
 
@@ -2947,10 +2990,15 @@ class MaterialDesignGUI:
         return valid_json_files, skipped_files
 
     def check_folder_quality(self, folder_path, image_files, selected_checks):
-        """检查单个文件夹的数据质量"""
-        # 扫描文件夹中的所有JSON文件（注意：image_files参数实际存储的是图片文件列表）
-        all_files = os.listdir(folder_path)
-        json_files = [f for f in all_files if f.lower().endswith('.json')]
+        """检查单个文件夹的数据质量（递归搜索子目录）"""
+        # 递归扫描文件夹中的所有文件
+        all_files = []
+        json_files = []
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                all_files.append(file)
+                if file.lower().endswith('.json'):
+                    json_files.append(file)
 
         # 首先过滤出真正的JSON文件
         valid_json_files, skipped_files = self.filter_valid_json_files(folder_path, json_files)
@@ -2963,8 +3011,7 @@ class MaterialDesignGUI:
 
         # 1.5 检查图片文件是否有对应的JSON标注文件
         if '缺json' in selected_checks:
-            # 获取文件夹中的所有图片文件
-            all_files = os.listdir(folder_path)
+            # 获取文件夹中的所有图片文件（递归）
             image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff', '.JPG', '.JPEG', '.PNG')
             image_files = [f for f in all_files if f.endswith(image_extensions)]
             json_file_names = set(f for f in all_files if f.lower().endswith('.json'))
@@ -3179,70 +3226,163 @@ class MaterialDesignGUI:
         return abs(area) / 2
 
     def check_image_json_correspondence(self, folder_path, json_files):
-        """检查图片和JSON文件的对应关系"""
+        """检查图片和JSON文件的对应关系（支持递归检查）"""
         problems = []
 
         try:
-            # 获取文件夹中的所有文件
-            all_files = os.listdir(folder_path)
-
-            # 分离图片文件和JSON文件
+            # 递归获取文件夹中的所有文件
             image_files = []
-            json_file_names = set()
+            json_file_set = set()
 
-            for file in all_files:
-                if file.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff')):
-                    image_files.append(file)
-                elif file.lower().endswith('.json'):
-                    json_file_names.add(file)
+            for root, dirs, files in os.walk(folder_path):
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(full_path, folder_path)
+                    if file.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff')):
+                        image_files.append((file, rel_path, full_path))
+                    elif file.lower().endswith('.json'):
+                        json_file_set.add((file, rel_path, full_path))
+
+            # 构建文件名到路径的映射（用于快速查找）
+            json_name_to_path = {}
+            for json_file, rel_path, full_path in json_file_set:
+                base = os.path.splitext(json_file)[0]
+                if base not in json_name_to_path:
+                    json_name_to_path[base] = []
+                json_name_to_path[base].append((json_file, rel_path, full_path))
 
             # 检查每个JSON文件对应的图片是否存在
-            for json_file in json_files:
-                if json_file not in json_file_names:
-                    continue
-
-                json_path = os.path.join(folder_path, json_file)
+            for json_file, rel_path, full_path in json_file_set:
                 try:
-                    data, read_result = self.read_json_file_safely(json_path)
+                    data, read_result = self.read_json_file_safely(full_path)
                     if data is None:
                         continue
 
                     image_path = data.get('imagePath', '')
                     if image_path:
-                        # 提取图片文件名
+                        # 提取图片文件名（支持路径）
                         image_name = os.path.basename(image_path)
-                        if image_name not in image_files:
+                        # 检查是否存在匹配的图片
+                        found = any(img[0] == image_name for img in image_files)
+                        if not found:
                             problems.append({
                                 'folder': folder_path,
                                 'file': json_file,
-                                'error_type': '图片JSON对应',
+                                'error_type': 'JSON引用图片缺失',
                                 'description': f'JSON文件引用的图片不存在: {image_name}'
                             })
                 except Exception:
                     continue
 
             # 检查每个图片文件是否有对应的JSON文件
-            for image_file in image_files:
-                # 生成可能的JSON文件名
+            for image_file, rel_path, full_path in image_files:
                 base_name = os.path.splitext(image_file)[0]
-                possible_json_names = [
-                    f"{base_name}.json",
-                    f"{base_name}.JSON"
-                ]
-
-                # 检查是否存在对应的JSON文件
-                json_exists = any(json_name in json_file_names for json_name in possible_json_names)
+                json_exists = base_name in json_name_to_path
 
                 if not json_exists:
                     problems.append({
                         'folder': folder_path,
                         'file': image_file,
-                        'error_type': '图片JSON对应',
+                        'error_type': '图片缺少JSON标注',
                         'description': f'图片文件缺少对应的JSON标注文件'
                     })
 
         except Exception as e:
             self.log_message(f"检查图片JSON对应关系时出错: {e}")
+
+        return problems
+
+    def check_filename_duplicates(self, all_folders):
+        """检查所有文件夹中的文件名重复情况（支持文件夹内和跨文件夹全局检查）
+        同时检查文件名中是否包含特殊字符（中文、空格、括号等）
+        """
+        problems = []
+        filename_to_folders = {}  # basename -> [folder_path, ...]
+        import re
+
+        image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff',
+                           '.JPG', '.JPEG', '.PNG', '.GIF', '.BMP', '.TIF', '.TIFF')
+
+        # 定义特殊字符的正则表达式模式
+        special_char_regexes = [
+            (re.compile(r'[\u4e00-\u9fff]'), '中文字符'),
+            (re.compile(r'[\u3000-\u303f]'), '日文假名'),
+            (re.compile(r'[\uac00-\ud7af]'), '韩文字符'),
+            (re.compile(r' '), '空格'),
+            (re.compile(r'\t'), '制表符'),
+            (re.compile(r'-'), '连字符'),
+            (re.compile(r'[()]'), '括号'),
+            (re.compile(r'[\[\]{}]'), '方括号/花括号'),
+            (re.compile(r'[!@#%^&*=,;:?\'\"]'), '特殊符号'),
+        ]
+
+        # 第一遍：收集所有文件夹中的所有图片文件，检测文件夹内重复和特殊字符
+        for folder_path in all_folders.keys():
+            if not os.path.exists(folder_path):
+                continue
+            try:
+                # 使用 os.walk 递归获取所有文件
+                all_files = []
+                for root, dirs, files in os.walk(folder_path):
+                    for file in files:
+                        all_files.append(file)
+
+                folder_filenames = {}  # basename -> count in this folder
+
+                for file in all_files:
+                    if file.endswith(image_extensions):
+                        basename = file.lower()
+                        folder_filenames[basename] = folder_filenames.get(basename, 0) + 1
+
+                        # 记录跨文件夹映射
+                        if basename not in filename_to_folders:
+                            filename_to_folders[basename] = []
+                        filename_to_folders[basename].append(folder_path)
+
+                        # 检查文件名中的特殊字符
+                        has_special = False
+                        special_types = []
+                        for regex, desc in special_char_regexes:
+                            if regex.search(file):
+                                has_special = True
+                                if desc not in special_types:
+                                    special_types.append(desc)
+
+                        if has_special:
+                            problems.append({
+                                'folder': folder_path,
+                                'file': file,
+                                'error_type': '文件名重复',
+                                'description': f'文件名包含特殊字符: {", ".join(special_types)}'
+                            })
+
+                # 报告文件夹内重复
+                for basename, count in folder_filenames.items():
+                    if count > 1:
+                        problems.append({
+                            'folder': folder_path,
+                            'file': basename,
+                            'error_type': '文件名重复',
+                            'description': f'文件名 "{basename}" 在当前文件夹内重复 {count} 次'
+                        })
+            except Exception:
+                continue
+
+        # 第二遍：检查跨文件夹重复
+        for basename, folders in filename_to_folders.items():
+            unique_folders = set(folders)
+            if len(unique_folders) > 1:
+                # 第一个文件夹保持不变，其余报告为重复
+                for i, folder in enumerate(folders):
+                    if i == 0:
+                        continue
+                    folder_name = self.folder_names.get(folder, os.path.basename(folder))
+                    problems.append({
+                        'folder': folder,
+                        'file': basename,
+                        'error_type': '文件名重复',
+                        'description': f'文件名 "{basename}" 在多个文件夹中重复'
+                    })
 
         return problems
 
@@ -3258,7 +3398,10 @@ class MaterialDesignGUI:
             '无效矩形': [],
             '空标签名': [],
             '面积为0': [],
-            '无效bbox': []
+            '无效bbox': [],
+            '文件名重复': [],
+            'JSON引用图片缺失': [],
+            '图片缺少JSON标注': []
         }
 
         for problem in all_problems:
@@ -3424,6 +3567,11 @@ class MaterialDesignGUI:
         fix_window = tk.Toplevel(self.root)
         fix_window.title("🛠️ 一键修复选项")
         fix_window.geometry("500x400")
+        # 设置窗口位置在主窗口中央
+        fix_window.update_idletasks()
+        x = self.root.winfo_x() + (self.root.winfo_width() - 500) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - 400) // 2
+        fix_window.geometry(f"+{x}+{y}")
         fix_window.transient(self.root)
         fix_window.grab_set()
 
@@ -3444,15 +3592,35 @@ class MaterialDesignGUI:
             if not problems:  # 跳过没有问题的类型
                 continue
 
-            var = tk.BooleanVar(value=True)  # 默认选中所有
-            checkbox = tk.Checkbutton(dialog_frame,
-                                    text=f"{error_type} ({len(problems)} 个)",
-                                    variable=var,
-                                    bg=self.colors['surface'],
-                                    fg=self.colors['on_surface'],
-                                    font=('Segoe UI', 10))
-            checkbox.pack(anchor=tk.W, pady=2)
-            self.fix_checkboxes[error_type] = var
+            # 为"文件名重复"问题添加特殊说明（通过重命名修复）
+            if error_type == '文件名重复':
+                var = tk.BooleanVar(value=False)  # 默认不选中
+                checkbox = tk.Checkbutton(dialog_frame,
+                                        text=f"{error_type} ({len(problems)} 个) - 可一键重命名修复",
+                                        variable=var,
+                                        bg=self.colors['surface'],
+                                        fg=self.colors['on_surface'],
+                                        font=('Segoe UI', 10))
+                checkbox.pack(anchor=tk.W, pady=2)
+                self.fix_checkboxes[error_type] = var
+
+                # 添加说明标签
+                info_text = "  提示：重命名会同时修改图片和JSON文件名，并更新JSON中的imagePath字段"
+                info_label = ttk.Label(dialog_frame,
+                                      text=info_text,
+                                      style='MaterialCaption.TLabel',
+                                      font=('Segoe UI', 9, 'italic'))
+                info_label.pack(anchor=tk.W, pady=(0, 4))
+            else:
+                var = tk.BooleanVar(value=True)  # 默认选中所有
+                checkbox = tk.Checkbutton(dialog_frame,
+                                        text=f"{error_type} ({len(problems)} 个)",
+                                        variable=var,
+                                        bg=self.colors['surface'],
+                                        fg=self.colors['on_surface'],
+                                        font=('Segoe UI', 10))
+                checkbox.pack(anchor=tk.W, pady=2)
+                self.fix_checkboxes[error_type] = var
 
         # 操作选项
         options_frame = ttk.Frame(dialog_frame, style='MaterialCard.TFrame')
@@ -3539,16 +3707,28 @@ class MaterialDesignGUI:
             messagebox.showwarning("警告", "请选择要修复的问题类型")
             return
 
-        # 统计要删除的文件
-        files_to_delete = []
-        for error_type in selected_types:
-            if error_type in self.problem_files:
-                files_to_delete.extend(self.problem_files[error_type])
+        # 分离可删除的问题和需要重命名的问题
+        rename_types = ['文件名重复']
+        deletable_types = [t for t in selected_types if t not in rename_types]
+        rename_types = [t for t in selected_types if t in rename_types]
+
+        if not deletable_types and not rename_types:
+            messagebox.showinfo("提示", "没有选中任何问题")
+            return
 
         # 创建预览窗口
         preview_window = tk.Toplevel(parent_window)
         preview_window.title("👁️ 修复预览")
-        preview_window.geometry("600x400")
+        preview_window.geometry("700x500")
+        # 设置窗口位置在父窗口中央
+        preview_window.update_idletasks()
+        parent_x = parent_window.winfo_x()
+        parent_y = parent_window.winfo_y()
+        parent_w = parent_window.winfo_width()
+        parent_h = parent_window.winfo_height()
+        x = parent_x + (parent_w - 700) // 2
+        y = parent_y + (parent_h - 500) // 2
+        preview_window.geometry(f"+{x}+{y}")
         preview_window.transient(parent_window)
 
         # 预览内容
@@ -3557,48 +3737,114 @@ class MaterialDesignGUI:
 
         # 标题
         title_label = ttk.Label(preview_frame,
-                               text=f"即将删除 {len(files_to_delete)} 个问题文件",
+                               text="修复预览",
                                style='MaterialTitleMedium.TLabel',
                                font=('Segoe UI', 14, 'bold'))
         title_label.pack(anchor=tk.W, pady=(0, 16))
 
         # 文件列表
         preview_tree = ttk.Treeview(preview_frame,
-                                  columns=('folder', 'file', 'error_type'),
+                                  columns=('folder', 'file', 'new_name', 'error_type'),
                                   show='headings',
-                                  height=10)
+                                  height=15)
 
         preview_tree.heading('folder', text='文件夹')
-        preview_tree.heading('file', text='文件名')
+        preview_tree.heading('file', text='当前文件名')
+        preview_tree.heading('new_name', text='修复后文件名')
         preview_tree.heading('error_type', text='错误类型')
 
-        preview_tree.column('folder', width=150)
-        preview_tree.column('file', width=250)
+        preview_tree.column('folder', width=120)
+        preview_tree.column('file', width=200)
+        preview_tree.column('new_name', width=200)
         preview_tree.column('error_type', width=150)
 
-        for file_info in files_to_delete:
-            folder_name = self.folder_names.get(file_info['folder'],
-                                              os.path.basename(file_info['folder']))
-            preview_tree.insert('', tk.END, values=(
-                folder_name,
-                file_info['file'],
-                file_info['error_type']
-            ))
+        # 统计
+        delete_count = 0
+        rename_count = 0
+
+        # 添加要删除的文件
+        for error_type in deletable_types:
+            if error_type in self.problem_files:
+                for file_info in self.problem_files[error_type]:
+                    folder_name = self.folder_names.get(file_info['folder'],
+                                                      os.path.basename(file_info['folder']))
+                    preview_tree.insert('', tk.END, values=(
+                        folder_name,
+                        file_info['file'],
+                        '（删除）',
+                        error_type
+                    ))
+                    delete_count += 1
+
+        # 添加要重命名的文件（文件名重复问题）
+        rename_plan = {}  # {original_path: new_name}
+        if '文件名重复' in rename_types and '文件名重复' in self.problem_files:
+            # 收集所有重复的文件名
+            from collections import defaultdict
+            filename_groups = defaultdict(list)
+            for file_info in self.problem_files['文件名重复']:
+                basename = os.path.basename(file_info['file']).lower()
+                filename_groups[basename].append(file_info)
+
+            # 为每个重复组生成重命名计划
+            for basename, files in filename_groups.items():
+                if len(files) > 1:
+                    # 第一个文件保持不变，其余重命名
+                    for i, file_info in enumerate(files):
+                        if i == 0:
+                            continue
+                        original_name = file_info['file']
+                        new_name = self._generate_safe_filename(original_name)
+
+                        folder_name = self.folder_names.get(file_info['folder'],
+                                                          os.path.basename(file_info['folder']))
+                        preview_tree.insert('', tk.END, values=(
+                            folder_name,
+                            original_name,
+                            new_name,
+                            '文件名重复'
+                        ))
+                        full_path = os.path.normpath(os.path.join(file_info['folder'], file_info['file']))
+                        rename_plan[full_path] = new_name
+                        rename_count += 1
+                else:
+                    # 仅含特殊字符的单个文件也需要重命名清理
+                    file_info = files[0]
+                    if 'description' in file_info and '特殊字符' in file_info['description']:
+                        original_name = file_info['file']
+                        new_name = self._generate_safe_filename(original_name)
+
+                        folder_name = self.folder_names.get(file_info['folder'],
+                                                          os.path.basename(file_info['folder']))
+                        preview_tree.insert('', tk.END, values=(
+                            folder_name,
+                            original_name,
+                            new_name,
+                            '文件名重复'
+                        ))
+                        full_path = os.path.normpath(os.path.join(file_info['folder'], file_info['file']))
+                        rename_plan[full_path] = new_name
+                        rename_count += 1
+
+        preview_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # 滚动条
         preview_scrollbar = ttk.Scrollbar(preview_frame, orient=tk.VERTICAL, command=preview_tree.yview)
         preview_tree.configure(yscrollcommand=preview_scrollbar.set)
-
-        preview_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         preview_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # 操作说明
+        desc_text = f"选中的问题类型: {', '.join(selected_types)}\n"
+        if delete_count > 0:
+            desc_text += f"删除文件: {delete_count} 个\n"
+        if rename_count > 0:
+            desc_text += f"重命名文件: {rename_count} 个（同时重命名图片和JSON文件）\n"
+
         desc_label = ttk.Label(preview_frame,
-                              text=f"选中的问题类型: {', '.join(selected_types)}\n" +
-                                   f"删除方式: {'回收站' if self.delete_option.get() == 'recycle' else '永久删除'}",
+                              text=desc_text,
                               style='MaterialBody.TLabel',
                               font=('Segoe UI', 10),
-                              wraplength=500)
+                              wraplength=600)
         desc_label.pack(anchor=tk.W, pady=(16, 0))
 
         # 关闭按钮
@@ -3614,6 +3860,116 @@ class MaterialDesignGUI:
                             pady=8)
         close_btn.pack(pady=16)
 
+        # 保存重命名计划供 execute_fix 使用
+        self._rename_plan = rename_plan
+
+    def _generate_rename_plan(self):
+        """生成文件名重复问题的重命名计划（包含特殊字符清理）"""
+        rename_plan = {}
+
+        if '文件名重复' in self.problem_files:
+            from collections import defaultdict
+            filename_groups = defaultdict(list)
+            for file_info in self.problem_files['文件名重复']:
+                basename = os.path.basename(file_info['file']).lower()
+                filename_groups[basename].append(file_info)
+
+            for basename, files in filename_groups.items():
+                if len(files) > 1:
+                    for i, file_info in enumerate(files):
+                        if i == 0:
+                            continue
+                        original_name = file_info['file']
+                        new_name = self._generate_safe_filename(original_name)
+
+                        full_path = os.path.normpath(os.path.join(file_info['folder'], file_info['file']))
+                        rename_plan[full_path] = new_name
+                else:
+                    # 仅含特殊字符的单个文件也需要重命名清理
+                    file_info = files[0]
+                    if 'description' in file_info and '特殊字符' in file_info['description']:
+                        original_name = file_info['file']
+                        new_name = self._generate_safe_filename(original_name)
+
+                        full_path = os.path.normpath(os.path.join(file_info['folder'], file_info['file']))
+                        rename_plan[full_path] = new_name
+
+        return rename_plan
+
+    def _generate_safe_filename(self, original_name):
+        """生成安全的文件名：中文转拼音，清理特殊字符，限制连续字母长度，添加随机后缀"""
+        import random
+        import re
+        try:
+            from pypinyin import lazy_pinyin
+            has_pypinyin = True
+        except ImportError:
+            has_pypinyin = False
+
+        name_part, ext_part = os.path.splitext(original_name)
+
+        # 如果安装了pypinyin，将中文转为拼音
+        if has_pypinyin:
+            # 逐字符处理：中文转拼音，其他字符保留
+            converted_name = []
+            chinese_buffer = []
+            for char in name_part:
+                # 判断是否为中文字符
+                if '\u4e00' <= char <= '\u9fff':
+                    chinese_buffer.append(char)
+                else:
+                    # 遇到非中文字符，先处理缓冲区中的中文
+                    if chinese_buffer:
+                        pinyin_list = lazy_pinyin(chinese_buffer)
+                        converted_name.extend(pinyin_list)
+                        chinese_buffer = []
+                    converted_name.append(char)
+            # 处理剩余的中文
+            if chinese_buffer:
+                pinyin_list = lazy_pinyin(chinese_buffer)
+                converted_name.extend(pinyin_list)
+
+            # 拼接为字符串
+            safe_name = ''.join(converted_name)
+        else:
+            safe_name = name_part
+
+        # 清理特殊字符：只保留ASCII字母、数字、下划线、点、减号
+        safe_name = re.sub(r'[^\w\-\.]', '_', safe_name, flags=re.ASCII)
+
+        # 限制连续字母长度不超过10个
+        result = []
+        letter_count = 0
+        for char in safe_name:
+            if char.isalpha():
+                letter_count += 1
+                if letter_count > 10:
+                    result.append('_')
+                    letter_count = 0
+                else:
+                    result.append(char)
+            else:
+                letter_count = 0
+                result.append(char)
+        safe_name = ''.join(result)
+
+        # 合并连续下划线
+        safe_name = re.sub(r'_+', '_', safe_name)
+        # 去掉开头和结尾的下划线
+        safe_name = safe_name.strip('_')
+
+        # 如果文件名以点开开头（隐藏文件），保留点
+        if original_name.startswith('.'):
+            safe_name = '.' + safe_name
+
+        # 如果处理后文件名为空，使用默认名称
+        if not safe_name:
+            safe_name = 'file'
+
+        # 添加随机后缀确保唯一性
+        random_suffix = random.randint(1000, 9999)
+        return f"{safe_name}_r{random_suffix}{ext_part}"
+
     def execute_fix(self, parent_window):
         """执行修复操作"""
         selected_types = []
@@ -3625,75 +3981,165 @@ class MaterialDesignGUI:
             messagebox.showwarning("警告", "请选择要修复的问题类型")
             return
 
+        # 分离可删除的问题和需要重命名的问题
+        rename_types_list = ['文件名重复']
+        deletable_types = [t for t in selected_types if t not in rename_types_list]
+        rename_types = [t for t in selected_types if t in rename_types_list]
+
+        # 如果没有预览过，动态生成重命名计划
+        if rename_types and not hasattr(self, '_rename_plan'):
+            self._rename_plan = self._generate_rename_plan()
+
         # 确认对话框
-        files_count = sum(len(self.problem_files.get(error_type, [])) for error_type in selected_types)
-        if files_count == 0:
+        # 只统计真正会被删除的问题类型（"缺json"和"图片缺少JSON标注"不删除文件）
+        types_that_delete = [t for t in deletable_types if t not in ['缺json', '图片缺少JSON标注']]
+        delete_count = sum(len(self.problem_files.get(error_type, [])) for error_type in types_that_delete)
+        rename_count = len(getattr(self, '_rename_plan', {}))
+
+        if delete_count == 0 and rename_count == 0:
             messagebox.showinfo("提示", "没有选中的问题文件")
             return
 
+        confirm_text = ""
+        if delete_count > 0:
+            confirm_text += f"删除文件: {delete_count} 个\n"
+        if rename_count > 0:
+            confirm_text += f"重命名文件: {rename_count} 个\n"
+
         confirm = messagebox.askyesno(
-            "确认删除",
-            f"即将删除 {files_count} 个问题文件\n" +
-            f"删除方式: {'回收站' if self.delete_option.get() == 'recycle' else '永久删除'}\n" +
-            "此操作不可撤销，是否继续？"
+            "确认修复",
+            f"即将执行以下修复操作:\n{confirm_text}" +
+            f"\n此操作不可撤销，是否继续？"
         )
 
         if not confirm:
             return
 
-        # 收集需要删除的文件（去重）
-        files_to_delete = set()
+        # 执行删除操作
+        if deletable_types:
+            # 收集需要删除的文件（去重）
+            files_to_delete = set()
 
-        for error_type in selected_types:
-            if error_type not in self.problem_files:
-                continue
-
-            for file_info in self.problem_files[error_type]:
-                folder = file_info['folder']
-                filename = file_info['file']
-
-                if error_type == '缺json':
-                    # "缺json"问题：file字段是图片文件，不需要删除（图片本身没错）
-                    # 这类问题无法通过删除修复，跳过
+            for error_type in deletable_types:
+                if error_type not in self.problem_files:
                     continue
 
-                elif error_type in ['缺图片', '图片JSON对应']:
-                    # "缺图片"问题：file字段是JSON文件，只删除JSON文件
-                    file_path = os.path.normpath(os.path.join(folder, filename))
-                    files_to_delete.add(file_path)
+                for file_info in self.problem_files[error_type]:
+                    folder = file_info['folder']
+                    filename = file_info['file']
 
-                else:
-                    # 其他问题（标注越界、无效多边形等）：file字段是JSON文件
-                    # 需要先读取JSON获取图片名，然后删除JSON+图片
-                    file_path = os.path.normpath(os.path.join(folder, filename))
-                    files_to_delete.add(file_path)
+                    if error_type == '缺json':
+                        # "缺json"问题：file字段是图片文件，不需要删除（图片本身没错）
+                        # 这类问题无法通过删除修复，跳过
+                        continue
 
-                    # 先读取JSON获取图片路径（在删除前！）
-                    try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            data = json.load(f)
-                        image_path = data.get('imagePath', '')
-                        if image_path:
-                            image_name = os.path.basename(image_path)
-                            image_full_path = os.path.normpath(os.path.join(folder, image_name))
-                            if os.path.exists(image_full_path):
-                                files_to_delete.add(image_full_path)
-                    except:
-                        pass  # 读取失败不影响JSON文件删除
+                    elif error_type in ['缺图片', '图片JSON对应', 'JSON引用图片缺失']:
+                        # "缺图片"问题：file字段是JSON文件，只删除JSON文件
+                        file_path = os.path.normpath(os.path.join(folder, filename))
+                        files_to_delete.add(file_path)
 
-        # 执行删除
-        deleted_count = 0
-        error_count = 0
-        for file_path in files_to_delete:
-            try:
-                self.delete_file_safely(file_path)
-                deleted_count += 1
-            except Exception as e:
-                self.log_message(f"❌ 删除文件失败 {os.path.basename(file_path)}: {e}")
-                error_count += 1
+                    elif error_type == '图片缺少JSON标注':
+                        # 图片缺少JSON标注：file字段是图片路径，跳过（图片本身没错）
+                        continue
 
-        # 更新界面和数据
-        self.log_message(f"✅ 修复完成: 删除 {deleted_count} 个文件, 失败 {error_count} 个")
+                    else:
+                        # 其他问题（标注越界、无效多边形等）：file字段是JSON文件
+                        # 需要先读取JSON获取图片名，然后删除JSON+图片
+                        file_path = os.path.normpath(os.path.join(folder, filename))
+                        files_to_delete.add(file_path)
+
+                        # 先读取JSON获取图片路径（在删除前！）
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                data = json.load(f)
+                            image_path = data.get('imagePath', '')
+                            if image_path:
+                                image_name = os.path.basename(image_path)
+                                image_full_path = os.path.normpath(os.path.join(folder, image_name))
+                                if os.path.exists(image_full_path):
+                                    files_to_delete.add(image_full_path)
+                        except:
+                            pass  # 读取失败不影响JSON文件删除
+
+            # 执行删除
+            deleted_count = 0
+            error_count = 0
+            for file_path in files_to_delete:
+                try:
+                    self.delete_file_safely(file_path)
+                    deleted_count += 1
+                except Exception as e:
+                    self.log_message(f"❌ 删除文件失败 {os.path.basename(file_path)}: {e}")
+                    error_count += 1
+
+            self.log_message(f"✅ 删除完成: 删除 {deleted_count} 个文件, 失败 {error_count} 个")
+
+        # 执行重命名操作（文件名重复问题）
+        if rename_types and hasattr(self, '_rename_plan') and self._rename_plan:
+            renamed_count = 0
+            rename_error_count = 0
+
+            for original_file, new_name in self._rename_plan.items():
+                try:
+                    # 获取原始文件的完整路径
+                    original_path = os.path.normpath(original_file)
+                    if not os.path.exists(original_path):
+                        self.log_message(f"❌ 文件不存在: {original_file}")
+                        rename_error_count += 1
+                        continue
+
+                    # 获取文件夹路径
+                    folder = os.path.dirname(original_path)
+                    old_basename = os.path.basename(original_path)
+
+                    # 重命名图片文件
+                    new_path = os.path.join(folder, new_name)
+                    os.rename(original_path, new_path)
+
+                    # 同步重命名对应的JSON文件并更新内容
+                    # 先尝试直接匹配的JSON文件
+                    old_json = os.path.join(folder, os.path.splitext(old_basename)[0] + '.json')
+                    new_json = os.path.join(folder, os.path.splitext(new_name)[0] + '.json')
+
+                    if not os.path.exists(old_json):
+                        # 如果直接匹配的JSON不存在，尝试查找可能的原始JSON文件
+                        # 移除可能的 _rXXXX 后缀来查找原始JSON
+                        base_without_suffix = os.path.splitext(old_basename)[0]
+                        # 尝试移除末尾的 _r数字 模式
+                        import re as _re
+                        original_base = _re.sub(r'_r\d+$', '', base_without_suffix)
+                        if original_base != base_without_suffix:
+                            old_json_alt = os.path.join(folder, original_base + '.json')
+                            if os.path.exists(old_json_alt):
+                                old_json = old_json_alt
+                                self.log_message(f"  找到原始JSON: {os.path.basename(old_json)}")
+
+                    if os.path.exists(old_json):
+                        os.rename(old_json, new_json)
+                        # 更新JSON文件中的imagePath字段
+                        try:
+                            with open(new_json, 'r', encoding='utf-8') as f:
+                                json_data = json.load(f)
+                            if 'imagePath' in json_data:
+                                json_data['imagePath'] = new_name
+                            if 'imageData' in json_data and json_data['imageData'] is None:
+                                pass  # 保持None
+                            with open(new_json, 'w', encoding='utf-8') as f:
+                                json.dump(json_data, f, ensure_ascii=False, indent=2)
+                        except Exception as je:
+                            self.log_message(f"  ⚠️ 更新JSON内容失败: {je}")
+
+                    renamed_count += 1
+                    self.log_message(f"  重命名: {old_basename} -> {new_name}")
+                except Exception as e:
+                    self.log_message(f"❌ 重命名失败 {os.path.basename(original_file)}: {e}")
+                    rename_error_count += 1
+
+            self.log_message(f"✅ 重命名完成: 重命名 {renamed_count} 个文件, 失败 {rename_error_count} 个")
+
+        # 清除重命名计划
+        if hasattr(self, '_rename_plan'):
+            del self._rename_plan
 
         # 刷新文件夹数据
         self.refresh_folders_data()
@@ -3722,6 +4168,196 @@ class MaterialDesignGUI:
         self.log_message("🔄 刷新数据质量检查数据")
         self.start_quality_check()
 
+    def show_quality_log(self):
+        """显示详细日志窗口（包含运行日志和问题文件详情两个标签页）"""
+        log_window = tk.Toplevel(self.root)
+        log_window.title("📋 详细日志")
+        log_window.geometry("800x600")
+        # 居中显示
+        log_window.update_idletasks()
+        x = self.root.winfo_x() + (self.root.winfo_width() - 800) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - 600) // 2
+        log_window.geometry(f"+{x}+{y}")
+        log_window.transient(self.root)
+
+        # 日志内容区域
+        log_frame = ttk.Frame(log_window, style='MaterialCard.TFrame')
+        log_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=16)
+
+        # 标题
+        ttk.Label(log_frame, text="📋 详细日志记录",
+                  style='MaterialTitleMedium.TLabel',
+                  font=('Segoe UI', 14, 'bold')).pack(anchor=tk.W, pady=(0, 16))
+
+        # 使用 Notebook 创建标签页
+        notebook = ttk.Notebook(log_frame)
+        notebook.pack(fill=tk.BOTH, expand=True)
+
+        # ===== 标签页1：运行日志 =====
+        log_tab = ttk.Frame(notebook)
+        notebook.add(log_tab, text="📋 运行日志")
+
+        # 日志文本区域
+        text_frame = ttk.Frame(log_tab)
+        text_frame.pack(fill=tk.BOTH, expand=True, padx=4, pady=4)
+
+        log_text = tk.Text(text_frame, wrap=tk.WORD, font=('Consolas', 9))
+        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=log_text.yview)
+        log_text.configure(yscrollcommand=scrollbar.set)
+
+        log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # 插入日志内容
+        log_content = self.get_log_content()
+        log_text.insert(tk.END, log_content)
+        log_text.config(state=tk.DISABLED)
+
+        # ===== 标签页2：问题文件详情 =====
+        detail_tab = ttk.Frame(notebook)
+        notebook.add(detail_tab, text="📋 问题文件详情")
+
+        # 问题文件列表（带折叠功能）
+        tree_frame = ttk.Frame(detail_tab)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=4, pady=4)
+
+        detail_tree = ttk.Treeview(tree_frame,
+                                   columns=('description',),
+                                   show='tree headings',
+                                   selectmode='extended')
+        detail_tree.heading('#0', text='文件名')
+        detail_tree.heading('description', text='描述')
+        detail_tree.column('#0', width=300)
+        detail_tree.column('description', width=400)
+
+        # 滚动条
+        detail_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=detail_tree.yview)
+        detail_tree.configure(yscrollcommand=detail_scrollbar.set)
+
+        detail_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        detail_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # 填充问题文件数据（按错误类型分组，支持折叠）
+        for error_type, problems in self.problem_files.items():
+            if not problems:
+                continue
+            # 创建父节点（错误类型）
+            parent_id = detail_tree.insert('', tk.END, text=f"▶ {error_type} ({len(problems)}个)",
+                                           values=('',),
+                                           tags=('parent',),
+                                           open=False)
+            # 添加子节点（具体问题）
+            for problem in problems:
+                detail_tree.insert(parent_id, tk.END,
+                                   text=f"  {problem['file']}",
+                                   values=(problem['description'],),
+                                   tags=('child',))
+
+        # 筛选栏（在Treeview之后创建，避免引用问题）
+        filter_frame = ttk.Frame(detail_tab)
+        filter_frame.pack(fill=tk.X, padx=4, pady=(4, 0))
+
+        ttk.Label(filter_frame, text="筛选:", font=('Segoe UI', 9, 'bold')).pack(side=tk.LEFT, padx=(0, 8))
+
+        # 为每种错误类型创建复选框
+        detail_checkboxes = {}
+        for error_type in self.problem_files.keys():
+            if not self.problem_files[error_type]:
+                continue
+            var = tk.BooleanVar(value=True)  # 默认全选
+            cb = ttk.Checkbutton(filter_frame, text=f"{error_type}", variable=var,
+                                 command=lambda: self._filter_detail_tree(detail_tree, detail_checkboxes))
+            cb.pack(side=tk.LEFT, padx=4)
+            detail_checkboxes[error_type] = var
+
+        # 全选/全不选按钮
+        all_btn = tk.Button(filter_frame, text="全选", font=('Segoe UI', 8),
+                            command=lambda cbx=detail_checkboxes: self._set_all_detail_checks(cbx, True),
+                            bg=self.colors['secondary'], fg=self.colors['on_secondary'],
+                            relief='flat', cursor='hand2', padx=8, pady=2)
+        all_btn.pack(side=tk.LEFT, padx=(16, 0))
+
+        none_btn = tk.Button(filter_frame, text="全不选", font=('Segoe UI', 8),
+                             command=lambda cbx=detail_checkboxes: self._set_all_detail_checks(cbx, False),
+                             bg=self.colors['secondary'], fg=self.colors['on_secondary'],
+                             relief='flat', cursor='hand2', padx=8, pady=2)
+        none_btn.pack(side=tk.LEFT, padx=(4, 0))
+
+        # 绑定点击事件：点击父节点时切换折叠状态
+        def on_tree_click(event):
+            item = detail_tree.identify_row(event.y)
+            if item and 'parent' in detail_tree.item(item, 'tags'):
+                children = detail_tree.get_children(item)
+                if children and detail_tree.item(item, 'open'):
+                    detail_tree.item(item, open=False)
+                    detail_tree.item(item, text=f"▶ {detail_tree.item(item, 'text')[2:]}")
+                else:
+                    detail_tree.item(item, open=True)
+                    detail_tree.item(item, text=f"▼ {detail_tree.item(item, 'text')[2:]}")
+
+        detail_tree.bind('<Button-1>', on_tree_click)
+
+        # 按钮区域
+        btn_frame = ttk.Frame(log_frame)
+        btn_frame.pack(fill=tk.X, pady=(16, 0))
+
+        # 导出按钮
+        export_btn = tk.Button(btn_frame, text="💾 导出日志",
+                              command=lambda: self.export_log(log_text),
+                              bg=self.colors['primary'],
+                              fg=self.colors['on_primary'],
+                              font=('Segoe UI', 10, 'bold'),
+                              relief='flat', cursor='hand2', padx=16, pady=8)
+        export_btn.pack(side=tk.LEFT)
+
+        # 关闭按钮
+        close_btn = tk.Button(btn_frame, text="❌ 关闭",
+                             command=log_window.destroy,
+                             bg=self.colors['error'],
+                             fg=self.colors['on_error'],
+                             font=('Segoe UI', 10, 'bold'),
+                             relief='flat', cursor='hand2', padx=16, pady=8)
+        close_btn.pack(side=tk.RIGHT)
+
+    def get_log_content(self):
+        """获取日志内容"""
+        return self.log_text.get(1.0, tk.END)
+
+    def export_log(self, log_text):
+        """导出日志到文件"""
+        log_content = log_text.get(1.0, tk.END)
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[("文本文件", "*.txt"), ("所有文件", "*.*")],
+            title="导出日志"
+        )
+        if file_path:
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(log_content)
+                messagebox.showinfo("成功", f"日志已导出到:\n{file_path}")
+            except Exception as e:
+                messagebox.showerror("错误", f"导出日志失败:\n{e}")
+
+    def _filter_detail_tree(self, tree, checkboxes):
+        """根据复选框状态筛选Treeview中的父节点"""
+        for error_type, var in checkboxes.items():
+            for item in tree.get_children(''):
+                item_text = tree.item(item, 'text')
+                if error_type in item_text:
+                    if var.get():
+                        # 如果不在根级别，重新插入到根级别
+                        if tree.parent(item) != '':
+                            tree.detach(item)
+                            tree.insert('', 'end', iid=item)
+                    else:
+                        tree.detach(item)
+
+    def _set_all_detail_checks(self, checkboxes, value):
+        """全选/全不选复选框"""
+        for var in checkboxes.values():
+            var.set(value)
+
     def init_check_options(self):
         """初始化检查选项"""
         # 定义所有检查项目
@@ -3737,7 +4373,8 @@ class MaterialDesignGUI:
             '面积为0': {'description': '检查标注区域面积是否为0', 'default': True},
             '图片JSON对应': {'description': '检查图片和JSON文件是否一一对应', 'default': True},
             '标注数量匹配': {'description': '检查图片和标注数量是否匹配', 'default': True},
-            '无效bbox': {'description': '检查生成的bbox是否有效（无负值、宽高为正）', 'default': True}
+            '无效bbox': {'description': '检查生成的bbox是否有效（无负值、宽高为正）', 'default': True},
+            '文件名重复': {'description': '检查不同文件夹中是否存在重复的图片文件名，以及文件名是否包含特殊字符', 'default': True}
         }
 
         # 创建检查选项的变量
@@ -4192,11 +4829,14 @@ class MaterialDesignGUI:
         self.log_message("=== 验证完成 ===")
     
     def get_image_files(self, input_dir):
-        """获取输入目录中的所有图片文件"""
+        """获取输入目录中的所有图片文件（递归搜索）"""
         raw_image_files = []
-        for ext in ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.JPG', '*.JPEG', '*.PNG']:
-            raw_image_files.extend(glob.glob(osp.join(input_dir, ext)))
-        
+        for root, dirs, files in os.walk(input_dir):
+            for file in files:
+                if file.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff',
+                                           '.JPG', '.JPEG', '.PNG', '.GIF', '.BMP', '.TIF', '.TIFF')):
+                    raw_image_files.append(os.path.join(root, file))
+
         # 去重
         image_files = []
         seen_paths = set()
@@ -4205,9 +4845,73 @@ class MaterialDesignGUI:
             if key not in seen_paths:
                 seen_paths.add(key)
                 image_files.append(p)
-        
+
         return image_files
-    
+
+    def deduplicate_filename(self, basename, output_dir, subset_name):
+        """对文件名进行去重处理
+
+        Args:
+            basename: 原始文件名（不含路径）
+            output_dir: 输出目录
+            subset_name: 子集名称（train/test/verify等）
+
+        Returns:
+            str: 去重后的文件名
+        """
+        import random
+
+        name, ext = os.path.splitext(basename)
+        dest_dir = osp.join(output_dir, subset_name, 'images')
+
+        # 确保目标目录存在
+        os.makedirs(dest_dir, exist_ok=True)
+
+        # 使用全局 seen_filenames 进行跨 part 去重追踪
+        if not hasattr(self, 'seen_filenames'):
+            self.seen_filenames = {}
+
+        # 检查全局是否已有此文件名
+        safe_name = basename
+        if basename in self.seen_filenames:
+            # 文件名已被使用，生成带随机数的新文件名
+            for _ in range(100):  # 最多尝试100次
+                random_suffix = random.randint(1000, 9999)
+                new_name = f"{name}_r{random_suffix}{ext}"
+                if new_name not in self.seen_filenames:
+                    safe_name = new_name
+                    dest_path = osp.join(dest_dir, new_name)
+                    if not os.path.exists(dest_path):
+                        self.log_message(f"  文件名冲突检测: '{basename}' 已存在，重命名为 '{new_name}'")
+                        break
+            else:
+                # 极端情况：100次随机都冲突，使用时间戳
+                import time
+                timestamp = int(time.time() * 1000)
+                safe_name = f"{name}_r{timestamp}{ext}"
+                self.log_message(f"  文件名冲突检测: '{basename}' 已存在，重命名为 '{safe_name}'")
+        else:
+            # 检查目标文件是否已存在（兼容：磁盘上已存在的文件）
+            dest_path = osp.join(dest_dir, basename)
+            if os.path.exists(dest_path):
+                for _ in range(100):
+                    random_suffix = random.randint(1000, 9999)
+                    new_name = f"{name}_r{random_suffix}{ext}"
+                    new_path = osp.join(dest_dir, new_name)
+                    if not os.path.exists(new_path) and new_name not in self.seen_filenames:
+                        safe_name = new_name
+                        self.log_message(f"  文件名冲突检测: '{basename}' 已存在，重命名为 '{new_name}'")
+                        break
+                else:
+                    import time
+                    timestamp = int(time.time() * 1000)
+                    safe_name = f"{name}_r{timestamp}{ext}"
+                    self.log_message(f"  文件名冲突检测: '{basename}' 已存在，重命名为 '{safe_name}'")
+
+        # 记录已使用的文件名（全局追踪）
+        self.seen_filenames[safe_name] = subset_name
+        return safe_name
+
     def create_output_directories(self, output_dir, folder_files_dict=None):
         """创建输出目录结构"""
         split_dirs = ['train', 'test', 'verify']
@@ -4361,27 +5065,52 @@ class MaterialDesignGUI:
     def copy_files_to_split_output_dirs(self, output_dir, split_subsets, folder_files_dict):
         """复制文件到分割后的输出目录"""
         self.log_message("复制文件到分割后的输出目录...")
-        
+
+        # 构建全局图片到JSON的映射（用于检查图片是否有标注）
+        img_to_json_map = {}
+        for folder_path, image_files in folder_files_dict.items():
+            for img_file in image_files:
+                img_label = os.path.splitext(os.path.basename(img_file))[0]
+                # 使用图片文件的实际目录路径，而非 folder_files_dict 的键（可能是分割后的虚拟路径）
+                real_folder = os.path.dirname(img_file)
+                json_path = osp.join(real_folder, img_label + '.json')
+                img_to_json_map[img_file] = json_path
+
         total_progress_steps = sum(len(parts_list) for parts_list in split_subsets.values())
         current_step = 0
-        
+
         for subset_name, parts_list in split_subsets.items():
             if len(parts_list) == 1:
                 # 未分割的子集
                 subset_dir = osp.join(output_dir, subset_name, 'images')
                 files = parts_list[0]
-                
+
                 self.log_message(f"复制{subset_name}集文件: {len(files)} 张图片")
-                
+
+                skipped = 0
                 for i, img_file in enumerate(files):
                     filename = os.path.basename(img_file)
-                    dest_path = osp.join(subset_dir, filename)
+
+                    # 检查是否有对应的 JSON 标注文件
+                    json_path = img_to_json_map.get(img_file)
+                    if not json_path or not os.path.exists(json_path):
+                        skipped += 1
+                        continue
+
+                    # 直接使用原始文件名（不再自动重命名，由用户在数据质量检查阶段自行处理重复问题）
+                    safe_filename = filename
+                    dest_path = osp.join(subset_dir, safe_filename)
                     shutil.copy2(img_file, dest_path)
-                    
+
+                    # 记录文件名映射
+                    self.filename_mapping[(subset_name, filename)] = safe_filename
+
                     # 更新进度条
                     progress = (current_step + (i + 1) / len(files)) / total_progress_steps
                     self.progress_var.set(progress * 0.3 + 0.6)  # 60%-90%的进度区间
-                
+
+                if skipped > 0:
+                    self.log_message(f"  跳过 {skipped} 个无标注的图片")
                 current_step += 1
                 self.log_message(f"✓ {subset_name}集文件复制完成")
             else:
@@ -4389,82 +5118,100 @@ class MaterialDesignGUI:
                 for i, part_files in enumerate(parts_list):
                     part_name = f"{subset_name}_part{i+1:02d}"
                     part_images_dir = osp.join(output_dir, part_name, 'images')
-                    
+
                     self.log_message(f"复制{part_name}文件: {len(part_files)} 张图片")
-                    
+
+                    skipped = 0
                     for j, img_file in enumerate(part_files):
                         filename = os.path.basename(img_file)
-                        dest_path = osp.join(part_images_dir, filename)
+
+                        # 检查是否有对应的 JSON 标注文件
+                        json_path = img_to_json_map.get(img_file)
+                        if not json_path or not os.path.exists(json_path):
+                            skipped += 1
+                            continue
+
+                        # 直接使用原始文件名（不再自动重命名，由用户在数据质量检查阶段自行处理重复问题）
+                        safe_filename = filename
+                        dest_path = osp.join(part_images_dir, safe_filename)
                         shutil.copy2(img_file, dest_path)
-                        
+
+                        # 记录文件名映射
+                        self.filename_mapping[(part_name, filename)] = safe_filename
+
                         # 更新进度条
                         progress = (current_step + (j + 1) / len(part_files)) / total_progress_steps
                         self.progress_var.set(progress * 0.3 + 0.6)  # 60%-90%的进度区间
-                    
+
+                    if skipped > 0:
+                        self.log_message(f"  跳过 {skipped} 个无标注的图片")
                     current_step += 1
                     self.log_message(f"✓ {part_name}文件复制完成")
     
     def generate_coco_annotations_for_split_subsets(self, output_dir, split_subsets):
         """为分割后的子集生成COCO格式标注"""
         self.log_message("为分割后的子集生成COCO格式标注...")
-        
+
+        # 初始化全局标注去重集合，确保跨 part 不重复
+        self.global_processed_annotations = set()
+
         # 使用已建立的全局标签映射
         global_converter = self.global_converter
         self.log_message(f"使用已建立的标签映射，共{len(global_converter.labels_list)}个标签:")
         for label in global_converter.labels_list:
             label_id = global_converter.label_to_num[label]
             self.log_message(f"  {label_id}: {label}")
-        
+
         total_parts = sum(len(parts_list) for parts_list in split_subsets.values())
         current_part = 0
-        
+
         for subset_name, parts_list in split_subsets.items():
             if len(parts_list) == 1:
                 # 未分割的子集
                 files = parts_list[0]
                 self.log_message(f"生成{subset_name}集COCO标注...")
-                
-                coco_data = self.process_split_json_files_multi(global_converter, files, subset_name)
-                
+
+                coco_data = self.process_split_json_files_multi(global_converter, files, subset_name, output_dir, self.filename_mapping)
+
                 annotations_dir = osp.join(output_dir, subset_name, 'annotations')
                 json_filename = f'instance_{subset_name}.json'
                 json_path = osp.join(annotations_dir, json_filename)
-                
+
                 with open(json_path, 'w', encoding='utf-8') as f:
                     json.dump(coco_data, f, indent=2, ensure_ascii=False)
-                
+
                 self.log_message(f"✓ {subset_name}集COCO标注生成完成: {json_filename}")
                 self.log_message(f"  - 图片数量: {len(coco_data['images'])}")
                 self.log_message(f"  - 标注数量: {len(coco_data['annotations'])}")
                 self.log_message(f"  - 类别数量: {len(coco_data['categories'])}")
-                
+
                 # 验证标签ID一致性
                 self.verify_label_consistency(coco_data, global_converter, subset_name)
-                
+
                 current_part += 1
             else:
                 # 分割后的子集
                 for i, part_files in enumerate(parts_list):
                     part_name = f"{subset_name}_part{i+1:02d}"
                     self.log_message(f"生成{part_name}COCO标注...")
-                    
-                    coco_data = self.process_split_json_files_multi(global_converter, part_files, part_name)
-                    
+
+                    coco_data = self.process_split_json_files_multi(global_converter, part_files, part_name, output_dir, self.filename_mapping)
+
                     annotations_dir = osp.join(output_dir, part_name, 'annotations')
                     json_filename = f'instance_{part_name}.json'
                     json_path = osp.join(annotations_dir, json_filename)
-                    
+
                     with open(json_path, 'w', encoding='utf-8') as f:
                         json.dump(coco_data, f, indent=2, ensure_ascii=False)
-                    
+
                     self.log_message(f"✓ {part_name}COCO标注生成完成: {json_filename}")
                     self.log_message(f"  - 图片数量: {len(coco_data['images'])}")
                     self.log_message(f"  - 标注数量: {len(coco_data['annotations'])}")
                     self.log_message(f"  - 类别数量: {len(coco_data['categories'])}")
-                    
+
                     # 验证标签ID一致性
                     self.verify_label_consistency(coco_data, global_converter, part_name)
-                    
+
                     current_part += 1
                     
                     # 更新进度条
@@ -4568,13 +5315,18 @@ class MaterialDesignGUI:
         # 复制文件
         for i, img_file in enumerate(files):
             filename = os.path.basename(img_file)
-            dest_path = osp.join(split_dir, filename)
+            # 直接使用原始文件名（不再自动重命名，由用户在数据质量检查阶段自行处理重复问题）
+            safe_filename = filename
+            dest_path = osp.join(split_dir, safe_filename)
             shutil.copy2(img_file, dest_path)
-            
+
+            # 记录文件名映射
+            self.filename_mapping[(split_name, filename)] = safe_filename
+
             # 更新进度条
             progress = progress_start + (i + 1) / len(files) * (progress_end - progress_start)
             self.progress_var.set(progress)
-        
+
         self.log_message(f"✓ {split_name}集文件复制完成: {len(files)} 个文件")
     
     def generate_coco_annotations(self, output_dir, train_files, test_files, verify_files, input_dir):
@@ -4610,10 +5362,10 @@ class MaterialDesignGUI:
         
         # 生成训练集标注
         self.generate_split_coco_annotations_multi(output_dir, 'train', train_files, global_converter, 0.9, 0.95)
-        
+
         # 生成测试集标注
         self.generate_split_coco_annotations_multi(output_dir, 'test', test_files, global_converter, 0.95, 0.98)
-        
+
         # 生成验证集标注
         self.generate_split_coco_annotations_multi(output_dir, 'verify', verify_files, global_converter, 0.98, 1.0)
     
@@ -4625,7 +5377,7 @@ class MaterialDesignGUI:
         # 注意：这里不再创建新的converter实例
         
         # 处理文件
-        coco_data = self.process_split_json_files(global_converter, input_dir, files, split_name)
+        coco_data = self.process_split_json_files(global_converter, input_dir, files, split_name, output_dir, self.filename_mapping)
         
         # 保存COCO JSON文件
         annotations_dir = osp.join(output_dir, split_name, 'annotations')
@@ -4651,7 +5403,7 @@ class MaterialDesignGUI:
         # 注意：这里不再创建新的converter实例
         
         # 处理文件
-        coco_data = self.process_split_json_files_multi(global_converter, files, split_name)
+        coco_data = self.process_split_json_files_multi(global_converter, files, split_name, output_dir, self.filename_mapping)
         
         # 保存COCO JSON文件
         annotations_dir = osp.join(output_dir, split_name, 'annotations')
@@ -4700,7 +5452,7 @@ class MaterialDesignGUI:
         else:
             self.log_message(f"  ⚠ {split_name}集有 {invalid_annotations} 个标注的category_id无效")
     
-    def process_split_json_files(self, converter, input_dir, files, split_name):
+    def process_split_json_files(self, converter, input_dir, files, split_name, output_dir, filename_mapping=None):
         """处理指定子集的JSON文件"""
         data_coco = {}
         images_list = []
@@ -4727,11 +5479,17 @@ class MaterialDesignGUI:
                 with open(label_file, encoding='utf-8') as f:
                     data = json.load(f)
                 
-                # 统一获取文件名
+                # 统一获取JSON中引用的文件名
                 if '\\' in data['imagePath']:
-                    current_file_name = data['imagePath'].split('\\')[-1]
+                    json_file_name = data['imagePath'].split('\\')[-1]
                 else:
-                    current_file_name = data['imagePath'].split('/')[-1]
+                    json_file_name = data['imagePath'].split('/')[-1]
+
+                # 文件名去重：优先从映射表查找，如果没有则调用deduplicate_filename
+                if filename_mapping and (split_name, json_file_name) in filename_mapping:
+                    current_file_name = filename_mapping[(split_name, json_file_name)]
+                else:
+                    current_file_name = self.deduplicate_filename(json_file_name, output_dir, split_name)
                 
                 # 分配image_id
                 if current_file_name in file_name_to_image_id:
@@ -4793,10 +5551,10 @@ class MaterialDesignGUI:
                         self.log_message(f"警告: 无效的bbox {temp_bbox}，跳过该标注")
                         continue
 
-                    # 去重
+                    # 去重（使用文件名而非 image_id，避免跨 part 误删）
                     rounded_bbox = tuple(round(v, 2) for v in temp_bbox)
                     category_id = converter.label_to_num[label]
-                    ann_key = (current_image_id, category_id, rounded_bbox)
+                    ann_key = (current_file_name, category_id, rounded_bbox)
                     if ann_key in processed_annotations_set:
                         continue
                     processed_annotations_set.add(ann_key)
@@ -4873,13 +5631,16 @@ class MaterialDesignGUI:
             try:
                 with open(label_file, encoding='utf-8') as f:
                     data = json.load(f)
-                
-                # 统一获取文件名（兼容不同分隔符）
+
+                # 统一获取JSON中引用的文件名
                 if '\\' in data['imagePath']:
-                    current_file_name = data['imagePath'].split('\\')[-1]
+                    json_file_name = data['imagePath'].split('\\')[-1]
                 else:
-                    current_file_name = data['imagePath'].split('/')[-1]
-                
+                    json_file_name = data['imagePath'].split('/')[-1]
+
+                # process_json_files 方法用于简单场景，直接使用原始文件名
+                current_file_name = json_file_name
+
                 # 分配/复用 image_id，确保同名图片只出现一次
                 if current_file_name in file_name_to_image_id:
                     current_image_id = file_name_to_image_id[current_file_name]
@@ -4938,11 +5699,11 @@ class MaterialDesignGUI:
                         self.log_message(f"警告: 无效的bbox {temp_bbox}，跳过该标注")
                         continue
                     
-                    # 去重：按 image_id, category_id, 取两位小数的bbox
+                    # 去重：按 file_name, category_id, 取两位小数的bbox
                     rounded_bbox = tuple(round(v, 2) for v in temp_bbox)
                     # 当前 image_id 已统一
                     category_id = converter.label_to_num[label]
-                    ann_key = (current_image_id, category_id, rounded_bbox)
+                    ann_key = (current_file_name, category_id, rounded_bbox)
                     if ann_key in processed_annotations_set:
                         # 已存在，跳过重复
                         continue
@@ -5111,6 +5872,11 @@ class MaterialDesignGUI:
         dialog = tk.Toplevel(self.root)
         dialog.title(f"扫描结果 - 发现 {len(valid_folders)} 个文件夹")
         dialog.geometry("600x500")
+        # 设置窗口位置在主窗口中央
+        dialog.update_idletasks()
+        x = self.root.winfo_x() + (self.root.winfo_width() - 600) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - 500) // 2
+        dialog.geometry(f"+{x}+{y}")
         dialog.transient(self.root)
         dialog.grab_set()
         
@@ -6576,15 +7342,20 @@ class MaterialDesignGUI:
     
     # ==================== 多文件夹处理方法 ====================
     
-    def process_split_json_files_multi(self, converter, files, split_name):
+    def process_split_json_files_multi(self, converter, files, split_name, output_dir, filename_mapping=None):
         """处理指定子集的JSON文件（多文件夹版本）"""
         data_coco = {}
         images_list = []
         annotations_list = []
         image_num = -1
         object_num = -1
-        processed_annotations_set = set()
-        
+
+        # 使用全局标注去重集合（跨 part 去重，基于文件名而非 image_id）
+        if hasattr(self, 'global_processed_annotations'):
+            processed_annotations_set = self.global_processed_annotations
+        else:
+            processed_annotations_set = set()
+
         # 文件名到image_id的映射
         file_name_to_image_id = {}
         
@@ -6617,11 +7388,17 @@ class MaterialDesignGUI:
                 with open(label_file, encoding='utf-8') as f:
                     data = json.load(f)
                 
-                # 统一获取文件名
+                # 统一获取JSON中引用的文件名
                 if '\\' in data['imagePath']:
-                    current_file_name = data['imagePath'].split('\\')[-1]
+                    json_file_name = data['imagePath'].split('\\')[-1]
                 else:
-                    current_file_name = data['imagePath'].split('/')[-1]
+                    json_file_name = data['imagePath'].split('/')[-1]
+
+                # 文件名去重：优先从映射表查找，如果没有则调用deduplicate_filename
+                if filename_mapping and (split_name, json_file_name) in filename_mapping:
+                    current_file_name = filename_mapping[(split_name, json_file_name)]
+                else:
+                    current_file_name = self.deduplicate_filename(json_file_name, output_dir, split_name)
                 
                 # 分配image_id
                 if current_file_name in file_name_to_image_id:
@@ -6683,10 +7460,10 @@ class MaterialDesignGUI:
                         self.log_message(f"警告: 无效的bbox {temp_bbox}，跳过该标注")
                         continue
 
-                    # 去重
+                    # 去重（使用文件名而非 image_id，避免跨 part 误删）
                     rounded_bbox = tuple(round(v, 2) for v in temp_bbox)
                     category_id = converter.label_to_num[label]
-                    ann_key = (current_image_id, category_id, rounded_bbox)
+                    ann_key = (current_file_name, category_id, rounded_bbox)
                     if ann_key in processed_annotations_set:
                         continue
                     processed_annotations_set.add(ann_key)

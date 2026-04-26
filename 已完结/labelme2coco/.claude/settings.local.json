@@ -3,7 +3,11 @@
     "allow": [
       "Bash(python:*)",
       "Bash(python3:*)",
-      "Bash(d:/proiect/.venv/Scripts/python.exe:*)"
+      "Bash(d:/proiect/.venv/Scripts/python.exe:*)",
+      "Bash(py --version)",
+      "Bash(awk '/^class MaterialDesignGUI:/,/^class [A-Z]/' \"D:\\\\proiect\\\\已完结\\\\labelme2coco\\\\label2coco2.7.py\")",
+      "Bash(cat)",
+      "Read(//tmp/**)"
     ]
   }
 }

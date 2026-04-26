@@ -4,9 +4,9 @@ import re
 import json
 
 CONFIG = {
-    "model_name": "glm-4.7-flash",
+    "model_name": "qwen3-8b",
     "api_url": "http://ds.scc.com.cn/v1/chat/completions",
-    "api_key": "1",
+    "api_key": "0",
     "timeout": 15.0
 }
 

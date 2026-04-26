@@ -246,7 +246,51 @@ class ClockSyncApp:
         )
         self.selected_ip_label.pack(side=LEFT, padx=10)
 
+        # ---- 配置模式选择 ----
+        mode_frame = ttk.LabelFrame(main_frame, text="配置模式")
+        mode_inner = ttk.Frame(mode_frame, padding=10)
+        mode_inner.pack(fill=X)
+        mode_frame.pack(fill=X, pady=(0, 10))
+
+        mode_row = ttk.Frame(mode_inner)
+        mode_row.pack(fill=X)
+
+        ttk.Label(mode_row, text="选择模式: ").pack(side=LEFT, padx=5)
+        self.mode_var = ttk.StringVar(value="w32tm命令模式")
+        modes = ["w32tm命令模式", "注册表直接配置", "强制本地时钟源"]
+        for mode in modes:
+            ttk.Radiobutton(
+                mode_row, text=mode,
+                variable=self.mode_var, value=mode,
+                command=self.on_mode_change
+            ).pack(side=LEFT, padx=5)
+
+        self.mode_desc_label = ttk.Label(
+            mode_row,
+            text="说明: 使用 w32tm 命令配置（服务运行时），适用于大多数系统",
+            bootstyle="info",
+            wraplength=400
+        )
+        self.mode_desc_label.pack(side=LEFT, padx=10)
+
+        self.mode_descriptions = {
+            "w32tm命令模式": "说明: 使用 w32tm 命令配置（服务运行时），适用于大多数系统",
+            "注册表直接配置": "说明: 直接写入注册表后重启服务，适用于 w32tm 命令不生效的系统",
+            "强制本地时钟源": "说明: 配置为本地 CMOS 时钟源，适用于网络隔离环境",
+        }
+
         # ---- 日志区 ----
+        # 日志操作按钮
+        log_btn_frame = ttk.Frame(main_frame)
+        log_btn_frame.pack(fill=X, pady=(0, 0))
+
+        ttk.Button(
+            log_btn_frame, text="📋 一键复制日志",
+            command=self.copy_log_to_clipboard,
+            bootstyle="info-outline",
+            width=18
+        ).pack(side=RIGHT)
+
         log_frame = ttk.LabelFrame(main_frame, text="操作日志")
         log_inner_frame = ttk.Frame(log_frame, padding=5)
         log_frame.pack(fill=BOTH, expand=True)
@@ -285,6 +329,23 @@ class ClockSyncApp:
         ip = NTP_SERVERS.get(server_name, "")
         self.selected_ip_label.config(text=f"当前选择: {ip}")
         self.config_btn_label.config(text=f"({server_name})")
+
+    def on_mode_change(self):
+        """配置模式切换"""
+        mode = self.mode_var.get()
+        desc = self.mode_descriptions.get(mode, "")
+        self.mode_desc_label.config(text=desc)
+
+    def copy_log_to_clipboard(self):
+        """复制日志内容到剪贴板"""
+        try:
+            log_text = self.log_display.get("1.0", END)
+            self.root.clipboard_clear()
+            self.root.clipboard_append(log_text)
+            self.root.update()
+            self.log("✓ 日志已复制到剪贴板", "success")
+        except Exception as e:
+            self.log(f"✗ 复制失败: {str(e)}", "error")
 
     def log(self, message, tag=None):
         """添加日志"""
@@ -476,44 +537,40 @@ class ClockSyncApp:
             self.log("✗ 需要管理员权限才能配置 NTP 服务器", "error")
             return
 
+        mode = self.mode_var.get()
         self.log(f"正在配置 NTP 服务器为 {server_name} ({ip})...", "info")
+        self.log(f"使用配置模式: {mode}", "info")
         threading.Thread(target=self._configure_ntp_thread, args=(ip, server_name), daemon=True).start()
 
     def _configure_ntp_thread(self, ip, server_name):
-        """后台配置 NTP"""
-        # 1. 配置 NTP 服务器
-        cmd = f'w32tm /config /manualpeerlist:"{ip},0x9" /syncfromflags:manual /reliable:YES /update'
-        rc, out, err = run_command(cmd)
-        if rc == 0:
-            self.log(f"✓ NTP 配置成功: {out.strip()}", "success")
-        else:
-            self.log(f"✗ NTP 配置失败: {err.strip()}", "error")
-            self.root.after(0, lambda: None)
-            return
+        """后台配置 NTP - 根据选择的模式调用对应方法"""
+        import time
+        mode = self.mode_var.get()
 
-        # 2. 重启 w32time 服务
-        self.log("正在重启 w32time 服务...", "info")
+        if mode == "w32tm命令模式":
+            self._configure_via_w32tm(ip, server_name)
+        elif mode == "注册表直接配置":
+            self._configure_via_registry(ip, server_name)
+        elif mode == "强制本地时钟源":
+            self._configure_local_clock(server_name)
 
-        # 设置自动启动
-        rc, out, err = run_command('sc config w32time start= auto')
-        if rc == 0:
-            self.log(f"  设置自动启动: {out.strip()}", "success")
+    def _wait_and_resync(self, ip, server_name):
+        """等待服务启动并强制同步验证（供模式1和模式2复用）"""
+        import time
 
-        # 停止服务
-        rc, out, err = run_command('net stop w32time')
-        if rc == 0:
-            self.log(f"  停止服务: {out.strip()}", "info")
-        elif "没有启动" not in err and "3521" not in err:
-            self.log(f"  停止服务警告: {err.strip()}", "warning")
+        # 等待服务完全启动
+        service_ready = False
+        for _ in range(10):
+            time.sleep(1)
+            rc2, out2, _ = run_command('sc query w32time')
+            if rc2 == 0 and "RUNNING" in out2:
+                service_ready = True
+                break
 
-        # 启动服务
-        rc, out, err = run_command('net start w32time')
-        if rc == 0:
-            self.log(f"  启动服务: {out.strip()}", "success")
-        else:
-            self.log(f"  启动服务失败: {err.strip()}", "error")
+        if not service_ready:
+            self.log("  ⚠ 服务启动后未进入 RUNNING 状态", "warning")
 
-        # 3. 强制同步
+        # 强制同步
         self.log("正在强制同步...", "info")
         rc, out, err = run_command('w32tm /resync /rediscover')
         if rc == 0:
@@ -521,7 +578,7 @@ class ClockSyncApp:
         else:
             self.log(f"⚠ 强制同步返回: {err.strip()}", "warning")
 
-        # 4. 验证配置
+        # 验证配置
         self.log("\n=== 验证配置 ===", "info")
         rc, out, err = run_command('w32tm /query /source')
         if rc == 0:
@@ -531,10 +588,183 @@ class ClockSyncApp:
                 self.log(f"  ✓ 已成功锁定到 {server_name} 时钟源", "success")
             else:
                 self.log(f"  ⚠ 同步源未指向预期服务器", "warning")
+                self.log("  建议：尝试切换其他配置模式", "warning")
+                time.sleep(1)
+                run_command('w32tm /resync')
 
         self.log("\n✓ NTP 配置完成！", "success")
+        self.root.after(1000, self.check_status)
 
-        # 刷新状态
+    def _restart_service(self):
+        """重启 w32time 服务"""
+        import time
+        self.log("正在重启 w32time 服务...", "info")
+        run_command('net stop w32time')
+        time.sleep(2)
+        rc, out, err = run_command('net start w32time')
+        if rc == 0:
+            self.log(f"  ✓ 服务重启成功: {out.strip()}", "success")
+            return True
+        else:
+            self.log(f"  ✗ 服务重启失败: {err.strip()}", "error")
+            return False
+
+    def _configure_via_w32tm(self, ip, server_name):
+        """模式1：使用 w32tm 命令配置（服务运行时）"""
+        self.log("【模式: w32tm命令配置】", "info")
+
+        # 1. 使用 w32tm /config 命令
+        cmd = f'w32tm /config /manualpeerlist:"{ip},0x9" /syncfromflags:manual /reliable:YES /update'
+        rc, out, err = run_command(cmd)
+        if rc == 0:
+            self.log(f"  ✓ w32tm 配置成功: {out.strip()}", "success")
+        else:
+            self.log(f"  ✗ w32tm 配置失败: {err.strip()}", "error")
+            self.log("  建议：切换到「注册表直接配置」模式重试", "warning")
+            return
+
+        # 2. 启用 NtpClient
+        run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\TimeProviders\\NtpClient '
+            '/v Enabled /t REG_DWORD /d 1 /f'
+        )
+
+        # 3. 禁用 VMICTimeProvider
+        run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\TimeProviders\\VMICTimeProvider '
+            '/v Enabled /t REG_DWORD /d 0 /f'
+        )
+
+        # 4. 设置自动启动
+        run_command('sc config w32time start= auto')
+
+        # 5. 重启服务
+        if not self._restart_service():
+            return
+
+        # 6. 同步验证
+        self._wait_and_resync(ip, server_name)
+
+    def _configure_via_registry(self, ip, server_name):
+        """模式2：通过注册表直接配置"""
+        self.log("【模式: 注册表直接配置】", "info")
+
+        # 1.1 设置 NtpServer
+        rc, out, err = run_command(
+            f'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters '
+            f'/v NtpServer /t REG_SZ /d "{ip},0x9" /f'
+        )
+        if rc == 0:
+            self.log(f"  ✓ 已设置 NtpServer: {ip},0x9", "success")
+        else:
+            self.log(f"  ✗ 设置 NtpServer 失败: {err.strip()}", "error")
+            return
+
+        # 1.2 设置 SyncFromFlags: MANUAL
+        rc, out, err = run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters '
+            '/v SyncFromFlags /t REG_DWORD /d 1 /f'
+        )
+        if rc == 0:
+            self.log("  ✓ 已设置同步模式为手动", "success")
+
+        # 1.3 设置可靠时钟源
+        rc, out, err = run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters '
+            '/v Reliable /t REG_DWORD /d 1 /f'
+        )
+        if rc == 0:
+            self.log("  ✓ 已标记为可靠时钟源", "success")
+
+        # 1.4 启用 NtpClient 提供程序
+        rc, out, err = run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\TimeProviders\\NtpClient '
+            '/v Enabled /t REG_DWORD /d 1 /f'
+        )
+        if rc == 0:
+            self.log("  ✓ NtpClient 提供程序已启用", "success")
+        else:
+            self.log(f"  ⚠ 启用 NtpClient 失败: {err.strip()}", "warning")
+
+        # 1.5 禁用 VMICTimeProvider
+        run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\TimeProviders\\VMICTimeProvider '
+            '/v Enabled /t REG_DWORD /d 0 /f'
+        )
+
+        # 1.6 设置轮询间隔
+        rc, out, err = run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\TimeProviders\\NtpClient '
+            '/v SpecialPollInterval /t REG_DWORD /d 900 /f'
+        )
+        if rc == 0:
+            self.log("  ✓ 轮询间隔已设置为 900 秒", "info")
+
+        # 2. 设置自动启动
+        rc, out, err = run_command('sc config w32time start= auto')
+        if rc == 0:
+            self.log(f"  设置自动启动: {out.strip()}", "success")
+
+        # 3. 重启服务
+        if not self._restart_service():
+            return
+
+        # 4. 同步验证
+        self._wait_and_resync(ip, server_name)
+
+    def _configure_local_clock(self, server_name):
+        """模式3：强制本地时钟源模式"""
+        import time
+        self.log("【模式: 强制本地时钟源】", "info")
+        self.log("注意: 此模式将系统配置为使用本地 CMOS 时钟，不依赖外部 NTP 服务器", "warning")
+
+        # 1. 配置为本地 CMOS 时钟
+        rc, out, err = run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters '
+            '/v Type /t REG_SZ /d "NoSync" /f'
+        )
+        if rc == 0:
+            self.log("  ✓ 已设置时钟类型为 NoSync", "success")
+
+        # 2. 启用本地时钟分发器
+        rc, out, err = run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters '
+            '/v LocalClockDispenserNtpRef /t REG_SZ /d "127.127.1.0" /f'
+        )
+        if rc == 0:
+            self.log("  ✓ 已配置本地时钟分发器", "success")
+
+        # 3. 设置 AnnounceFlags
+        rc, out, err = run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\Config '
+            '/v AnnounceFlags /t REG_DWORD /d 5 /f'
+        )
+        if rc == 0:
+            self.log("  ✓ 已设置 AnnounceFlags", "info")
+
+        # 4. 启用 NtpServer 提供程序
+        rc, out, err = run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\TimeProviders\\NtpServer '
+            '/v Enabled /t REG_DWORD /d 1 /f'
+        )
+        if rc == 0:
+            self.log("  ✓ NtpServer 提供程序已启用", "success")
+
+        # 5. 设置服务自动启动
+        run_command('sc config w32time start= auto')
+
+        # 6. 重启服务
+        if not self._restart_service():
+            return
+
+        # 7. 验证
+        self.log("\n=== 验证配置 ===", "info")
+        rc, out, err = run_command('w32tm /query /source')
+        if rc == 0:
+            source = out.strip()
+            self.log(f"  当前同步源: {source}", "info")
+
+        self.log("\n✓ 本地时钟源配置完成！", "success")
         self.root.after(1000, self.check_status)
 
     def force_sync(self):
