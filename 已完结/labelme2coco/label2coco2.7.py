@@ -442,7 +442,7 @@ class MaterialDesignGUI:
         self.current_filter = None   # 当前过滤类型，None表示显示全部
         self.stat_widgets = {}       # 保存统计行widget引用 {error_type: (frame, btn, count, icon_var)}
         self.seen_filenames = {}     # 全局文件名去重追踪：basename -> set(已使用的完整文件名)
-        self.filename_mapping = {}   # 文件名映射表：(subset_name, original_basename) -> deduplicated_basename
+        self.filename_mapping = {}   # 文件名映射表：(subset_name, original_basename) -> 输出文件名
         print("多文件夹管理变量初始化完成")
         
         # 全局进度与按钮集合
@@ -740,7 +740,15 @@ class MaterialDesignGUI:
         scrollable_frame.bind("<Leave>", lambda e: canvas.unbind_all("<MouseWheel>"))
         
         return container, scrollable_frame
-    
+
+    def _limit_stats_height(self, widget, max_ratio=0.4):
+        """限制统计区域的最大高度为窗口高度的一定比例"""
+        window_height = self.root.winfo_height()
+        max_height = int(window_height * max_ratio)
+        current_height = widget.winfo_reqheight()
+        if current_height > max_height:
+            widget.configure(height=max_height)
+
     def animate_progress_bar(self, target_value, duration=300):
         """动画化进度条更新"""
         current_value = self.progress_var.get()
@@ -1139,6 +1147,14 @@ class MaterialDesignGUI:
                                            fg=self.colors['on_surface_variant'],
                                            font=('Segoe UI', 9))
         self.current_label_info.pack(anchor=tk.W, padx=12, pady=(0, 8))
+
+        # 当前选中ID（隐藏标签，用于内部追踪）
+        self.current_id_label = tk.Label(edit_frame,
+                                         text="--",
+                                         bg=self.colors['surface_container'],
+                                         fg=self.colors['on_surface_variant'],
+                                         font=('Segoe UI', 9))
+        self.current_id_label.pack(anchor=tk.W, padx=12, pady=(0, 8))
         
         # 绑定选择事件
         self.labels_tree.bind('<<TreeviewSelect>>', self.on_label_select)
@@ -1766,8 +1782,15 @@ class MaterialDesignGUI:
                                font=('Segoe UI', 12, 'bold'))
         stats_label.pack(anchor=tk.W, pady=(0, 8))
 
+        # 创建带滚动条的错误统计区域
+        stats_scroll_container, stats_scrollable_frame = self.create_scrollable_area(
+            stats_frame, bg=self.colors['surface'])
+        stats_scroll_container.pack(fill=tk.X, pady=(0, 8))
+        # 限制最大高度为窗口高度的 40%，超出时可滚动
+        stats_scroll_container.bind('<Configure>', lambda e: self._limit_stats_height(stats_scroll_container, 0.4))
+
         # 创建错误统计网格
-        self.error_stats_frame = ttk.Frame(stats_frame, style='MaterialCard.TFrame')
+        self.error_stats_frame = ttk.Frame(stats_scrollable_frame, style='MaterialCard.TFrame')
         self.error_stats_frame.pack(fill=tk.X)
         # 设置列权重，让内容可以正确扩展
         self.error_stats_frame.grid_columnconfigure(0, weight=1)
@@ -3297,11 +3320,9 @@ class MaterialDesignGUI:
         同时检查文件名中是否包含特殊字符（中文、空格、括号等）
         """
         problems = []
-        filename_to_folders = {}  # basename -> [folder_path, ...]
         import re
 
-        image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff',
-                           '.JPG', '.JPEG', '.PNG', '.GIF', '.BMP', '.TIF', '.TIFF')
+        image_extensions_lower = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff')
 
         # 定义特殊字符的正则表达式模式
         special_char_regexes = [
@@ -3316,30 +3337,33 @@ class MaterialDesignGUI:
             (re.compile(r'[!@#%^&*=,;:?\'\"]'), '特殊符号'),
         ]
 
-        # 第一遍：收集所有文件夹中的所有图片文件，检测文件夹内重复和特殊字符
+        # 第一遍：收集所有文件夹中的所有图片文件，保留真实路径以便后续修复。
+        file_instances = {}  # basename_lower -> [instance, ...]
         for folder_path in all_folders.keys():
             if not os.path.exists(folder_path):
                 continue
             try:
-                # 使用 os.walk 递归获取所有文件
-                all_files = []
+                folder_filenames = {}  # basename -> [instance, ...]
+
                 for root, dirs, files in os.walk(folder_path):
                     for file in files:
-                        all_files.append(file)
+                        if not file.lower().endswith(image_extensions_lower):
+                            continue
 
-                folder_filenames = {}  # basename -> count in this folder
-
-                for file in all_files:
-                    if file.endswith(image_extensions):
                         basename = file.lower()
-                        folder_filenames[basename] = folder_filenames.get(basename, 0) + 1
+                        full_path = os.path.normpath(os.path.join(root, file))
+                        rel_path = os.path.relpath(full_path, folder_path)
+                        instance = {
+                            'folder': folder_path,
+                            'file': rel_path,
+                            'name': file,
+                            'basename': basename,
+                            'source_path': full_path
+                        }
 
-                        # 记录跨文件夹映射
-                        if basename not in filename_to_folders:
-                            filename_to_folders[basename] = []
-                        filename_to_folders[basename].append(folder_path)
+                        folder_filenames.setdefault(basename, []).append(instance)
+                        file_instances.setdefault(basename, []).append(instance)
 
-                        # 检查文件名中的特殊字符
                         has_special = False
                         special_types = []
                         for regex, desc in special_char_regexes:
@@ -3351,37 +3375,43 @@ class MaterialDesignGUI:
                         if has_special:
                             problems.append({
                                 'folder': folder_path,
-                                'file': file,
+                                'file': rel_path,
+                                'source_path': full_path,
                                 'error_type': '文件名重复',
                                 'description': f'文件名包含特殊字符: {", ".join(special_types)}'
                             })
 
                 # 报告文件夹内重复
-                for basename, count in folder_filenames.items():
-                    if count > 1:
-                        problems.append({
-                            'folder': folder_path,
-                            'file': basename,
-                            'error_type': '文件名重复',
-                            'description': f'文件名 "{basename}" 在当前文件夹内重复 {count} 次'
-                        })
+                for basename, instances in folder_filenames.items():
+                    if len(instances) > 1:
+                        for instance in instances[1:]:
+                            original_filename = instance['name']
+                            problems.append({
+                                'folder': instance['folder'],
+                                'file': instance['file'],
+                                'source_path': instance['source_path'],
+                                'error_type': '文件名重复',
+                                'description': f'文件名 "{original_filename}" 在当前文件夹内重复 {len(instances)} 次'
+                            })
             except Exception:
                 continue
 
         # 第二遍：检查跨文件夹重复
-        for basename, folders in filename_to_folders.items():
-            unique_folders = set(folders)
+        for basename, instances in file_instances.items():
+            unique_folders = set(instance['folder'] for instance in instances)
             if len(unique_folders) > 1:
-                # 第一个文件夹保持不变，其余报告为重复
-                for i, folder in enumerate(folders):
-                    if i == 0:
+                first_seen = False
+                for instance in instances:
+                    if not first_seen:
+                        first_seen = True
                         continue
-                    folder_name = self.folder_names.get(folder, os.path.basename(folder))
+                    original_filename = instance['name']
                     problems.append({
-                        'folder': folder,
-                        'file': basename,
+                        'folder': instance['folder'],
+                        'file': instance['file'],
+                        'source_path': instance['source_path'],
                         'error_type': '文件名重复',
-                        'description': f'文件名 "{basename}" 在多个文件夹中重复'
+                        'description': f'文件名 "{original_filename}" 在多个文件夹中重复'
                     })
 
         return problems
@@ -3867,32 +3897,32 @@ class MaterialDesignGUI:
         """生成文件名重复问题的重命名计划（包含特殊字符清理）"""
         rename_plan = {}
 
-        if '文件名重复' in self.problem_files:
-            from collections import defaultdict
-            filename_groups = defaultdict(list)
-            for file_info in self.problem_files['文件名重复']:
-                basename = os.path.basename(file_info['file']).lower()
-                filename_groups[basename].append(file_info)
+        if '文件名重复' not in self.problem_files:
+            return rename_plan
 
-            for basename, files in filename_groups.items():
-                if len(files) > 1:
-                    for i, file_info in enumerate(files):
-                        if i == 0:
-                            continue
-                        original_name = file_info['file']
-                        new_name = self._generate_safe_filename(original_name)
+        for file_info in self.problem_files['文件名重复']:
+            desc = file_info.get('description', '')
+            if not any(keyword in desc for keyword in ['特殊字符', '在当前文件夹内重复', '在多个文件夹中重复']):
+                continue
 
-                        full_path = os.path.normpath(os.path.join(file_info['folder'], file_info['file']))
-                        rename_plan[full_path] = new_name
-                else:
-                    # 仅含特殊字符的单个文件也需要重命名清理
-                    file_info = files[0]
-                    if 'description' in file_info and '特殊字符' in file_info['description']:
-                        original_name = file_info['file']
-                        new_name = self._generate_safe_filename(original_name)
+            full_path = file_info.get('source_path')
+            if not full_path:
+                full_path = os.path.normpath(os.path.join(file_info['folder'], file_info['file']))
+            else:
+                full_path = os.path.normpath(full_path)
 
-                        full_path = os.path.normpath(os.path.join(file_info['folder'], file_info['file']))
-                        rename_plan[full_path] = new_name
+            if not os.path.exists(full_path):
+                # 兼容旧扫描结果：如果file只是basename，则递归寻找真实文件。
+                target_name = os.path.basename(file_info['file']).lower()
+                for root, _, files in os.walk(file_info['folder']):
+                    match = next((f for f in files if f.lower() == target_name), None)
+                    if match:
+                        full_path = os.path.normpath(os.path.join(root, match))
+                        break
+
+            original_name = os.path.basename(full_path)
+            new_name = self._generate_safe_filename(original_name)
+            rename_plan[full_path] = new_name
 
         return rename_plan
 
@@ -3991,10 +4021,12 @@ class MaterialDesignGUI:
             self._rename_plan = self._generate_rename_plan()
 
         # 确认对话框
-        # 只统计真正会被删除的问题类型（"缺json"和"图片缺少JSON标注"不删除文件）
-        types_that_delete = [t for t in deletable_types if t not in ['缺json', '图片缺少JSON标注']]
-        delete_count = sum(len(self.problem_files.get(error_type, [])) for error_type in types_that_delete)
-        rename_count = len(getattr(self, '_rename_plan', {}))
+        delete_count = sum(len(self.problem_files.get(error_type, [])) for error_type in deletable_types)
+
+        # 统计重命名数量：文件名重复问题的记录数
+        rename_count = 0
+        if rename_types and '文件名重复' in self.problem_files:
+            rename_count = len(self.problem_files['文件名重复'])
 
         if delete_count == 0 and rename_count == 0:
             messagebox.showinfo("提示", "没有选中的问题文件")
@@ -4028,38 +4060,8 @@ class MaterialDesignGUI:
                     folder = file_info['folder']
                     filename = file_info['file']
 
-                    if error_type == '缺json':
-                        # "缺json"问题：file字段是图片文件，不需要删除（图片本身没错）
-                        # 这类问题无法通过删除修复，跳过
-                        continue
-
-                    elif error_type in ['缺图片', '图片JSON对应', 'JSON引用图片缺失']:
-                        # "缺图片"问题：file字段是JSON文件，只删除JSON文件
-                        file_path = os.path.normpath(os.path.join(folder, filename))
-                        files_to_delete.add(file_path)
-
-                    elif error_type == '图片缺少JSON标注':
-                        # 图片缺少JSON标注：file字段是图片路径，跳过（图片本身没错）
-                        continue
-
-                    else:
-                        # 其他问题（标注越界、无效多边形等）：file字段是JSON文件
-                        # 需要先读取JSON获取图片名，然后删除JSON+图片
-                        file_path = os.path.normpath(os.path.join(folder, filename))
-                        files_to_delete.add(file_path)
-
-                        # 先读取JSON获取图片路径（在删除前！）
-                        try:
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                data = json.load(f)
-                            image_path = data.get('imagePath', '')
-                            if image_path:
-                                image_name = os.path.basename(image_path)
-                                image_full_path = os.path.normpath(os.path.join(folder, image_name))
-                                if os.path.exists(image_full_path):
-                                    files_to_delete.add(image_full_path)
-                        except:
-                            pass  # 读取失败不影响JSON文件删除
+                    file_path = os.path.normpath(os.path.join(folder, filename))
+                    files_to_delete.add(file_path)
 
             # 执行删除
             deleted_count = 0
@@ -4091,6 +4093,15 @@ class MaterialDesignGUI:
                     # 获取文件夹路径
                     folder = os.path.dirname(original_path)
                     old_basename = os.path.basename(original_path)
+                    name_part, ext_part = os.path.splitext(new_name)
+                    candidate_name = new_name
+                    candidate_path = os.path.join(folder, candidate_name)
+                    counter = 1
+                    while os.path.exists(candidate_path) and os.path.normcase(candidate_path) != os.path.normcase(original_path):
+                        candidate_name = f"{name_part}_{counter}{ext_part}"
+                        candidate_path = os.path.join(folder, candidate_name)
+                        counter += 1
+                    new_name = candidate_name
 
                     # 重命名图片文件
                     new_path = os.path.join(folder, new_name)
@@ -4524,6 +4535,8 @@ class MaterialDesignGUI:
         try:
             self.log_message("=== 开始多文件夹数据集切分和格式转换 ===")
             self.log_message(f"输出目录: {output_dir}")
+            self.seen_filenames = {}
+            self.filename_mapping = {}
             
             # 获取切分比例
             train_ratio = self.train_ratio_var.get()
@@ -4736,6 +4749,8 @@ class MaterialDesignGUI:
             
             # 全局验证标签ID一致性
             self.global_validation(output_dir, self.global_converter)
+            if not self.validate_coco_image_files(output_dir):
+                raise ValueError("COCO标注中的图片文件名与输出图片不一致，请查看上方日志")
             
             self.status_var.set("处理完成")
             messagebox.showinfo("成功", "多文件夹数据集切分和转换完成！")
@@ -4750,29 +4765,35 @@ class MaterialDesignGUI:
     def global_validation(self, output_dir, global_converter):
         """全局验证：确保所有子集的标签ID一致"""
         self.log_message("=== 全局标签ID一致性验证 ===")
-        
-        split_names = ['train', 'test', 'verify']
+
+        annotation_files = []
+        for root, _, files in os.walk(output_dir):
+            if os.path.basename(root) != 'annotations':
+                continue
+            split_name = os.path.basename(os.path.dirname(root))
+            for file in files:
+                if file.lower().endswith('.json'):
+                    annotation_files.append((split_name, os.path.join(root, file)))
+
         all_categories = {}
-        
+
         # 收集所有子集的categories信息
-        for split_name in split_names:
-            json_path = osp.join(output_dir, split_name, 'annotations', f'instance_{split_name}.json')
-            if os.path.exists(json_path):
-                try:
-                    with open(json_path, 'r', encoding='utf-8') as f:
-                        coco_data = json.load(f)
-                    
-                    for category in coco_data['categories']:
-                        label_name = category['name']
-                        category_id = category['id']
-                        
-                        if label_name not in all_categories:
-                            all_categories[label_name] = {}
-                        
-                        all_categories[label_name][split_name] = category_id
-                        
-                except Exception as e:
-                    self.log_message(f"读取{split_name}集JSON文件失败: {e}")
+        for split_name, json_path in annotation_files:
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    coco_data = json.load(f)
+
+                for category in coco_data['categories']:
+                    label_name = category['name']
+                    category_id = category['id']
+
+                    if label_name not in all_categories:
+                        all_categories[label_name] = {}
+
+                    all_categories[label_name][split_name] = category_id
+
+            except Exception as e:
+                self.log_message(f"读取{split_name}集JSON文件失败: {e}")
         
         # 验证每个标签在所有子集中的ID是否一致
         global_errors = 0
@@ -4862,10 +4883,6 @@ class MaterialDesignGUI:
         import random
 
         name, ext = os.path.splitext(basename)
-        dest_dir = osp.join(output_dir, subset_name, 'images')
-
-        # 确保目标目录存在
-        os.makedirs(dest_dir, exist_ok=True)
 
         # 使用全局 seen_filenames 进行跨 part 去重追踪
         if not hasattr(self, 'seen_filenames'):
@@ -4880,37 +4897,79 @@ class MaterialDesignGUI:
                 new_name = f"{name}_r{random_suffix}{ext}"
                 if new_name not in self.seen_filenames:
                     safe_name = new_name
-                    dest_path = osp.join(dest_dir, new_name)
-                    if not os.path.exists(dest_path):
-                        self.log_message(f"  文件名冲突检测: '{basename}' 已存在，重命名为 '{new_name}'")
-                        break
+                    self.log_message(f"  COCO文件名重复: '{basename}' 已出现，标注中改用 '{new_name}'")
+                    break
             else:
                 # 极端情况：100次随机都冲突，使用时间戳
                 import time
                 timestamp = int(time.time() * 1000)
                 safe_name = f"{name}_r{timestamp}{ext}"
-                self.log_message(f"  文件名冲突检测: '{basename}' 已存在，重命名为 '{safe_name}'")
-        else:
-            # 检查目标文件是否已存在（兼容：磁盘上已存在的文件）
-            dest_path = osp.join(dest_dir, basename)
-            if os.path.exists(dest_path):
-                for _ in range(100):
-                    random_suffix = random.randint(1000, 9999)
-                    new_name = f"{name}_r{random_suffix}{ext}"
-                    new_path = osp.join(dest_dir, new_name)
-                    if not os.path.exists(new_path) and new_name not in self.seen_filenames:
-                        safe_name = new_name
-                        self.log_message(f"  文件名冲突检测: '{basename}' 已存在，重命名为 '{new_name}'")
-                        break
-                else:
-                    import time
-                    timestamp = int(time.time() * 1000)
-                    safe_name = f"{name}_r{timestamp}{ext}"
-                    self.log_message(f"  文件名冲突检测: '{basename}' 已存在，重命名为 '{safe_name}'")
+                self.log_message(f"  COCO文件名重复: '{basename}' 已出现，标注中改用 '{safe_name}'")
 
         # 记录已使用的文件名（全局追踪）
         self.seen_filenames[safe_name] = subset_name
         return safe_name
+
+    def resolve_coco_file_name(self, json_file_name, split_name, output_dir, filename_mapping=None):
+        """根据复制阶段的映射解析COCO中的file_name。"""
+        if filename_mapping:
+            split_key = (split_name, json_file_name)
+            if split_key in filename_mapping:
+                return filename_mapping[split_key]
+
+        return self.deduplicate_filename(json_file_name, output_dir, split_name)
+
+    def validate_coco_image_files(self, output_dir):
+        """检查COCO JSON中的file_name是否能在对应images目录找到。"""
+        self.log_message("=== COCO图片文件一致性检查 ===")
+        total_missing = 0
+        checked_json = 0
+
+        for root, _, files in os.walk(output_dir):
+            if os.path.basename(root) != 'annotations':
+                continue
+
+            split_dir = os.path.dirname(root)
+            images_dir = osp.join(split_dir, 'images')
+
+            for file in files:
+                if not file.lower().endswith('.json'):
+                    continue
+
+                checked_json += 1
+                json_path = osp.join(root, file)
+                try:
+                    with open(json_path, 'r', encoding='utf-8') as f:
+                        coco_data = json.load(f)
+                except Exception as e:
+                    self.log_message(f"  错误: 无法读取 {json_path}: {e}")
+                    total_missing += 1
+                    continue
+
+                missing = []
+                for image in coco_data.get('images', []):
+                    file_name = image.get('file_name', '')
+                    if file_name and not os.path.exists(osp.join(images_dir, file_name)):
+                        missing.append(file_name)
+
+                if missing:
+                    total_missing += len(missing)
+                    preview = ', '.join(missing[:5])
+                    suffix = ' ...' if len(missing) > 5 else ''
+                    self.log_message(f"  错误: {file} 有 {len(missing)} 个图片引用不存在: {preview}{suffix}")
+                else:
+                    self.log_message(f"  ✓ {file} 图片引用一致")
+
+        if checked_json == 0:
+            self.log_message("  警告: 未找到COCO标注JSON，跳过图片一致性检查")
+            return True
+
+        if total_missing == 0:
+            self.log_message("✓ COCO图片文件一致性检查通过")
+            return True
+
+        self.log_message(f"⚠ COCO图片文件一致性检查失败，共 {total_missing} 个图片引用不存在")
+        return False
 
     def create_output_directories(self, output_dir, folder_files_dict=None):
         """创建输出目录结构"""
@@ -5097,13 +5156,34 @@ class MaterialDesignGUI:
                         skipped += 1
                         continue
 
-                    # 直接使用原始文件名（不再自动重命名，由用户在数据质量检查阶段自行处理重复问题）
-                    safe_filename = filename
+                    # 使用全局去重确保文件名唯一
+                    if filename in self.filename_mapping:
+                        safe_filename = self.filename_mapping[filename]
+                        # 如果映射的文件名与原始名不同，复制时使用映射后的名称
+                        if safe_filename != filename:
+                            name, ext = os.path.splitext(filename)
+                            safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
+                            # 确保映射名也唯一
+                            while safe_filename in self.filename_mapping.values():
+                                safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
+                    else:
+                        safe_filename = filename
+
                     dest_path = osp.join(subset_dir, safe_filename)
+                    # 如果目标文件已存在，进行重命名
+                    if os.path.exists(dest_path):
+                        name, ext = os.path.splitext(filename)
+                        safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
+                        while os.path.exists(osp.join(subset_dir, safe_filename)):
+                            safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
+                        dest_path = osp.join(subset_dir, safe_filename)
+                        self.log_message(f"  文件名冲突: '{filename}' 已存在，重命名为 '{safe_filename}'")
+
                     shutil.copy2(img_file, dest_path)
 
-                    # 记录文件名映射
+                    # 记录文件名映射，兼容全局key和子集key。
                     self.filename_mapping[(subset_name, filename)] = safe_filename
+                    self.filename_mapping[filename] = safe_filename
 
                     # 更新进度条
                     progress = (current_step + (i + 1) / len(files)) / total_progress_steps
@@ -5315,13 +5395,31 @@ class MaterialDesignGUI:
         # 复制文件
         for i, img_file in enumerate(files):
             filename = os.path.basename(img_file)
-            # 直接使用原始文件名（不再自动重命名，由用户在数据质量检查阶段自行处理重复问题）
-            safe_filename = filename
+            # 使用全局去重确保文件名唯一
+            if filename in self.filename_mapping:
+                safe_filename = self.filename_mapping[filename]
+                if safe_filename != filename:
+                    name, ext = os.path.splitext(filename)
+                    safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
+                    while safe_filename in self.filename_mapping.values():
+                        safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
+            else:
+                safe_filename = filename
+
             dest_path = osp.join(split_dir, safe_filename)
+            if os.path.exists(dest_path):
+                name, ext = os.path.splitext(filename)
+                safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
+                while os.path.exists(osp.join(split_dir, safe_filename)):
+                    safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
+                dest_path = osp.join(split_dir, safe_filename)
+                self.log_message(f"  文件名冲突: '{filename}' 已存在，重命名为 '{safe_filename}'")
+
             shutil.copy2(img_file, dest_path)
 
-            # 记录文件名映射
+            # 记录文件名映射，兼容全局key和子集key。
             self.filename_mapping[(split_name, filename)] = safe_filename
+            self.filename_mapping[filename] = safe_filename
 
             # 更新进度条
             progress = progress_start + (i + 1) / len(files) * (progress_end - progress_start)
@@ -5485,11 +5583,10 @@ class MaterialDesignGUI:
                 else:
                     json_file_name = data['imagePath'].split('/')[-1]
 
-                # 文件名去重：优先从映射表查找，如果没有则调用deduplicate_filename
-                if filename_mapping and (split_name, json_file_name) in filename_mapping:
-                    current_file_name = filename_mapping[(split_name, json_file_name)]
-                else:
-                    current_file_name = self.deduplicate_filename(json_file_name, output_dir, split_name)
+                # 优先使用复制阶段记录的文件名映射；没有映射时才做COCO内部去重。
+                current_file_name = self.resolve_coco_file_name(
+                    json_file_name, split_name, output_dir, filename_mapping
+                )
                 
                 # 分配image_id
                 if current_file_name in file_name_to_image_id:
@@ -7394,11 +7491,10 @@ class MaterialDesignGUI:
                 else:
                     json_file_name = data['imagePath'].split('/')[-1]
 
-                # 文件名去重：优先从映射表查找，如果没有则调用deduplicate_filename
-                if filename_mapping and (split_name, json_file_name) in filename_mapping:
-                    current_file_name = filename_mapping[(split_name, json_file_name)]
-                else:
-                    current_file_name = self.deduplicate_filename(json_file_name, output_dir, split_name)
+                # 优先使用复制阶段记录的文件名映射；part场景使用(split_name, 文件名)作为key。
+                current_file_name = self.resolve_coco_file_name(
+                    json_file_name, split_name, output_dir, filename_mapping
+                )
                 
                 # 分配image_id
                 if current_file_name in file_name_to_image_id:
