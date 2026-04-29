@@ -708,11 +708,15 @@ class MaterialDesignGUI:
         
         return button
     
-    def create_scrollable_area(self, parent, bg=None):
+    def create_scrollable_area(self, parent, bg=None, height=None):
         """创建带滚动条的区域，适配较长的侧边内容"""
         container = tk.Frame(parent, bg=bg or self.colors['background'], relief='flat')
         
         canvas = tk.Canvas(container, bg=bg or self.colors['background'], highlightthickness=0, bd=0)
+        if height is not None:
+            container.configure(height=height)
+            container.pack_propagate(False)
+            canvas.configure(height=height)
         scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=canvas.yview)
         
         scrollable_frame = tk.Frame(canvas, bg=bg or self.colors['background'], relief='flat')
@@ -743,11 +747,9 @@ class MaterialDesignGUI:
 
     def _limit_stats_height(self, widget, max_ratio=0.4):
         """限制统计区域的最大高度为窗口高度的一定比例"""
-        window_height = self.root.winfo_height()
-        max_height = int(window_height * max_ratio)
-        current_height = widget.winfo_reqheight()
-        if current_height > max_height:
-            widget.configure(height=max_height)
+        window_height = max(self.root.winfo_height(), 600)
+        max_height = max(120, int(window_height * max_ratio))
+        widget.configure(height=max_height)
 
     def animate_progress_bar(self, target_value, duration=300):
         """动画化进度条更新"""
@@ -1784,13 +1786,11 @@ class MaterialDesignGUI:
 
         # 创建带滚动条的错误统计区域
         stats_scroll_container, stats_scrollable_frame = self.create_scrollable_area(
-            stats_frame, bg=self.colors['surface'])
+            stats_frame, bg=self.colors['surface'], height=150)
         stats_scroll_container.pack(fill=tk.X, pady=(0, 8))
-        # 限制最大高度为窗口高度的 40%，超出时可滚动
-        stats_scroll_container.bind('<Configure>', lambda e: self._limit_stats_height(stats_scroll_container, 0.4))
 
         # 创建错误统计网格
-        self.error_stats_frame = ttk.Frame(stats_scrollable_frame, style='MaterialCard.TFrame')
+        self.error_stats_frame = tk.Frame(stats_scrollable_frame, bg=self.colors['surface'])
         self.error_stats_frame.pack(fill=tk.X)
         # 设置列权重，让内容可以正确扩展
         self.error_stats_frame.grid_columnconfigure(0, weight=1)
@@ -1834,10 +1834,14 @@ class MaterialDesignGUI:
 
         # 滚动条
         tree_scrollbar = ttk.Scrollbar(tree_container, orient=tk.VERTICAL, command=self.problem_tree.yview)
-        self.problem_tree.configure(yscrollcommand=tree_scrollbar.set)
+        tree_xscrollbar = ttk.Scrollbar(tree_container, orient=tk.HORIZONTAL, command=self.problem_tree.xview)
+        self.problem_tree.configure(yscrollcommand=tree_scrollbar.set, xscrollcommand=tree_xscrollbar.set)
 
-        self.problem_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        tree_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        tree_container.grid_rowconfigure(0, weight=1)
+        tree_container.grid_columnconfigure(0, weight=1)
+        self.problem_tree.grid(row=0, column=0, sticky='nsew')
+        tree_scrollbar.grid(row=0, column=1, sticky='ns')
+        tree_xscrollbar.grid(row=1, column=0, sticky='ew')
 
         # 初始化空数据显示
         self.show_no_scan_results()
@@ -3285,12 +3289,24 @@ class MaterialDesignGUI:
                     if image_path:
                         # 提取图片文件名（支持路径）
                         image_name = os.path.basename(image_path)
+                        expected_image_base = os.path.splitext(json_file)[0]
+                        referenced_image_base = os.path.splitext(image_name)[0]
+                        if referenced_image_base != expected_image_base:
+                            problems.append({
+                                'folder': folder_path,
+                                'file': rel_path,
+                                'source_path': full_path,
+                                'error_type': '图片JSON对应',
+                                'description': f'JSON文件名与imagePath不一致: 期望 {expected_image_base}.*，实际引用 {image_name}'
+                            })
+
                         # 检查是否存在匹配的图片
                         found = any(img[0] == image_name for img in image_files)
                         if not found:
                             problems.append({
                                 'folder': folder_path,
-                                'file': json_file,
+                                'file': rel_path,
+                                'source_path': full_path,
                                 'error_type': 'JSON引用图片缺失',
                                 'description': f'JSON文件引用的图片不存在: {image_name}'
                             })
@@ -3305,7 +3321,8 @@ class MaterialDesignGUI:
                 if not json_exists:
                     problems.append({
                         'folder': folder_path,
-                        'file': image_file,
+                        'file': rel_path,
+                        'source_path': full_path,
                         'error_type': '图片缺少JSON标注',
                         'description': f'图片文件缺少对应的JSON标注文件'
                     })
@@ -4395,6 +4412,8 @@ class MaterialDesignGUI:
         row = 0
         col = 0
         columns = 3
+        for c in range(columns):
+            self.check_options_frame.grid_columnconfigure(c, weight=1, uniform='quality_checks')
 
         for check_name, check_info in self.check_options.items():
             # 创建复选框
@@ -4411,8 +4430,8 @@ class MaterialDesignGUI:
                                     selectcolor=self.colors['primary_container'],
                                     activebackground=self.colors['surface'])
 
-            # 使用grid布局，每行3个
-            checkbox.grid(row=row, column=col, sticky='w', padx=(8, 32), pady=2)
+            # 使用等宽网格，避免长选项把布局撑开
+            checkbox.grid(row=row, column=col, sticky='ew', padx=(8, 12), pady=2)
 
             # 更新行列计数
             col += 1
@@ -5156,19 +5175,7 @@ class MaterialDesignGUI:
                         skipped += 1
                         continue
 
-                    # 使用全局去重确保文件名唯一
-                    if filename in self.filename_mapping:
-                        safe_filename = self.filename_mapping[filename]
-                        # 如果映射的文件名与原始名不同，复制时使用映射后的名称
-                        if safe_filename != filename:
-                            name, ext = os.path.splitext(filename)
-                            safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
-                            # 确保映射名也唯一
-                            while safe_filename in self.filename_mapping.values():
-                                safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
-                    else:
-                        safe_filename = filename
-
+                    safe_filename = filename
                     dest_path = osp.join(subset_dir, safe_filename)
                     # 如果目标文件已存在，进行重命名
                     if os.path.exists(dest_path):
@@ -5181,9 +5188,8 @@ class MaterialDesignGUI:
 
                     shutil.copy2(img_file, dest_path)
 
-                    # 记录文件名映射，兼容全局key和子集key。
+                    # 记录当前输出子集的文件名映射，避免跨子集同名文件互相覆盖。
                     self.filename_mapping[(subset_name, filename)] = safe_filename
-                    self.filename_mapping[filename] = safe_filename
 
                     # 更新进度条
                     progress = (current_step + (i + 1) / len(files)) / total_progress_steps
@@ -5211,9 +5217,16 @@ class MaterialDesignGUI:
                             skipped += 1
                             continue
 
-                        # 直接使用原始文件名（不再自动重命名，由用户在数据质量检查阶段自行处理重复问题）
                         safe_filename = filename
                         dest_path = osp.join(part_images_dir, safe_filename)
+                        if os.path.exists(dest_path):
+                            name, ext = os.path.splitext(filename)
+                            safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
+                            while os.path.exists(osp.join(part_images_dir, safe_filename)):
+                                safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
+                            dest_path = osp.join(part_images_dir, safe_filename)
+                            self.log_message(f"  文件名冲突: '{filename}' 已存在，重命名为 '{safe_filename}'")
+
                         shutil.copy2(img_file, dest_path)
 
                         # 记录文件名映射
@@ -5395,17 +5408,7 @@ class MaterialDesignGUI:
         # 复制文件
         for i, img_file in enumerate(files):
             filename = os.path.basename(img_file)
-            # 使用全局去重确保文件名唯一
-            if filename in self.filename_mapping:
-                safe_filename = self.filename_mapping[filename]
-                if safe_filename != filename:
-                    name, ext = os.path.splitext(filename)
-                    safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
-                    while safe_filename in self.filename_mapping.values():
-                        safe_filename = name + "_r" + str(random.randint(1000, 9999)) + ext
-            else:
-                safe_filename = filename
-
+            safe_filename = filename
             dest_path = osp.join(split_dir, safe_filename)
             if os.path.exists(dest_path):
                 name, ext = os.path.splitext(filename)
@@ -5417,9 +5420,8 @@ class MaterialDesignGUI:
 
             shutil.copy2(img_file, dest_path)
 
-            # 记录文件名映射，兼容全局key和子集key。
+            # 记录当前输出子集的文件名映射，避免跨子集同名文件互相覆盖。
             self.filename_mapping[(split_name, filename)] = safe_filename
-            self.filename_mapping[filename] = safe_filename
 
             # 更新进度条
             progress = progress_start + (i + 1) / len(files) * (progress_end - progress_start)
@@ -5583,9 +5585,16 @@ class MaterialDesignGUI:
                 else:
                     json_file_name = data['imagePath'].split('/')[-1]
 
-                # 优先使用复制阶段记录的文件名映射；没有映射时才做COCO内部去重。
+                actual_file_name = os.path.basename(img_file)
+                if json_file_name != actual_file_name:
+                    self.log_message(
+                        f"  警告: {os.path.basename(label_file)} 的imagePath为 {json_file_name}，"
+                        f"已按实际图片 {actual_file_name} 写入COCO"
+                    )
+
+                # COCO的file_name必须对应实际复制的图片文件名，不能被JSON里错误的imagePath带偏。
                 current_file_name = self.resolve_coco_file_name(
-                    json_file_name, split_name, output_dir, filename_mapping
+                    actual_file_name, split_name, output_dir, filename_mapping
                 )
                 
                 # 分配image_id
@@ -7491,9 +7500,16 @@ class MaterialDesignGUI:
                 else:
                     json_file_name = data['imagePath'].split('/')[-1]
 
-                # 优先使用复制阶段记录的文件名映射；part场景使用(split_name, 文件名)作为key。
+                actual_file_name = os.path.basename(img_file)
+                if json_file_name != actual_file_name:
+                    self.log_message(
+                        f"  警告: {os.path.basename(label_file)} 的imagePath为 {json_file_name}，"
+                        f"已按实际图片 {actual_file_name} 写入COCO"
+                    )
+
+                # COCO的file_name必须对应实际复制的图片文件名，不能被JSON里错误的imagePath带偏。
                 current_file_name = self.resolve_coco_file_name(
-                    json_file_name, split_name, output_dir, filename_mapping
+                    actual_file_name, split_name, output_dir, filename_mapping
                 )
                 
                 # 分配image_id

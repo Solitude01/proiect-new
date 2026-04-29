@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import hashlib
+import math
 from pathlib import Path
 from typing import List, Set, Dict, Tuple, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -1304,10 +1305,11 @@ class COCOValidatorGUI:
                 try:
                     with open(json_file, 'r', encoding='utf-8') as f:
                         data = json.load(f)
+                    image_lookup = self._build_image_lookup(data)
                     if 'annotations' in data:
                         for ann in data['annotations']:
                             # 创建标注内容的哈希键
-                            ann_key = self._create_annotation_hash(ann)
+                            ann_key = self._create_annotation_hash(ann, image_lookup)
                             if ann_key:
                                 ann_hashes[ann_key] = ann_hashes.get(ann_key, 0) + 1
                 except:
@@ -1327,27 +1329,28 @@ class COCOValidatorGUI:
     def check_cross_json_duplicate_annotations(self) -> Dict[str, List[str]]:
         """检查跨JSON文件的标注重复（不按目录分组，直接比较所有JSON文件）"""
         # 收集所有JSON文件中的标注哈希
-        annotations_by_file = {}  # {json_filename: {hash: count}}
+        annotations_by_file = {}  # {json_path: {hash: count}}
 
         for json_file in self.selected_files:
             ann_hashes = {}
             try:
                 with open(json_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
+                image_lookup = self._build_image_lookup(data)
                 if 'annotations' in data:
                     for ann in data['annotations']:
-                        ann_key = self._create_annotation_hash(ann)
+                        ann_key = self._create_annotation_hash(ann, image_lookup)
                         if ann_key:
                             ann_hashes[ann_key] = ann_hashes.get(ann_key, 0) + 1
             except:
                 pass
-            annotations_by_file[os.path.basename(json_file)] = ann_hashes
+            annotations_by_file[json_file] = ann_hashes
 
         # 查找跨JSON文件重复的标注
-        all_anns = defaultdict(list)  # {hash: [json_files]}
-        for json_name, ann_hashes in annotations_by_file.items():
+        all_anns = defaultdict(list)  # {hash: [json_paths]}
+        for json_path, ann_hashes in annotations_by_file.items():
             for ann_hash in ann_hashes:
-                all_anns[ann_hash].append(json_name)
+                all_anns[ann_hash].append(json_path)
 
         # 过滤出跨文件重复的（出现在多个JSON文件中）
         duplicates = {k: v for k, v in all_anns.items() if len(v) > 1}
@@ -1421,21 +1424,47 @@ class COCOValidatorGUI:
 
         return results
 
-    def _create_annotation_hash(self, annotation: dict) -> Optional[str]:
+    def _build_image_lookup(self, data: dict) -> Dict:
+        """构建 image_id 到 file_name 的映射，用于跨文件标注去重"""
+        lookup = {}
+        for img in data.get('images', []):
+            if isinstance(img, dict) and 'id' in img:
+                lookup[img['id']] = img.get('file_name', img['id'])
+        return lookup
+
+    def _create_annotation_hash(self, annotation: dict, image_lookup: Optional[Dict] = None) -> Optional[str]:
         """创建标注内容的哈希值"""
         try:
+            image_id = annotation.get('image_id')
+            image_ref = image_lookup.get(image_id, image_id) if image_lookup else image_id
             # 使用关键字段创建哈希
             key_fields = {
-                'image_id': annotation.get('image_id'),
+                'image_ref': image_ref,
                 'category_id': annotation.get('category_id'),
-                'bbox': tuple(annotation.get('bbox', [])),
+                'bbox': self._normalize_for_hash(annotation.get('bbox', [])),
                 'area': annotation.get('area'),
-                'segmentation': str(annotation.get('segmentation', ''))[:100],  # 限制长度
+                'segmentation': self._normalize_for_hash(annotation.get('segmentation', '')),
             }
-            key_str = str(key_fields)
+            key_str = json.dumps(key_fields, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
             return hashlib.md5(key_str.encode()).hexdigest()
         except:
             return None
+
+    def _normalize_for_hash(self, value):
+        """将标注内容规范化，避免字典顺序或元组/列表差异影响哈希"""
+        if isinstance(value, dict):
+            return {k: self._normalize_for_hash(value[k]) for k in sorted(value)}
+        if isinstance(value, (list, tuple)):
+            return [self._normalize_for_hash(v) for v in value]
+        return value
+
+    def _is_valid_number(self, value) -> bool:
+        """判断值是否为有效数字，排除 bool、NaN 和无穷值"""
+        return (
+            isinstance(value, (int, float)) and
+            not isinstance(value, bool) and
+            math.isfinite(value)
+        )
 
     def _finish_validation(self, elapsed_time=0):
         """完成验证后的GUI更新（在主线程中执行）"""
@@ -1561,6 +1590,7 @@ class COCOValidatorGUI:
 
         if errors:
             self.report_errors(file_name, errors)
+            self.record_validation_errors(file_path, errors)
             return
 
         images = data.get("images", [])
@@ -1705,66 +1735,89 @@ class COCOValidatorGUI:
                         "detail": f"Annotation ID {ann_id} 的 iscrowd 值必须为 0 或 1，当前值: {iscrowd}"
                     })
 
+            bbox = ann.get("bbox")
+            bbox_has_valid_shape = isinstance(bbox, list) and len(bbox) == 4
+            bbox_has_numeric_values = bbox_has_valid_shape and all(self._is_valid_number(v) for v in bbox)
+
             if self.validation_checks['bbox_format'].get():
-                bbox = ann.get("bbox")
-                if not isinstance(bbox, list) or len(bbox) != 4:
+                if not bbox_has_valid_shape:
                     errors.append({
                         "type": "BBox格式错误",
                         "detail": f"Annotation ID {ann_id} 的 bbox 必须是包含4个数字的列表 [x, y, width, height]。"
                     })
+                elif not bbox_has_numeric_values:
+                    errors.append({
+                        "type": "BBox数值类型错误",
+                        "detail": f"Annotation ID {ann_id} 的 BBox 包含非数字值。"
+                    })
+
+            if self.validation_checks['bbox_bounds'].get():
+                if not bbox_has_valid_shape:
+                    if not self.validation_checks['bbox_format'].get():
+                        errors.append({
+                            "type": "BBox格式错误",
+                            "detail": f"Annotation ID {ann_id} 的 bbox 必须是包含4个数字的列表 [x, y, width, height]，无法进行边界检查。"
+                        })
+                elif not bbox_has_numeric_values:
+                    if not self.validation_checks['bbox_format'].get():
+                        errors.append({
+                            "type": "BBox数值类型错误",
+                            "detail": f"Annotation ID {ann_id} 的 BBox 包含非数字值，无法进行边界检查。"
+                        })
                 else:
-                    if self.validation_checks['bbox_bounds'].get():
-                        try:
-                            x, y, w, h = bbox
+                    x, y, w, h = bbox
 
-                            if x < 0:
+                    if x < 0:
+                        errors.append({
+                            "type": "BBox x坐标无效",
+                            "detail": f"Annotation ID {ann_id} 的 BBox x坐标 {x} 小于0。"
+                        })
+
+                    if y < 0:
+                        errors.append({
+                            "type": "BBox y坐标无效",
+                            "detail": f"Annotation ID {ann_id} 的 BBox y坐标 {y} 小于0。"
+                        })
+
+                    if w <= 0:
+                        errors.append({
+                            "type": "BBox width无效",
+                            "detail": f"Annotation ID {ann_id} 的 BBox width {w} 必须大于0。"
+                        })
+
+                    if h <= 0:
+                        errors.append({
+                            "type": "BBox height无效",
+                            "detail": f"Annotation ID {ann_id} 的 BBox height {h} 必须大于0。"
+                        })
+
+                    image_id = ann.get("image_id")
+                    if image_id in image_info_map:
+                        img_info = image_info_map[image_id]
+                        img_width = img_info.get("width")
+                        img_height = img_info.get("height")
+
+                        if img_width is not None and img_height is not None:
+                            dimensions_valid = (
+                                self._is_valid_number(img_width) and
+                                self._is_valid_number(img_height)
+                            )
+                            if not dimensions_valid:
                                 errors.append({
-                                    "type": "BBox x坐标无效",
-                                    "detail": f"Annotation ID {ann_id} 的 BBox x坐标 {x} 小于0。"
+                                    "type": "Image尺寸类型错误",
+                                    "detail": f"Image ID {image_id} 的 width/height 必须是有效数字，无法进行 BBox 边界检查。"
+                                })
+                            elif x + w > img_width:
+                                errors.append({
+                                    "type": "BBox越界",
+                                    "detail": f"Annotation ID {ann_id} 的 BBox [{x}, {y}, {w}, {h}] 超出了图像 {image_id} 的宽度边界 (图像宽度: {img_width})。"
                                 })
 
-                            if y < 0:
+                            if dimensions_valid and y + h > img_height:
                                 errors.append({
-                                    "type": "BBox y坐标无效",
-                                    "detail": f"Annotation ID {ann_id} 的 BBox y坐标 {y} 小于0。"
+                                    "type": "BBox越界",
+                                    "detail": f"Annotation ID {ann_id} 的 BBox [{x}, {y}, {w}, {h}] 超出了图像 {image_id} 的高度边界 (图像高度: {img_height})。"
                                 })
-
-                            if w <= 0:
-                                errors.append({
-                                    "type": "BBox width无效",
-                                    "detail": f"Annotation ID {ann_id} 的 BBox width {w} 必须大于0。"
-                                })
-
-                            if h <= 0:
-                                errors.append({
-                                    "type": "BBox height无效",
-                                    "detail": f"Annotation ID {ann_id} 的 BBox height {h} 必须大于0。"
-                                })
-
-                            image_id = ann.get("image_id")
-                            if image_id in image_info_map:
-                                img_info = image_info_map[image_id]
-                                img_width = img_info.get("width")
-                                img_height = img_info.get("height")
-
-                                if img_width is not None and img_height is not None:
-                                    if x + w > img_width:
-                                        errors.append({
-                                            "type": "BBox越界",
-                                            "detail": f"Annotation ID {ann_id} 的 BBox [{x}, {y}, {w}, {h}] 超出了图像 {image_id} 的宽度边界 (图像宽度: {img_width})。"
-                                        })
-
-                                    if y + h > img_height:
-                                        errors.append({
-                                            "type": "BBox越界",
-                                            "detail": f"Annotation ID {ann_id} 的 BBox [{x}, {y}, {w}, {h}] 超出了图像 {image_id} 的高度边界 (图像高度: {img_height})。"
-                                        })
-
-                        except (TypeError, ValueError) as e:
-                            errors.append({
-                                "type": "BBox数值类型错误",
-                                "detail": f"Annotation ID {ann_id} 的 BBox 包含非数字值。"
-                            })
 
             if self.validation_checks['area_valid'].get():
                 area = ann.get("area")
@@ -1838,16 +1891,7 @@ class COCOValidatorGUI:
 
         if errors:
             self.report_errors(file_name, errors)
-            error_types = {}
-            for error in errors:
-                error_type = error['type']
-                error_types[error_type] = error_types.get(error_type, 0) + 1
-
-            with self.validation_lock:
-                self.validation_stats[file_path] = {
-                    'total_errors': len(errors),
-                    'error_types': error_types
-                }
+            self.record_validation_errors(file_path, errors)
         else:
             self.log(f"[{file_name}]... 验证通过。\n\n")
             with self.validation_lock:
@@ -1864,6 +1908,19 @@ class COCOValidatorGUI:
             self.log(f"    详情：{error['detail']}\n")
         self.log("\n")
 
+    def record_validation_errors(self, file_path: str, errors: List[Dict]):
+        """记录验证错误统计"""
+        error_types = {}
+        for error in errors:
+            error_type = error['type']
+            error_types[error_type] = error_types.get(error_type, 0) + 1
+
+        with self.validation_lock:
+            self.validation_stats[file_path] = {
+                'total_errors': len(errors),
+                'error_types': error_types
+            }
+
     def start_fix(self):
         """开始修复去重"""
         if not self.cross_dir_results:
@@ -1879,6 +1936,20 @@ class COCOValidatorGUI:
         # 创建预览窗口
         self._show_fix_preview(preview)
 
+    def _sanitize_filename_component(self, value: str) -> str:
+        """将目录名转换为可用于文件名前缀的安全文本"""
+        sanitized = ''.join(ch if ch.isalnum() or ch in ('-', '_') else '_' for ch in value)
+        sanitized = sanitized.strip('_')
+        return sanitized or 'dir'
+
+    def _make_prefixed_image_name(self, dir_name: str, image_name: str) -> str:
+        """为重复图片生成保留原相对目录的新文件名"""
+        normalized = image_name.replace('\\', '/')
+        if '/' in normalized:
+            rel_dir, base_name = normalized.rsplit('/', 1)
+            return f"{rel_dir}/{self._sanitize_filename_component(dir_name)}_{base_name}"
+        return f"{self._sanitize_filename_component(dir_name)}_{normalized}"
+
     def _generate_fix_preview(self) -> dict:
         """生成修复预览"""
         preview = {
@@ -1891,7 +1962,7 @@ class COCOValidatorGUI:
         if 'duplicate_images' in self.cross_dir_results:
             for img_name, dirs in self.cross_dir_results['duplicate_images'].items():
                 for dir_name in dirs[1:]:  # 保留第一个，重命名其余
-                    new_name = f"{dir_name}_{img_name}"
+                    new_name = self._make_prefixed_image_name(dir_name, img_name)
                     preview['image_renames'].append({
                         'original': img_name,
                         'new': new_name,
@@ -1904,7 +1975,8 @@ class COCOValidatorGUI:
                 for dir_name in dirs[1:]:  # 保留第一个，移除其余
                     preview['annotation_removals'].append({
                         'directory': dir_name,
-                        'hash': ann_hash[:8] + '...',
+                        'hash': ann_hash,
+                        'display_hash': ann_hash[:8] + '...',
                     })
 
         # 跨JSON文件标注去重预览
@@ -1913,7 +1985,8 @@ class COCOValidatorGUI:
                 for json_file in json_files[1:]:  # 保留第一个，移除其余
                     preview['json_annotation_removals'].append({
                         'json_file': json_file,
-                        'hash': ann_hash[:8] + '...',
+                        'hash': ann_hash,
+                        'display_hash': ann_hash[:8] + '...',
                     })
 
         return preview
@@ -1970,7 +2043,7 @@ class COCOValidatorGUI:
             preview_text.insert(tk.END, "=" * 50 + "\n")
             for item in preview['annotation_removals']:
                 preview_text.insert(tk.END, f"  目录: {item['directory']}/\n")
-                preview_text.insert(tk.END, f"  标注哈希: {item['hash']}\n\n")
+                preview_text.insert(tk.END, f"  标注哈希: {item['display_hash']}\n\n")
         else:
             preview_text.insert(tk.END, "无需移除标注\n\n")
 
@@ -1979,7 +2052,7 @@ class COCOValidatorGUI:
             preview_text.insert(tk.END, "=" * 50 + "\n")
             for item in preview['json_annotation_removals']:
                 preview_text.insert(tk.END, f"  JSON文件: {item['json_file']}\n")
-                preview_text.insert(tk.END, f"  标注哈希: {item['hash']}\n\n")
+                preview_text.insert(tk.END, f"  标注哈希: {item['display_hash']}\n\n")
         else:
             preview_text.insert(tk.END, "无需移除跨JSON文件重复标注\n\n")
 
@@ -2017,6 +2090,71 @@ class COCOValidatorGUI:
             cursor="hand2"
         ).pack(side=tk.LEFT, padx=10)
 
+    def _get_repair_base_dir(self) -> str:
+        """获取修复输出时用于计算相对路径的基准目录"""
+        if not self.selected_files:
+            return os.getcwd()
+
+        parent_dirs = [os.path.dirname(os.path.abspath(f)) for f in self.selected_files]
+        common_dir = os.path.commonpath(parent_dirs)
+        if os.path.basename(common_dir).lower() == 'annotations':
+            return os.path.dirname(common_dir)
+        return common_dir
+
+    def _safe_relpath(self, path: str, base_dir: str) -> str:
+        """计算安全相对路径；若不在基准目录下，则退回到文件名"""
+        abs_path = os.path.abspath(path)
+        abs_base = os.path.abspath(base_dir)
+        try:
+            common = os.path.commonpath([abs_path, abs_base])
+            if common == abs_base:
+                return os.path.relpath(abs_path, abs_base)
+        except ValueError:
+            pass
+        return os.path.basename(path)
+
+    def _find_image_file(self, json_file: str, image_name: str) -> Optional[str]:
+        """根据 JSON 位置和 file_name 寻找真实图片文件"""
+        if not image_name:
+            return None
+
+        image_path = Path(image_name)
+        if image_path.is_absolute() and image_path.exists():
+            return str(image_path)
+
+        json_dir = Path(json_file).parent
+        candidates = [
+            json_dir / image_name,
+            json_dir.parent / image_name,
+            json_dir / 'images' / image_name,
+            json_dir.parent / 'images' / image_name,
+        ]
+
+        if json_dir.name.lower() == 'annotations':
+            candidates.insert(0, json_dir.parent / 'images' / image_name)
+
+        for candidate in candidates:
+            if candidate.exists() and candidate.is_file():
+                return str(candidate)
+        return None
+
+    def _copy_renamed_image_to_output(self, source_path: str, old_name: str, new_name: str, output_dir: str, base_dir: str) -> Optional[str]:
+        """复制真实图片到输出目录，并返回 JSON 中应写入的新 file_name"""
+        rel_source = self._safe_relpath(source_path, base_dir)
+        rel_source_dir = os.path.dirname(rel_source)
+        new_basename = os.path.basename(new_name.replace('\\', '/'))
+        output_path = os.path.join(output_dir, rel_source_dir, new_basename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        if os.path.abspath(source_path) != os.path.abspath(output_path):
+            shutil.copy2(source_path, output_path)
+
+        normalized_old = old_name.replace('\\', '/')
+        if '/' in normalized_old:
+            old_rel_dir = normalized_old.rsplit('/', 1)[0]
+            return f"{old_rel_dir}/{new_basename}"
+        return new_basename
+
     def _execute_fix(self, preview: dict):
         """执行修复操作"""
         # 选择输出目录
@@ -2029,6 +2167,7 @@ class COCOValidatorGUI:
 
         try:
             self.log(f"\n======= 开始修复 =======\n")
+            base_dir = self._get_repair_base_dir()
 
             # 创建备份
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -2037,7 +2176,7 @@ class COCOValidatorGUI:
 
             # 复制原始文件到备份目录
             for json_file in self.selected_files:
-                rel_path = os.path.relpath(json_file, os.path.dirname(self.selected_files[0]))
+                rel_path = self._safe_relpath(json_file, base_dir)
                 backup_path = os.path.join(backup_dir, rel_path)
                 os.makedirs(os.path.dirname(backup_path), exist_ok=True)
                 shutil.copy2(json_file, backup_path)
@@ -2055,6 +2194,9 @@ class COCOValidatorGUI:
 
             # 执行图片重命名
             renamed_count = 0
+            copied_image_count = 0
+            skipped_image_count = 0
+            copied_image_keys = set()
             if preview['image_renames']:
                 for item in preview['image_renames']:
                     dir_name = item['directory']
@@ -2063,16 +2205,37 @@ class COCOValidatorGUI:
 
                     # 找到对应目录的JSON文件
                     if dir_name in self.directory_structure:
+                        source_path = None
+                        for json_file in self.directory_structure[dir_name]:
+                            source_path = self._find_image_file(json_file, old_name)
+                            if source_path:
+                                break
+
+                        if not source_path:
+                            skipped_image_count += 1
+                            self.log(f"⚠️ 未找到真实图片文件，跳过重命名引用: {dir_name}/{old_name}\n")
+                            continue
+
+                        json_file_name = self._copy_renamed_image_to_output(
+                            source_path, old_name, new_name, output_dir, base_dir
+                        )
+                        image_key = (source_path, json_file_name)
+                        if image_key not in copied_image_keys:
+                            copied_image_keys.add(image_key)
+                            copied_image_count += 1
+
                         for json_file in self.directory_structure[dir_name]:
                             if json_file in json_data:
                                 data = json_data[json_file]
                                 # 更新images中的file_name
                                 for img in data.get('images', []):
                                     if img.get('file_name') == old_name:
-                                        img['file_name'] = new_name
+                                        img['file_name'] = json_file_name
                                         renamed_count += 1
 
-                self.log(f"✓ 重命名了 {renamed_count} 个图片引用\n")
+                self.log(f"✓ 重命名了 {renamed_count} 个图片引用，复制了 {copied_image_count} 个真实图片文件\n")
+                if skipped_image_count:
+                    self.log(f"⚠️ 有 {skipped_image_count} 个图片因找不到真实文件而跳过\n")
 
             # 执行标注去重
             removed_count = 0
@@ -2086,11 +2249,12 @@ class COCOValidatorGUI:
                             if json_file in json_data:
                                 data = json_data[json_file]
                                 annotations = data.get('annotations', [])
+                                image_lookup = self._build_image_lookup(data)
                                 # 标记要移除的标注（基于哈希匹配）
                                 to_remove = []
                                 for i, ann in enumerate(annotations):
-                                    ann_hash = self._create_annotation_hash(ann)
-                                    if ann_hash and ann_hash[:8] == item['hash'][:8]:
+                                    ann_hash = self._create_annotation_hash(ann, image_lookup)
+                                    if ann_hash and ann_hash == item['hash']:
                                         to_remove.append(i)
                                         break  # 每个文件只移除一个匹配的
 
@@ -2111,36 +2275,35 @@ class COCOValidatorGUI:
                 # 按JSON文件分组，每个文件可能移除多个标注
                 removals_by_file = defaultdict(list)
                 for item in preview['json_annotation_removals']:
-                    removals_by_file[item['json_file']].append(item['hash'][:8])
+                    removals_by_file[item['json_file']].append(item['hash'])
 
-                for json_name, hashes in removals_by_file.items():
-                    # 找到对应的完整路径
-                    for json_file in self.selected_files:
-                        if os.path.basename(json_file) == json_name and json_file in json_data:
-                            data = json_data[json_file]
-                            annotations = data.get('annotations', [])
-                            to_remove = []
-                            for i, ann in enumerate(annotations):
-                                ann_hash = self._create_annotation_hash(ann)
-                                if ann_hash and ann_hash[:8] in hashes:
-                                    to_remove.append(i)
-                                    # 每个哈希只移除一个
+                for json_file, hashes in removals_by_file.items():
+                    if json_file in json_data:
+                        data = json_data[json_file]
+                        annotations = data.get('annotations', [])
+                        image_lookup = self._build_image_lookup(data)
+                        remaining_hashes = set(hashes)
+                        to_remove = []
+                        for i, ann in enumerate(annotations):
+                            ann_hash = self._create_annotation_hash(ann, image_lookup)
+                            if ann_hash and ann_hash in remaining_hashes:
+                                to_remove.append(i)
+                                remaining_hashes.remove(ann_hash)
 
-                            for i in reversed(to_remove):
-                                annotations.pop(i)
-                                json_removed_count += 1
+                        for i in reversed(to_remove):
+                            annotations.pop(i)
+                            json_removed_count += 1
 
-                            # 重新编号annotation ID
-                            for i, ann in enumerate(annotations, 1):
-                                ann['id'] = i
-                            break
+                        # 重新编号annotation ID
+                        for i, ann in enumerate(annotations, 1):
+                            ann['id'] = i
 
                 self.log(f"✓ 移除了 {json_removed_count} 个跨JSON文件重复标注\n")
 
             # 保存修复后的文件
             saved_count = 0
             for json_file, data in json_data.items():
-                rel_path = os.path.relpath(json_file, os.path.dirname(self.selected_files[0]))
+                rel_path = self._safe_relpath(json_file, base_dir)
                 output_path = os.path.join(output_dir, rel_path)
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -2154,6 +2317,7 @@ class COCOValidatorGUI:
             messagebox.showinfo("✅ 修复完成",
                 f"修复已完成！\n\n"
                 f"• 重命名了 {renamed_count} 个图片引用\n"
+                f"• 复制了 {copied_image_count} 个重命名后的图片文件\n"
                 f"• 移除了 {removed_count} 个重复标注\n"
                 f"• 移除了 {json_removed_count} 个跨JSON文件重复标注\n"
                 f"• 保存了 {saved_count} 个文件\n\n"
