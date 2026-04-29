@@ -15,10 +15,13 @@ from PIL import Image, ImageTk, ImageDraw
 import webbrowser
 import random
 import datetime
+import queue
 try:
     import send2trash
 except ImportError:
     send2trash = None
+
+SUPPORTED_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff')
 
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller."""
@@ -52,11 +55,15 @@ class SimpleLabelme2COCO:
         return category
     
     def annotations_polygon(self, height, width, points, label, image_num, object_num):
+        bbox_result = self.get_bbox(height, width, points)
+        if bbox_result is None:
+            return None
+
         annotation = {}
         annotation['segmentation'] = [list(np.asarray(points).flatten())]
         annotation['iscrowd'] = 0
         annotation['image_id'] = image_num + 1
-        annotation['bbox'] = list(map(float, self.get_bbox(height, width, points)))
+        annotation['bbox'] = list(map(float, bbox_result))
         annotation['area'] = annotation['bbox'][2] * annotation['bbox'][3]
         annotation['category_id'] = self.label_to_num[label]
         annotation['id'] = object_num + 1
@@ -93,6 +100,8 @@ class SimpleLabelme2COCO:
         """从点坐标计算边界框"""
         if not points or len(points) < 1:
             return None
+        if height is None or width is None or height <= 0 or width <= 0:
+            return None
 
         # 直接从点坐标计算bbox，避免mask方法的浮点精度问题
         xs = [p[0] for p in points]
@@ -103,10 +112,12 @@ class SimpleLabelme2COCO:
         y_max = max(ys)
 
         # 确保坐标在合理范围内
-        x_min = max(0, min(x_min, width))
-        y_min = max(0, min(y_min, height))
-        x_max = max(0, min(x_max, width))
-        y_max = max(0, min(y_max, height))
+        x_limit = max(float(width) - 1e-6, 0)
+        y_limit = max(float(height) - 1e-6, 0)
+        x_min = max(0, min(x_min, x_limit))
+        y_min = max(0, min(y_min, y_limit))
+        x_max = max(0, min(x_max, x_limit))
+        y_max = max(0, min(y_max, y_limit))
 
         result = [x_min, y_min, x_max - x_min, y_max - y_min]
         # 四舍五入到2位小数，避免浮点精度问题
@@ -144,12 +155,11 @@ class DatasetSplitter:
         Returns:
             dict: 包含train、test、verify三个列表的字典
         """
-        if random_seed is not None:
-            random.seed(random_seed)
+        rng = random.Random(random_seed)
         
         # 随机打乱文件列表
         shuffled_files = file_list.copy()
-        random.shuffle(shuffled_files)
+        rng.shuffle(shuffled_files)
         
         total_files = len(shuffled_files)
         train_count = int(total_files * self.train_ratio)
@@ -202,8 +212,7 @@ class MultiFolderDatasetSplitter:
         Returns:
             dict: 包含train、test、verify三个列表的字典，每个列表包含所有文件夹的文件
         """
-        if random_seed is not None:
-            random.seed(random_seed)
+        rng = random.Random(random_seed)
         
         all_train_files = []
         all_test_files = []
@@ -216,7 +225,7 @@ class MultiFolderDatasetSplitter:
                 
             # 随机打乱当前文件夹的文件列表
             shuffled_files = file_list.copy()
-            random.shuffle(shuffled_files)
+            rng.shuffle(shuffled_files)
             
             total_files = len(shuffled_files)
             train_count = int(total_files * self.train_ratio)
@@ -249,8 +258,7 @@ class MultiFolderDatasetSplitter:
         Returns:
             dict: 每个文件夹的切分详细信息
         """
-        if random_seed is not None:
-            random.seed(random_seed)
+        rng = random.Random(random_seed)
         
         folder_info = {}
         
@@ -261,7 +269,7 @@ class MultiFolderDatasetSplitter:
             
             # 随机打乱当前文件夹的文件列表
             shuffled_files = file_list.copy()
-            random.shuffle(shuffled_files)
+            rng.shuffle(shuffled_files)
             
             total_files = len(shuffled_files)
             train_count = int(total_files * self.train_ratio)
@@ -289,6 +297,8 @@ class MultiFolderDatasetSplitter:
         """
         if not self.auto_split:
             return folder_files_dict
+        if self.max_images_per_folder <= 0:
+            raise ValueError("每文件夹图片上限必须大于0")
         
         def log(message):
             if log_callback:
@@ -313,7 +323,7 @@ class MultiFolderDatasetSplitter:
                 
                 # 随机打乱文件列表以确保均匀分布
                 shuffled_files = file_list.copy()
-                random.shuffle(shuffled_files)
+                random.Random().shuffle(shuffled_files)
                 
                 # 分割文件
                 for i in range(num_splits):
@@ -345,6 +355,10 @@ class MaterialDesignGUI:
                 print(f"图标加载失败: {e}")
             self.root.geometry("1200x800")
             self.root.minsize(1000, 650)
+            self._main_thread_id = threading.get_ident()
+            self._ui_queue = queue.Queue()
+            self._worker_lock = threading.Lock()
+            self._worker_running = False
             print("窗口创建成功")
             
         except Exception as e:
@@ -475,10 +489,56 @@ class MaterialDesignGUI:
             
             # 所有布局和定位完成后再显示窗口，避免闪烁
             self.root.deiconify()
+            self._process_ui_queue()
         except Exception as e:
             print(f"窗口居中失败: {e}")
             import traceback
             traceback.print_exc()
+
+    def _is_ui_thread(self):
+        return threading.get_ident() == getattr(self, '_main_thread_id', None)
+
+    def _process_ui_queue(self):
+        try:
+            while True:
+                func, args, kwargs = self._ui_queue.get_nowait()
+                try:
+                    func(*args, **kwargs)
+                except Exception as e:
+                    print(f"UI队列任务执行失败: {e}")
+        except queue.Empty:
+            pass
+
+        if hasattr(self, 'root'):
+            self.root.after(100, self._process_ui_queue)
+
+    def _ui_call(self, func, *args, **kwargs):
+        if self._is_ui_thread():
+            func(*args, **kwargs)
+        else:
+            self._ui_queue.put((func, args, kwargs))
+
+    def _set_progress(self, value):
+        self._ui_call(self.progress_var.set, value)
+
+    def _set_status(self, value):
+        self._ui_call(self.status_var.set, value)
+
+    def _show_messagebox(self, kind, title, message):
+        def _show():
+            getattr(messagebox, kind)(title, message)
+        self._ui_call(_show)
+
+    def _begin_worker(self):
+        with self._worker_lock:
+            if self._worker_running:
+                return False
+            self._worker_running = True
+            return True
+
+    def _finish_worker(self):
+        with self._worker_lock:
+            self._worker_running = False
         
     def setup_styles(self):
         """设置Material Design 3样式"""
@@ -1713,7 +1773,7 @@ class MaterialDesignGUI:
                            relief='flat',
                            cursor='hand2',
                            padx=16,
-                           pady=8)
+                            pady=8)
         scan_btn.pack(side=tk.LEFT)
 
         # 一键修复按钮
@@ -1726,7 +1786,7 @@ class MaterialDesignGUI:
                           relief='flat',
                           cursor='hand2',
                           padx=16,
-                          pady=8)
+                            pady=8)
         fix_btn.pack(side=tk.LEFT, padx=(16, 0))
 
         # 刷新按钮
@@ -1754,6 +1814,7 @@ class MaterialDesignGUI:
                           padx=16,
                           pady=8)
         log_btn.pack(side=tk.LEFT, padx=(16, 0))
+        self.quality_buttons = [scan_btn, fix_btn, refresh_btn, log_btn]
 
         # 检查选项区域
         options_frame = ttk.Frame(main_frame, style='MaterialCard.TFrame')
@@ -2086,8 +2147,10 @@ class MaterialDesignGUI:
                 continue
                 
             try:
-                with open(label_file, encoding='utf-8') as f:
-                    data = json.load(f)
+                data, read_result = self.read_json_file_safely(label_file)
+                if data is None:
+                    self.log_message(f"警告: 无法读取JSON文件 {label_file}: {read_result}")
+                    continue
                 
                 for shapes in data['shapes']:
                     label = shapes['label']
@@ -2226,14 +2289,14 @@ class MaterialDesignGUI:
         # 隐藏说明文字
         try:
             self.labels_info_label.pack_forget()
-        except:
+        except Exception:
             pass
         
         # 显示统计信息
         if hasattr(self, 'labels_stats_frame'):
             try:
                 self.labels_stats_frame.pack(fill=tk.X, pady=(0, 10))
-            except:
+            except Exception:
                 pass
         
         # 更新统计信息
@@ -2284,7 +2347,7 @@ class MaterialDesignGUI:
         if selection:
             item = self.labels_tree.item(selection[0])
             values = item['values']
-            if values and values[1] != '请先扫描标签映射':  # 不是提示行
+            if values and len(values) >= 4 and values[1] != '请先扫描标签映射':  # 不是提示行
                 label_name = values[1]
                 current_id = values[0]
                 count = values[2]
@@ -2768,16 +2831,39 @@ class MaterialDesignGUI:
         from datetime import datetime
         timestamp = datetime.now().strftime("%H:%M:%S")
         formatted = f"[{timestamp}] {message}"
-        self.log_text.insert(tk.END, f"{formatted}\n")
-        self.log_text.see(tk.END)
-        self.root.update_idletasks()
-        # 同时在控制台打印日志
-        print(formatted)
+
+        if self._is_ui_thread():
+            self._append_log_message(formatted, echo=True)
+        else:
+            print(formatted)
+            self._ui_call(self._append_log_message, formatted, False)
+
+    def _append_log_message(self, formatted, echo=True):
+        """在主线程追加日志。"""
+        if hasattr(self, 'log_text'):
+            self.log_text.insert(tk.END, f"{formatted}\n")
+            self.log_text.see(tk.END)
+        if echo:
+            print(formatted)
 
     def start_quality_check(self):
         """开始数据质量检查"""
         if not self.input_folders:
             messagebox.showwarning("警告", "请先添加文件夹")
+            return
+
+        if not self._begin_worker():
+            messagebox.showwarning("警告", "已有任务正在运行，请等待完成")
+            return
+
+        selected_checks = []
+        for check_name, var in self.check_vars.items():
+            if var.get():
+                selected_checks.append(check_name)
+
+        if not selected_checks:
+            self._finish_worker()
+            messagebox.showwarning("警告", "请至少选择一个检查项目")
             return
 
         # 禁用按钮防止重复点击
@@ -2788,23 +2874,13 @@ class MaterialDesignGUI:
         self.problem_files = {}
 
         # 在新线程中执行检查
-        thread = threading.Thread(target=self.run_quality_check)
+        thread = threading.Thread(target=self.run_quality_check, args=(selected_checks,))
         thread.daemon = True
         thread.start()
 
-    def run_quality_check(self):
+    def run_quality_check(self, selected_checks):
         """运行数据质量检查（在后台线程中）"""
         try:
-            # 获取用户选择的检查选项
-            selected_checks = []
-            for check_name, var in self.check_vars.items():
-                if var.get():
-                    selected_checks.append(check_name)
-
-            if not selected_checks:
-                self.log_message("⚠️ 未选择任何检查项目，请至少选择一个检查项目")
-                return
-
             self.log_message(f"=== 开始数据质量检查 ===")
             self.log_message(f"执行检查项目: {', '.join(selected_checks)}")
 
@@ -2853,7 +2929,7 @@ class MaterialDesignGUI:
             self.problem_files = self.categorize_problems(all_problems)
 
             # 更新界面显示
-            self.root.after(0, self.update_quality_ui)
+            self._ui_call(self.update_quality_ui)
 
             # 在控制台打印错误摘要
             if all_problems:
@@ -2872,7 +2948,8 @@ class MaterialDesignGUI:
             import traceback
             traceback.print_exc()
         finally:
-            self.root.after(0, self.enable_quality_buttons)
+            self._ui_call(self.enable_quality_buttons)
+            self._finish_worker()
 
     def read_json_file_safely(self, json_path):
         """安全读取JSON文件，支持多种编码和错误处理"""
@@ -2904,8 +2981,7 @@ class MaterialDesignGUI:
                         return None, f"文件内容为空({encoding})"
 
                     # 尝试解析JSON
-                    import json as json_module
-                    data = json_module.loads(content)
+                    data = json.loads(content)
 
                     # 验证JSON结构
                     if not isinstance(data, dict):
@@ -2942,6 +3018,13 @@ class MaterialDesignGUI:
 
         except Exception as e:
             return None, f"读取文件时发生未知错误: {str(e)}"
+
+    def write_json_atomic(self, json_path, data, indent=2):
+        """原子写入JSON，避免中途失败留下半截文件。"""
+        tmp_path = f"{json_path}.tmp"
+        with open(tmp_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=indent, ensure_ascii=False)
+        os.replace(tmp_path, json_path)
 
     def filter_valid_json_files(self, folder_path, file_list):
         """智能过滤出有效的JSON文件"""
@@ -3002,7 +3085,7 @@ class MaterialDesignGUI:
                             # 不是以JSON格式开头，可能是其他类型的文本文件
                             skipped_files.append((file, "内容不是JSON格式"))
                             continue
-                except:
+                except Exception:
                     # 无法用UTF-8读取，可能是二进制文件
                     skipped_files.append((file, "编码不支持"))
                     continue
@@ -3039,15 +3122,13 @@ class MaterialDesignGUI:
         # 1.5 检查图片文件是否有对应的JSON标注文件
         if '缺json' in selected_checks:
             # 获取文件夹中的所有图片文件（递归）
-            image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff', '.JPG', '.JPEG', '.PNG')
-            image_files = [f for f in all_files if f.endswith(image_extensions)]
-            json_file_names = set(f for f in all_files if f.lower().endswith('.json'))
+            image_files = [f for f in all_files if f.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS)]
+            json_file_names_lower = set(f.lower() for f in all_files if f.lower().endswith('.json'))
 
             # 对每个图片文件检查是否有对应的JSON
             for image_file in image_files:
                 base_name = os.path.splitext(image_file)[0]
-                possible_json_names = [f"{base_name}.json", f"{base_name}.JSON"]
-                json_exists = any(json_name in json_file_names for json_name in possible_json_names)
+                json_exists = f"{base_name}.json".lower() in json_file_names_lower
 
                 if not json_exists:
                     problems.append({
@@ -3147,7 +3228,7 @@ class MaterialDesignGUI:
         # 注意：不使用return，让后续检查（如标注越界、无效bbox）继续执行
 
         # 检查坐标是否越界
-        if '标注越界' in selected_checks:
+        if '标注越界' in selected_checks and img_width > 0 and img_height > 0:
             for j, point in enumerate(points):
                 if len(point) != 2:
                     problems.append({
@@ -3179,7 +3260,7 @@ class MaterialDesignGUI:
                 width = abs(x2 - x1)
                 height = abs(y2 - y1)
 
-                if width == 0 or height == 0:
+                if width < 1e-6 or height < 1e-6:
                     if '面积为0' in selected_checks:
                         problems.append({
                             'error_type': '面积为0',
@@ -3197,7 +3278,7 @@ class MaterialDesignGUI:
                 # 简单的面积检查（使用鞋带公式）
                 if '面积为0' in selected_checks:
                     area = self.calculate_polygon_area(points)
-                    if area == 0:
+                    if area < 1e-6:
                         problems.append({
                             'error_type': '面积为0',
                             'description': f'标注 {shape_index + 1}: 多边形面积为0'
@@ -3265,7 +3346,7 @@ class MaterialDesignGUI:
                 for file in files:
                     full_path = os.path.join(root, file)
                     rel_path = os.path.relpath(full_path, folder_path)
-                    if file.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff')):
+                    if file.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS):
                         image_files.append((file, rel_path, full_path))
                     elif file.lower().endswith('.json'):
                         json_file_set.add((file, rel_path, full_path))
@@ -3339,7 +3420,7 @@ class MaterialDesignGUI:
         problems = []
         import re
 
-        image_extensions_lower = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff')
+        image_extensions_lower = SUPPORTED_IMAGE_EXTENSIONS
 
         # 定义特殊字符的正则表达式模式
         special_char_regexes = [
@@ -3597,12 +3678,19 @@ class MaterialDesignGUI:
 
     def disable_quality_buttons(self):
         """禁用质量检查按钮"""
-        # 这里需要保存按钮的引用或者通过其他方式禁用
-        pass
+        for btn in getattr(self, 'quality_buttons', []):
+            try:
+                btn.config(state='disabled')
+            except Exception:
+                pass
 
     def enable_quality_buttons(self):
         """启用质量检查按钮"""
-        pass
+        for btn in getattr(self, 'quality_buttons', []):
+            try:
+                btn.config(state='normal')
+            except Exception:
+                pass
 
     def show_fix_options(self):
         """显示修复选项"""
@@ -4152,8 +4240,7 @@ class MaterialDesignGUI:
                                 json_data['imagePath'] = new_name
                             if 'imageData' in json_data and json_data['imageData'] is None:
                                 pass  # 保持None
-                            with open(new_json, 'w', encoding='utf-8') as f:
-                                json.dump(json_data, f, ensure_ascii=False, indent=2)
+                            self.write_json_atomic(new_json, json_data)
                         except Exception as je:
                             self.log_message(f"  ⚠️ 更新JSON内容失败: {je}")
 
@@ -4185,7 +4272,9 @@ class MaterialDesignGUI:
             if send2trash:
                 send2trash.send2trash(file_path)
             else:
-                # 如果没有send2trash库，使用普通删除
+                # 如果没有send2trash库，回退到永久删除前先确认
+                if not messagebox.askyesno("确认永久删除", "当前环境不支持回收站删除，是否改为永久删除？"):
+                    raise RuntimeError("用户取消永久删除")
                 os.remove(file_path)
         else:
             # 永久删除
@@ -4549,7 +4638,9 @@ class MaterialDesignGUI:
     
     # 旧的start_conversion方法已删除，使用新的多文件夹版本
         
-    def process_dataset(self, input_dir, output_dir, random_seed):
+    def process_dataset(self, input_dir, output_dir, random_seed,
+                        train_ratio=None, test_ratio=None, verify_ratio=None,
+                        max_images_per_folder=None, auto_split=None):
         """处理数据集：切分和转换"""
         try:
             self.log_message("=== 开始多文件夹数据集切分和格式转换 ===")
@@ -4557,10 +4648,8 @@ class MaterialDesignGUI:
             self.seen_filenames = {}
             self.filename_mapping = {}
             
-            # 获取切分比例
-            train_ratio = self.train_ratio_var.get()
-            test_ratio = self.test_ratio_var.get()
-            verify_ratio = self.verify_ratio_var.get()
+            if train_ratio is None or test_ratio is None or verify_ratio is None:
+                raise ValueError("缺少切分比例参数")
             
             self.log_message(f"切分比例: 训练集{train_ratio:.1%}, 测试集{test_ratio:.1%}, 验证集{verify_ratio:.1%}")
             if random_seed is not None:
@@ -4572,21 +4661,10 @@ class MaterialDesignGUI:
             if not self.input_folders:
                 raise ValueError("请先添加至少一个输入文件夹")
             
-            # 获取数量限制设置
-            max_images_per_folder = 2000  # 默认值
-            auto_split = True  # 默认启用
-            
-            try:
-                max_images_str = self.max_images_per_folder_var.get().strip()
-                if max_images_str:
-                    max_images_per_folder = int(max_images_str)
-                    if max_images_per_folder <= 0:
-                        raise ValueError("数量必须大于0")
-                auto_split = self.auto_split_var.get()
-            except (ValueError, AttributeError) as e:
-                self.log_message(f"数量限制设置错误，使用默认值2000: {e}")
-                max_images_per_folder = 2000
-                auto_split = True
+            if max_images_per_folder is None or auto_split is None:
+                raise ValueError("缺少数量限制参数")
+            if max_images_per_folder <= 0:
+                raise ValueError("每文件夹图片上限必须大于0")
             
             self.log_message(f"数量限制设置: 每文件夹最多 {max_images_per_folder} 张图片，自动分割: {'启用' if auto_split else '禁用'}")
             
@@ -4688,7 +4766,7 @@ class MaterialDesignGUI:
                         
                         # 随机打乱文件列表
                         shuffled_files = files.copy()
-                        random.shuffle(shuffled_files)
+                        random.Random(random_seed).shuffle(shuffled_files)
                         
                         # 分割文件
                         split_parts = []
@@ -4739,7 +4817,7 @@ class MaterialDesignGUI:
                 # 为每个子集生成COCO格式标注（使用已建立的标签映射）
                 self.generate_coco_annotations_multi(output_dir, train_files, test_files, verify_files)
             
-            self.progress_var.set(1.0)
+            self._set_progress(1.0)
             self.log_message("✓ 多文件夹数据集切分和转换完成！")
             self.log_message(f"输出目录: {output_dir}")
             
@@ -4771,15 +4849,16 @@ class MaterialDesignGUI:
             if not self.validate_coco_image_files(output_dir):
                 raise ValueError("COCO标注中的图片文件名与输出图片不一致，请查看上方日志")
             
-            self.status_var.set("处理完成")
-            messagebox.showinfo("成功", "多文件夹数据集切分和转换完成！")
+            self._set_status("处理完成")
+            self._show_messagebox("showinfo", "成功", "多文件夹数据集切分和转换完成！")
             
         except Exception as e:
             self.log_message(f"处理失败: {e}")
-            self.status_var.set("处理失败")
-            messagebox.showerror("错误", f"处理失败: {e}")
+            self._set_status("处理失败")
+            self._show_messagebox("showerror", "错误", f"处理失败: {e}")
         finally:
-            self.set_convert_buttons_state('normal')
+            self._ui_call(self.set_convert_buttons_state, 'normal')
+            self._finish_worker()
     
     def global_validation(self, output_dir, global_converter):
         """全局验证：确保所有子集的标签ID一致"""
@@ -4873,8 +4952,7 @@ class MaterialDesignGUI:
         raw_image_files = []
         for root, dirs, files in os.walk(input_dir):
             for file in files:
-                if file.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff',
-                                           '.JPG', '.JPEG', '.PNG', '.GIF', '.BMP', '.TIF', '.TIFF')):
+                if file.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS):
                     raw_image_files.append(os.path.join(root, file))
 
         # 去重
@@ -5029,8 +5107,7 @@ class MaterialDesignGUI:
                 for folder_key, files in folder_files_dict.items():
                     if "_part" in folder_key:
                         # 分割后的子文件夹
-                        original_path = folder_key.split("_part")[0]
-                        part_num = folder_key.split("_part")[1]
+                        original_path, part_num = folder_key.rsplit("_part", 1)
                         
                         if original_path not in split_folders:
                             split_folders[original_path] = []
@@ -5193,7 +5270,7 @@ class MaterialDesignGUI:
 
                     # 更新进度条
                     progress = (current_step + (i + 1) / len(files)) / total_progress_steps
-                    self.progress_var.set(progress * 0.3 + 0.6)  # 60%-90%的进度区间
+                    self._set_progress(progress * 0.3 + 0.6)  # 60%-90%的进度区间
 
                 if skipped > 0:
                     self.log_message(f"  跳过 {skipped} 个无标注的图片")
@@ -5234,7 +5311,7 @@ class MaterialDesignGUI:
 
                         # 更新进度条
                         progress = (current_step + (j + 1) / len(part_files)) / total_progress_steps
-                        self.progress_var.set(progress * 0.3 + 0.6)  # 60%-90%的进度区间
+                        self._set_progress(progress * 0.3 + 0.6)  # 60%-90%的进度区间
 
                     if skipped > 0:
                         self.log_message(f"  跳过 {skipped} 个无标注的图片")
@@ -5270,8 +5347,7 @@ class MaterialDesignGUI:
                 json_filename = f'instance_{subset_name}.json'
                 json_path = osp.join(annotations_dir, json_filename)
 
-                with open(json_path, 'w', encoding='utf-8') as f:
-                    json.dump(coco_data, f, indent=2, ensure_ascii=False)
+                self.write_json_atomic(json_path, coco_data)
 
                 self.log_message(f"✓ {subset_name}集COCO标注生成完成: {json_filename}")
                 self.log_message(f"  - 图片数量: {len(coco_data['images'])}")
@@ -5294,8 +5370,7 @@ class MaterialDesignGUI:
                     json_filename = f'instance_{part_name}.json'
                     json_path = osp.join(annotations_dir, json_filename)
 
-                    with open(json_path, 'w', encoding='utf-8') as f:
-                        json.dump(coco_data, f, indent=2, ensure_ascii=False)
+                    self.write_json_atomic(json_path, coco_data)
 
                     self.log_message(f"✓ {part_name}COCO标注生成完成: {json_filename}")
                     self.log_message(f"  - 图片数量: {len(coco_data['images'])}")
@@ -5309,7 +5384,7 @@ class MaterialDesignGUI:
                     
                     # 更新进度条
                     progress = current_part / total_parts
-                    self.progress_var.set(progress * 0.1 + 0.9)  # 90%-100%的进度区间
+                    self._set_progress(progress * 0.1 + 0.9)  # 90%-100%的进度区间
       
     def copy_files_to_split_dirs(self, input_dir, output_dir, train_files, test_files, verify_files):
         """复制文件到对应的切分目录（单文件夹版本，保持兼容性）"""
@@ -5348,7 +5423,7 @@ class MaterialDesignGUI:
             
             # 更新进度条
             progress = progress_start + (i + 1) / len(files) * (progress_end - progress_start)
-            self.progress_var.set(progress)
+            self._set_progress(progress)
         
         self.log_message(f"✓ {split_name}集文件复制完成: {len(files)} 个文件")
     
@@ -5374,8 +5449,7 @@ class MaterialDesignGUI:
                     # 处理分割后的文件夹名称显示
                     if "_part" in folder_key:
                         # 这是分割后的子文件夹
-                        original_path = folder_key.split("_part")[0]
-                        part_num = folder_key.split("_part")[1]
+                        original_path, part_num = folder_key.rsplit("_part", 1)
                         original_name = self.folder_names.get(original_path, os.path.basename(original_path))
                         display_name = f"{original_name}_part{part_num}"
                     else:
@@ -5425,7 +5499,7 @@ class MaterialDesignGUI:
 
             # 更新进度条
             progress = progress_start + (i + 1) / len(files) * (progress_end - progress_start)
-            self.progress_var.set(progress)
+            self._set_progress(progress)
 
         self.log_message(f"✓ {split_name}集文件复制完成: {len(files)} 个文件")
     
@@ -5484,8 +5558,7 @@ class MaterialDesignGUI:
         json_filename = f'instance_{split_name}.json'
         json_path = osp.join(annotations_dir, json_filename)
         
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(coco_data, f, indent=2, ensure_ascii=False)
+        self.write_json_atomic(json_path, coco_data)
         
         self.log_message(f"✓ {split_name}集COCO标注生成完成: {json_filename}")
         self.log_message(f"  - 图片数量: {len(coco_data['images'])}")
@@ -5510,8 +5583,7 @@ class MaterialDesignGUI:
         json_filename = f'instance_{split_name}.json'
         json_path = osp.join(annotations_dir, json_filename)
         
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(coco_data, f, indent=2, ensure_ascii=False)
+        self.write_json_atomic(json_path, coco_data)
         
         self.log_message(f"✓ {split_name}集COCO标注生成完成: {json_filename}")
         self.log_message(f"  - 图片数量: {len(coco_data['images'])}")
@@ -5576,8 +5648,10 @@ class MaterialDesignGUI:
                 continue
             
             try:
-                with open(label_file, encoding='utf-8') as f:
-                    data = json.load(f)
+                data, read_result = self.read_json_file_safely(label_file)
+                if data is None:
+                    self.log_message(f"警告: 无法读取JSON文件 {label_file}: {read_result}")
+                    continue
                 
                 # 统一获取JSON中引用的文件名
                 if '\\' in data['imagePath']:
@@ -5633,7 +5707,10 @@ class MaterialDesignGUI:
                         if not isinstance(points, list) or len(points) < 3:
                             continue
                         temp_points = points
-                        temp_bbox = list(map(float, converter.get_bbox(data['imageHeight'], data['imageWidth'], points)))
+                        bbox_result = converter.get_bbox(data['imageHeight'], data['imageWidth'], points)
+                        if bbox_result is None:
+                            continue
+                        temp_bbox = list(map(float, bbox_result))
                     elif p_type == 'rectangle':
                         pts = shapes.get('points', [])
                         if not isinstance(pts, list) or len(pts) != 2:
@@ -5668,11 +5745,13 @@ class MaterialDesignGUI:
                     # 生成annotation
                     object_num = object_num + 1
                     if p_type == 'polygon':
-                        annotations_list.append(
-                            converter.annotations_polygon(
-                                data['imageHeight'], data['imageWidth'], temp_points, label, image_num_for_converter, object_num
-                            )
+                        annotation = converter.annotations_polygon(
+                            data['imageHeight'], data['imageWidth'], temp_points, label, image_num_for_converter, object_num
                         )
+                        if annotation is None:
+                            object_num -= 1
+                            continue
+                        annotations_list.append(annotation)
                     else:  # rectangle
                         annotations_list.append(
                             converter.annotations_rectangle(temp_points, label, image_num_for_converter, object_num)
@@ -5735,8 +5814,10 @@ class MaterialDesignGUI:
             # 读取JSON以确定 file_name 和尺寸
             
             try:
-                with open(label_file, encoding='utf-8') as f:
-                    data = json.load(f)
+                data, read_result = self.read_json_file_safely(label_file)
+                if data is None:
+                    self.log_message(f"警告: 无法读取JSON文件 {label_file}: {read_result}")
+                    continue
 
                 # 统一获取JSON中引用的文件名
                 if '\\' in data['imagePath']:
@@ -5784,7 +5865,10 @@ class MaterialDesignGUI:
                             self.log_message("警告: 多边形标注点数量不足，跳过该标注")
                             continue
                         temp_points = points
-                        temp_bbox = list(map(float, converter.get_bbox(data['imageHeight'], data['imageWidth'], points)))
+                        bbox_result = converter.get_bbox(data['imageHeight'], data['imageWidth'], points)
+                        if bbox_result is None:
+                            continue
+                        temp_bbox = list(map(float, bbox_result))
                     elif p_type == 'rectangle':
                         pts = shapes.get('points', [])
                         if not isinstance(pts, list) or len(pts) != 2:
@@ -5818,11 +5902,13 @@ class MaterialDesignGUI:
                     # 生成并添加annotation（只在确定添加时递增object_num）
                     object_num = object_num + 1
                     if p_type == 'polygon':
-                        annotations_list.append(
-                            converter.annotations_polygon(
-                                data['imageHeight'], data['imageWidth'], temp_points, label, image_num_for_converter, object_num
-                            )
+                        annotation = converter.annotations_polygon(
+                            data['imageHeight'], data['imageWidth'], temp_points, label, image_num_for_converter, object_num
                         )
+                        if annotation is None:
+                            object_num -= 1
+                            continue
+                        annotations_list.append(annotation)
                     else:  # rectangle
                         annotations_list.append(
                             converter.annotations_rectangle(temp_points, label, image_num_for_converter, object_num)
@@ -5833,7 +5919,7 @@ class MaterialDesignGUI:
                 continue
             
             processed_count += 1
-            self.progress_var.set(0.3 + (processed_count / total_files) * 0.7)  # 剩余70%进度用于处理
+            self._set_progress(0.3 + (processed_count / total_files) * 0.7)  # 剩余70%进度用于处理
         
         data_coco['images'] = images_list
         data_coco['categories'] = converter.categories_list
@@ -5947,7 +6033,7 @@ class MaterialDesignGUI:
                 
                 # 快速检查文件扩展名
                 for file in files:
-                    if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                    if file.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS):
                         has_images = True
                     elif file.lower().endswith('.json'):
                         has_jsons = True
@@ -6350,8 +6436,9 @@ class MaterialDesignGUI:
                 continue
                 
             try:
-                with open(label_file, encoding='utf-8') as f:
-                    data = json.load(f)
+                data, read_result = self.read_json_file_safely(label_file)
+                if data is None:
+                    continue
                 
                 for shapes in data['shapes']:
                     label = shapes['label']
@@ -6693,7 +6780,7 @@ class MaterialDesignGUI:
                         for shape in data['shapes']:
                             if 'label' in shape and shape['label'] == label_name:
                                 count += 1
-                except:
+                except Exception:
                     continue
             
             return count
@@ -7036,7 +7123,7 @@ class MaterialDesignGUI:
                 try:
                     count = int(count_str)
                     total_expected_changes += count
-                except:
+                except Exception:
                     count = 0
                 modification_rules[old_label] = new_label
             
@@ -7296,8 +7383,7 @@ class MaterialDesignGUI:
                 
                 # 如果文件被修改，保存文件
                 if file_modified:
-                    with open(json_file, 'w', encoding='utf-8') as f:
-                        json.dump(data, f, indent=2, ensure_ascii=False)
+                    self.write_json_atomic(json_file, data)
                     
                     modified_files += 1
                     total_modifications += file_modifications
@@ -7548,7 +7634,10 @@ class MaterialDesignGUI:
                         if not isinstance(points, list) or len(points) < 3:
                             continue
                         temp_points = points
-                        temp_bbox = list(map(float, converter.get_bbox(data['imageHeight'], data['imageWidth'], points)))
+                        bbox_result = converter.get_bbox(data['imageHeight'], data['imageWidth'], points)
+                        if bbox_result is None:
+                            continue
+                        temp_bbox = list(map(float, bbox_result))
                     elif p_type == 'rectangle':
                         pts = shapes.get('points', [])
                         if not isinstance(pts, list) or len(pts) != 2:
@@ -7583,11 +7672,13 @@ class MaterialDesignGUI:
                     # 生成annotation
                     object_num = object_num + 1
                     if p_type == 'polygon':
-                        annotations_list.append(
-                            converter.annotations_polygon(
-                                data['imageHeight'], data['imageWidth'], temp_points, label, image_num_for_converter, object_num
-                            )
+                        annotation = converter.annotations_polygon(
+                            data['imageHeight'], data['imageWidth'], temp_points, label, image_num_for_converter, object_num
                         )
+                        if annotation is None:
+                            object_num -= 1
+                            continue
+                        annotations_list.append(annotation)
                     else:  # rectangle
                         annotations_list.append(
                             converter.annotations_rectangle(temp_points, label, image_num_for_converter, object_num)
@@ -7652,14 +7743,27 @@ class MaterialDesignGUI:
                 messagebox.showerror("错误", "随机种子必须是整数")
                 return
         # 如果没填写种子，random_seed保持None，就是随机切分
+
+        train_ratio = self.train_ratio_var.get()
+        test_ratio = self.test_ratio_var.get()
+        verify_ratio = self.verify_ratio_var.get()
+        max_images_str = self.max_images_per_folder_var.get().strip()
+        max_images_per_folder = int(max_images_str) if max_images_str else 2000
+        auto_split = self.auto_split_var.get()
+
+        if not self._begin_worker():
+            messagebox.showwarning("警告", "已有任务正在运行，请等待完成")
+            return
         
         # 在新线程中执行转换
         self.set_convert_buttons_state('disabled')
-        self.progress_var.set(0)
-        self.status_var.set("处理中...")
+        self._set_progress(0)
+        self._set_status("处理中...")
         
         thread = threading.Thread(target=self.process_dataset, 
-                                args=(None, output_dir, random_seed))
+                                args=(None, output_dir, random_seed,
+                                      train_ratio, test_ratio, verify_ratio,
+                                      max_images_per_folder, auto_split))
         thread.daemon = True
         thread.start()
     
