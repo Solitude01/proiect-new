@@ -3530,7 +3530,8 @@ class MaterialDesignGUI:
             '无效bbox': [],
             '文件名重复': [],
             'JSON引用图片缺失': [],
-            '图片缺少JSON标注': []
+            '图片缺少JSON标注': [],
+            '图片JSON对应': []
         }
 
         for problem in all_problems:
@@ -3747,6 +3748,24 @@ class MaterialDesignGUI:
                                       style='MaterialCaption.TLabel',
                                       font=('Segoe UI', 9, 'italic'))
                 info_label.pack(anchor=tk.W, pady=(0, 4))
+            # 为"图片JSON对应"问题添加特殊说明（通过更新imagePath修复）
+            elif error_type == '图片JSON对应':
+                var = tk.BooleanVar(value=True)  # 默认选中
+                checkbox = tk.Checkbutton(dialog_frame,
+                                        text=f"{error_type} ({len(problems)} 个) - 可自动修复imagePath",
+                                        variable=var,
+                                        bg=self.colors['surface'],
+                                        fg=self.colors['on_surface'],
+                                        font=('Segoe UI', 10))
+                checkbox.pack(anchor=tk.W, pady=2)
+                self.fix_checkboxes[error_type] = var
+
+                info_text = "  提示：自动将JSON中的imagePath更新为匹配文件名的图片（匹配图片不存在时则删除JSON和同名图片）"
+                info_label = ttk.Label(dialog_frame,
+                                      text=info_text,
+                                      style='MaterialCaption.TLabel',
+                                      font=('Segoe UI', 9, 'italic'))
+                info_label.pack(anchor=tk.W, pady=(0, 4))
             else:
                 var = tk.BooleanVar(value=True)  # 默认选中所有
                 checkbox = tk.Checkbutton(dialog_frame,
@@ -3843,12 +3862,13 @@ class MaterialDesignGUI:
             messagebox.showwarning("警告", "请选择要修复的问题类型")
             return
 
-        # 分离可删除的问题和需要重命名的问题
-        rename_types = ['文件名重复']
-        deletable_types = [t for t in selected_types if t not in rename_types]
-        rename_types = [t for t in selected_types if t in rename_types]
+        # 分离可删除的问题、需要重命名和需要修复imagePath的问题
+        fix_types = ['文件名重复', '图片JSON对应']
+        deletable_types = [t for t in selected_types if t not in fix_types]
+        rename_types = [t for t in selected_types if t == '文件名重复']
+        image_json_fix_types = [t for t in selected_types if t == '图片JSON对应']
 
-        if not deletable_types and not rename_types:
+        if not deletable_types and not rename_types and not image_json_fix_types:
             messagebox.showinfo("提示", "没有选中任何问题")
             return
 
@@ -3897,6 +3917,7 @@ class MaterialDesignGUI:
         # 统计
         delete_count = 0
         rename_count = 0
+        fix_imagejson_count = 0
 
         # 添加要删除的文件
         for error_type in deletable_types:
@@ -3911,6 +3932,44 @@ class MaterialDesignGUI:
                         error_type
                     ))
                     delete_count += 1
+
+        # 添加要修复imagePath的文件（图片JSON对应）
+        if '图片JSON对应' in image_json_fix_types and '图片JSON对应' in self.problem_files:
+            for file_info in self.problem_files['图片JSON对应']:
+                folder = file_info['folder']
+                json_rel_path = file_info['file']
+                json_full_path = os.path.normpath(file_info.get('source_path',
+                    os.path.join(folder, json_rel_path)))
+
+                # 检查同名图片是否存在
+                json_basename = os.path.splitext(os.path.basename(json_full_path))[0]
+                matching_found = False
+                for ext in SUPPORTED_IMAGE_EXTENSIONS:
+                    if os.path.exists(os.path.join(folder, json_basename + ext)):
+                        matching_found = True
+                        break
+                    candidate_full = os.path.join(
+                        os.path.dirname(json_full_path), json_basename + ext)
+                    if os.path.exists(candidate_full):
+                        matching_found = True
+                        break
+
+                folder_name = self.folder_names.get(folder, os.path.basename(folder))
+                if matching_found:
+                    preview_tree.insert('', tk.END, values=(
+                        folder_name,
+                        json_rel_path,
+                        '（更新imagePath）',
+                        '图片JSON对应'
+                    ))
+                else:
+                    preview_tree.insert('', tk.END, values=(
+                        folder_name,
+                        json_rel_path,
+                        '（删除JSON+同名图片）',
+                        '图片JSON对应'
+                    ))
+                fix_imagejson_count += 1
 
         # 添加要重命名的文件（文件名重复问题）
         rename_plan = {}  # {original_path: new_name}
@@ -3975,6 +4034,8 @@ class MaterialDesignGUI:
             desc_text += f"删除文件: {delete_count} 个\n"
         if rename_count > 0:
             desc_text += f"重命名文件: {rename_count} 个（同时重命名图片和JSON文件）\n"
+        if fix_imagejson_count > 0:
+            desc_text += f"修复JSON的imagePath: {fix_imagejson_count} 个（匹配图片存在则更新，不存在则删除JSON和同名图片）\n"
 
         desc_label = ttk.Label(preview_frame,
                               text=desc_text,
@@ -4117,10 +4178,11 @@ class MaterialDesignGUI:
             messagebox.showwarning("警告", "请选择要修复的问题类型")
             return
 
-        # 分离可删除的问题和需要重命名的问题
-        rename_types_list = ['文件名重复']
-        deletable_types = [t for t in selected_types if t not in rename_types_list]
-        rename_types = [t for t in selected_types if t in rename_types_list]
+        # 分离可删除的问题、需要重命名的问题和需要修复imagePath的问题
+        fix_types_list = ['文件名重复', '图片JSON对应']
+        deletable_types = [t for t in selected_types if t not in fix_types_list]
+        rename_types = [t for t in selected_types if t == '文件名重复']
+        image_json_fix_types = [t for t in selected_types if t == '图片JSON对应']
 
         # 如果没有预览过，动态生成重命名计划
         if rename_types and not hasattr(self, '_rename_plan'):
@@ -4134,7 +4196,12 @@ class MaterialDesignGUI:
         if rename_types and '文件名重复' in self.problem_files:
             rename_count = len(self.problem_files['文件名重复'])
 
-        if delete_count == 0 and rename_count == 0:
+        # 统计修复imagePath数量
+        fix_count = 0
+        if image_json_fix_types and '图片JSON对应' in self.problem_files:
+            fix_count = len(self.problem_files['图片JSON对应'])
+
+        if delete_count == 0 and rename_count == 0 and fix_count == 0:
             messagebox.showinfo("提示", "没有选中的问题文件")
             return
 
@@ -4143,6 +4210,8 @@ class MaterialDesignGUI:
             confirm_text += f"删除文件: {delete_count} 个\n"
         if rename_count > 0:
             confirm_text += f"重命名文件: {rename_count} 个\n"
+        if fix_count > 0:
+            confirm_text += f"修复JSON的imagePath: {fix_count} 个\n"
 
         confirm = messagebox.askyesno(
             "确认修复",
@@ -4254,6 +4323,87 @@ class MaterialDesignGUI:
                     rename_error_count += 1
 
             self.log_message(f"✅ 重命名完成: 重命名 {renamed_count} 个文件, 失败 {rename_error_count} 个")
+
+        # 执行修复imagePath操作（图片JSON对应问题）
+        if image_json_fix_types and '图片JSON对应' in self.problem_files:
+            fixed_count = 0
+            fix_error_count = 0
+            fix_deleted_json = 0
+            fix_deleted_img = 0
+
+            for file_info in self.problem_files['图片JSON对应']:
+                try:
+                    folder = file_info['folder']
+                    json_rel_path = file_info['file']
+                    json_full_path = os.path.normpath(file_info.get('source_path',
+                        os.path.join(folder, json_rel_path)))
+
+                    if not os.path.exists(json_full_path):
+                        self.log_message(f"  ⚠️ JSON文件不存在，跳过: {json_rel_path}")
+                        continue
+
+                    # 获取JSON文件名（不含扩展名）
+                    json_basename = os.path.splitext(os.path.basename(json_full_path))[0]
+
+                    # 查找同名的图片文件
+                    matching_image = None
+                    for ext in SUPPORTED_IMAGE_EXTENSIONS:
+                        candidate = os.path.join(folder, json_basename + ext)
+                        if os.path.exists(candidate):
+                            matching_image = json_basename + ext
+                            break
+                        # 也尝试在子目录中查找（处理 rel_path 的情况）
+                        candidate_full = os.path.join(
+                            os.path.dirname(json_full_path), json_basename + ext)
+                        if os.path.exists(candidate_full):
+                            matching_image = candidate_full
+                            break
+
+                    if matching_image:
+                        # 匹配图片存在 → 修复JSON的imagePath
+                        data, _ = self.read_json_file_safely(json_full_path)
+                        if data is None:
+                            self.log_message(f"  ❌ 无法读取JSON: {json_rel_path}")
+                            fix_error_count += 1
+                            continue
+
+                        image_filename = os.path.basename(matching_image) if os.path.sep in matching_image else matching_image
+                        data['imagePath'] = image_filename
+                        self.write_json_atomic(json_full_path, data)
+                        fixed_count += 1
+                        self.log_message(f"  🔧 修复imagePath: {json_rel_path} → {image_filename}")
+                    else:
+                        # 匹配图片不存在 → 删除JSON文件
+                        self.delete_file_safely(json_full_path)
+                        fix_deleted_json += 1
+                        self.log_message(f"  🗑️ 无可匹配图片，删除JSON: {json_rel_path}")
+
+                        # 同时检查并删除同名的图片文件（防止遗留孤立的图片）
+                        for ext in SUPPORTED_IMAGE_EXTENSIONS:
+                            img_path = os.path.join(
+                                os.path.dirname(json_full_path), json_basename + ext)
+                            if os.path.exists(img_path):
+                                self.delete_file_safely(img_path)
+                                fix_deleted_img += 1
+                                self.log_message(f"  🗑️ 同步删除孤立的图片: {json_basename}{ext}")
+                                break
+
+                except UserCancelledError:
+                    self.log_message(f"  ⏭️ 用户取消操作: {json_rel_path}")
+                except Exception as e:
+                    self.log_message(f"  ❌ 修复imagePath失败 {json_rel_path}: {e}")
+                    fix_error_count += 1
+
+            if fixed_count > 0 or fix_deleted_json > 0:
+                parts = []
+                if fixed_count > 0:
+                    parts.append(f"修复 {fixed_count} 个")
+                if fix_deleted_json > 0:
+                    parts.append(f"删除 {fix_deleted_json} 个JSON")
+                if fix_deleted_img > 0:
+                    parts.append(f"删除 {fix_deleted_img} 个孤立图片")
+                parts.append(f"失败 {fix_error_count} 个")
+                self.log_message(f"✅ 图片JSON对应修复完成: {', '.join(parts)}")
 
         # 清除重命名计划
         if hasattr(self, '_rename_plan'):

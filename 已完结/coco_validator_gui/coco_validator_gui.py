@@ -80,6 +80,7 @@ class COCOValidatorGUI:
             'cross_dir_duplicate_annotations': tk.BooleanVar(value=True),  # 跨目录标注内容重复检查
             'cross_json_duplicate_annotations': tk.BooleanVar(value=True),  # 跨JSON文件标注重复检查
             'json_image_mismatch': tk.BooleanVar(value=True),  # JSON标注与图片文件对应检查
+            'cross_json_duplicate_filenames': tk.BooleanVar(value=True),  # 跨JSON文件名唯一性检查
         }
 
         # 创建GUI组件
@@ -216,6 +217,7 @@ class COCOValidatorGUI:
             'cross_dir_duplicate_annotations': '🔗 跨目录标注内容重复',
             'cross_json_duplicate_annotations': '🔗 跨JSON文件标注重复',
             'json_image_mismatch': '🔗 JSON标注与图片对应检查',
+            'cross_json_duplicate_filenames': '🔗 跨JSON文件名唯一性检查',
         }
 
         for key, label in cross_dir_labels.items():
@@ -891,6 +893,18 @@ class COCOValidatorGUI:
                                 if len(data['file_only']) > 5:
                                     self.stats_text.insert(tk.END, f"      ... 还有 {len(data['file_only']) - 5} 个\n")
                             self.stats_text.insert(tk.END, f"    匹配: {data['matched']}/{data['json_total']} (JSON) vs {data['file_total']} (文件)\n\n")
+
+                if 'duplicate_json_filenames' in self.cross_dir_results:
+                    dup_fnames = self.cross_dir_results['duplicate_json_filenames']
+                    if dup_fnames:
+                        self.stats_text.insert(tk.END, f"⚠️ 发现 {len(dup_fnames)} 个跨JSON重复文件名:\n")
+                        for fname, paths in list(dup_fnames.items())[:10]:
+                            short_paths = [os.path.basename(p) for p in paths]
+                            self.stats_text.insert(tk.END, f"  📄 {fname}\n")
+                            self.stats_text.insert(tk.END, f"     出现在: {', '.join(short_paths)}\n")
+                        if len(dup_fnames) > 10:
+                            self.stats_text.insert(tk.END, f"  ... 还有 {len(dup_fnames) - 10} 个\n")
+                        self.stats_text.insert(tk.END, "\n")
         else:
             self.stats_text.insert(tk.END, "暂无统计数据\n")
             self.stats_text.insert(tk.END, "请先进行核查操作")
@@ -1033,6 +1047,14 @@ class COCOValidatorGUI:
                                     f.write(f"      - {fname}\n")
                             f.write(f"    匹配: {data['matched']}/{data['json_total']} (JSON) vs {data['file_total']} (文件)\n")
 
+                    if 'duplicate_json_filenames' in self.cross_dir_results:
+                        dup_fnames = self.cross_dir_results['duplicate_json_filenames']
+                        if dup_fnames:
+                            f.write(f"\n跨JSON重复文件名 ({len(dup_fnames)} 个):\n")
+                            for fname, paths in dup_fnames.items():
+                                f.write(f"  📄 {fname}\n")
+                                f.write(f"     出现在: {', '.join(paths)}\n")
+
                 # 写入详细日志
                 f.write(f"\n{'='*80}\n")
                 f.write("【详细核查日志】\n")
@@ -1139,6 +1161,26 @@ class COCOValidatorGUI:
 
     def _run_cross_dir_checks(self):
         """执行跨目录检查"""
+        # ===== 跨JSON文件名唯一性检查（文件级粒度，不依赖目录分组）=====
+        if (self.validation_checks['cross_json_duplicate_filenames'].get()
+                and len(self.selected_files) >= 2):
+            self.log("🔍 检查跨JSON文件名唯一性...\n")
+            duplicate_filenames = self.check_cross_json_duplicate_filenames()
+            if duplicate_filenames:
+                self.cross_dir_results['duplicate_json_filenames'] = duplicate_filenames
+                self.log(f"  ⚠️ 发现 {len(duplicate_filenames)} 个跨JSON重复的文件名\n")
+                for fname, paths in list(duplicate_filenames.items())[:5]:
+                    short_paths = [os.path.basename(p) for p in paths]
+                    self.log(f"    📄 {fname} 出现在: {', '.join(short_paths)}\n")
+                if len(duplicate_filenames) > 5:
+                    self.log(f"    ... 还有 {len(duplicate_filenames) - 5} 个\n")
+            else:
+                self.log("  ✓ 所有文件名在各JSON文件间唯一\n")
+
+        # 本检查发现问题时提前启用修复按钮（避免被下方 early return 跳过）
+        if self.cross_dir_results:
+            self.root.after(0, lambda: self.fix_button.config(state=tk.NORMAL))
+
         # 如果没有目录结构但有选中文件，自动按父目录分组
         if not self.directory_structure and self.selected_files:
             temp_structure = {}
@@ -1293,6 +1335,26 @@ class COCOValidatorGUI:
         # 过滤出重复的
         duplicates = {k: v for k, v in all_images.items() if len(v) > 1}
         return duplicates
+
+    def check_cross_json_duplicate_filenames(self) -> Dict[str, List[str]]:
+        """跨JSON文件名唯一性检查（文件级粒度，不按目录分组）"""
+        filename_to_paths = defaultdict(list)
+
+        for json_file in self.selected_files:
+            try:
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                if 'images' in data:
+                    seen_in_file = set()
+                    for img in data['images']:
+                        file_name = img.get('file_name', '')
+                        if file_name and file_name not in seen_in_file:
+                            seen_in_file.add(file_name)
+                            filename_to_paths[file_name].append(json_file)
+            except Exception:
+                pass
+
+        return {f: p for f, p in filename_to_paths.items() if len(p) > 1}
 
     def check_cross_dir_duplicate_annotations(self) -> Dict[str, List[str]]:
         """检查跨目录标注内容重复"""
@@ -1491,6 +1553,10 @@ class COCOValidatorGUI:
             if 'json_image_mismatch' in self.cross_dir_results:
                 for v in self.cross_dir_results['json_image_mismatch'].values():
                     total_issues += len(v['json_only']) + len(v['file_only'])
+            if 'duplicate_json_filenames' in self.cross_dir_results:
+                count = len(self.cross_dir_results['duplicate_json_filenames'])
+                total_issues += count
+                fixable_issues += count
             if total_issues > 0:
                 if fixable_issues > 0:
                     self.log(f"\n⚠️ 发现 {total_issues} 个问题（其中 {fixable_issues} 个可自动修复），点击「🔧 一键修复去重」可自动修复\n")
@@ -1956,6 +2022,7 @@ class COCOValidatorGUI:
             'image_renames': [],
             'annotation_removals': [],
             'json_annotation_removals': [],
+            'json_filename_renames': [],
         }
 
         # 图片重命名预览
@@ -1987,6 +2054,18 @@ class COCOValidatorGUI:
                         'json_file': json_file,
                         'hash': ann_hash,
                         'display_hash': ann_hash[:8] + '...',
+                    })
+
+        # 跨JSON文件名重复修复预览
+        if 'duplicate_json_filenames' in self.cross_dir_results:
+            for fname, json_paths in self.cross_dir_results['duplicate_json_filenames'].items():
+                for json_path in json_paths[1:]:  # 保留第一个，重命名其余
+                    parent_dir = os.path.basename(os.path.dirname(json_path))
+                    new_name = f"{self._sanitize_filename_component(parent_dir)}_{fname}"
+                    preview['json_filename_renames'].append({
+                        'json_file': json_path,
+                        'original': fname,
+                        'new': new_name,
                     })
 
         return preview
@@ -2055,6 +2134,16 @@ class COCOValidatorGUI:
                 preview_text.insert(tk.END, f"  标注哈希: {item['display_hash']}\n\n")
         else:
             preview_text.insert(tk.END, "无需移除跨JSON文件重复标注\n\n")
+
+        if preview['json_filename_renames']:
+            preview_text.insert(tk.END, f"\n📄 JSON文件名重命名（解决跨JSON文件名重复，共 {len(preview['json_filename_renames'])} 项）:\n")
+            preview_text.insert(tk.END, "=" * 50 + "\n")
+            for item in preview['json_filename_renames']:
+                json_basename = os.path.basename(item['json_file'])
+                preview_text.insert(tk.END, f"  JSON文件: {json_basename}\n")
+                preview_text.insert(tk.END, f"    {item['original']} → {item['new']}\n\n")
+        else:
+            preview_text.insert(tk.END, "无需重命名JSON中的文件名\n\n")
 
         preview_text.config(state=tk.DISABLED)
 
@@ -2300,6 +2389,18 @@ class COCOValidatorGUI:
 
                 self.log(f"✓ 移除了 {json_removed_count} 个跨JSON文件重复标注\n")
 
+            # 执行跨JSON文件名重命名
+            json_renamed_count = 0
+            if preview['json_filename_renames']:
+                for item in preview['json_filename_renames']:
+                    json_file = item['json_file']
+                    if json_file in json_data:
+                        for img in json_data[json_file].get('images', []):
+                            if img.get('file_name') == item['original']:
+                                img['file_name'] = item['new']
+                                json_renamed_count += 1
+                self.log(f"✓ 重命名了 {json_renamed_count} 个JSON中的文件名引用\n")
+
             # 保存修复后的文件
             saved_count = 0
             for json_file, data in json_data.items():
@@ -2320,6 +2421,7 @@ class COCOValidatorGUI:
                 f"• 复制了 {copied_image_count} 个重命名后的图片文件\n"
                 f"• 移除了 {removed_count} 个重复标注\n"
                 f"• 移除了 {json_removed_count} 个跨JSON文件重复标注\n"
+                f"• 重命名了 {json_renamed_count} 个JSON中的重复文件名引用\n"
                 f"• 保存了 {saved_count} 个文件\n\n"
                 f"备份目录: {backup_dir}\n"
                 f"输出目录: {output_dir}"
