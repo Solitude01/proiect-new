@@ -8,7 +8,11 @@
       "Bash(pyinstaller --clean \"时钟源配置工具.spec\")",
       "Bash(w32tm:*)",
       "Bash(powershell:*)",
-      "Bash(reg query:*)"
+      "Bash(reg query:*)",
+      "Bash(pyinstaller 时钟源配置工具.spec --clean --distpath dist)",
+      "Bash(rm -rf build __pycache__)",
+      "Bash(rm -f dist/时钟源配置工具.exe)",
+      "Bash(cmd *)"
     ]
   }
 }

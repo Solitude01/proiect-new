@@ -221,6 +221,20 @@ class ClockSyncApp:
             width=14
         ).pack(side=LEFT, padx=5)
 
+        ttk.Button(
+            btn_frame, text="📌 粗略校准",
+            command=self.coarse_calibrate,
+            bootstyle="secondary",
+            width=14
+        ).pack(side=LEFT, padx=5)
+
+        ttk.Button(
+            btn_frame, text="⚡ 强制对齐",
+            command=self.force_align,
+            bootstyle="danger",
+            width=14
+        ).pack(side=LEFT, padx=5)
+
         # ---- 时钟源选择 ----
         select_frame = ttk.LabelFrame(main_frame, text="时钟源选择")
         select_inner = ttk.Frame(select_frame, padding=10)
@@ -278,6 +292,47 @@ class ClockSyncApp:
             "注册表直接配置": "说明: 直接写入注册表后重启服务，适用于 w32tm 命令不生效的系统",
             "强制本地时钟源": "说明: 配置为本地 CMOS 时钟源，适用于网络隔离环境",
         }
+
+        # ---- 高级选项 ----
+        advanced_frame = ttk.LabelFrame(main_frame, text="高级选项")
+        advanced_inner = ttk.Frame(advanced_frame, padding=10)
+        advanced_inner.pack(fill=X)
+        advanced_frame.pack(fill=X, pady=(0, 10))
+
+        self.phase_correction_var = ttk.BooleanVar(value=False)
+        phase_cb = ttk.Checkbutton(
+            advanced_inner,
+            text="放大相位修正范围 (MaxAllowedPhaseOffset: 300s→3600s，解决大偏差无法同步问题)",
+            variable=self.phase_correction_var,
+            bootstyle="info-round-toggle"
+        )
+        phase_cb.pack(side=LEFT, padx=5)
+
+        ttk.Label(
+            advanced_inner,
+            text="提示: 在「w32tm命令模式」和「注册表直接配置」模式下生效",
+            bootstyle="secondary",
+            font=("Arial", 8)
+        ).pack(side=LEFT, padx=10)
+
+        ttk.Separator(advanced_inner, orient=VERTICAL).pack(side=LEFT, padx=10, fill=Y)
+
+        self.debug_log_var = ttk.BooleanVar(value=False)
+        debug_cb = ttk.Checkbutton(
+            advanced_inner,
+            text="开启 W32Time 调试日志",
+            variable=self.debug_log_var,
+            bootstyle="warning-round-toggle",
+            command=self._toggle_debug_log
+        )
+        debug_cb.pack(side=LEFT, padx=5)
+
+        ttk.Label(
+            advanced_inner,
+            text="(日志位置: C:\\Windows\\Temp\\w32time_debug.log)",
+            bootstyle="secondary",
+            font=("Arial", 8)
+        ).pack(side=LEFT, padx=5)
 
         # ---- 日志区 ----
         # 日志操作按钮
@@ -554,13 +609,48 @@ class ClockSyncApp:
         elif mode == "强制本地时钟源":
             self._configure_local_clock(server_name)
 
+    @staticmethod
+    def _is_resync_failure(out):
+        """判断 w32tm /resync 输出是否为真正的失败"""
+        if not out:
+            return False
+        text = out.replace('\n', ' ')
+        if "没有重新同步" in text:
+            return True
+        if "no time data" in text.lower():
+            return True
+        if "超时" in text and "0x800705B4" in text:
+            return True
+        return False
+
+    def _run_resync_with_retry(self):
+        """执行 resync，自动回退到 /force；返回 (success: bool, detail: str)"""
+        rc, out, err = run_command('w32tm /resync /rediscover')
+        detail = out.strip() or err.strip()
+        if rc == 0 and not self._is_resync_failure(out):
+            return True, detail
+
+        # 如果常规 resync 失败，日志记录并尝试 /force
+        if self._is_resync_failure(out):
+            self.log(f"  ⚠ 常规同步: {detail}", "warning")
+        else:
+            self.log(f"  ⚠ 常规同步返回: {detail}", "warning")
+
+        self.log("  尝试 w32tm /resync /force (跳过相位检测)...", "info")
+        rc2, out2, _ = run_command('w32tm /resync /force')
+        detail2 = out2.strip()
+        if rc2 == 0 and not self._is_resync_failure(out2):
+            return True, detail2
+        self.log(f"  ⚠ /force 同步: {detail2}", "warning")
+        return False, detail2
+
     def _wait_and_resync(self, ip, server_name):
         """等待服务启动并强制同步验证（供模式1和模式2复用）"""
         import time
 
         # 等待服务完全启动
         service_ready = False
-        for _ in range(10):
+        for _ in range(15):
             time.sleep(1)
             rc2, out2, _ = run_command('sc query w32time')
             if rc2 == 0 and "RUNNING" in out2:
@@ -569,14 +659,17 @@ class ClockSyncApp:
 
         if not service_ready:
             self.log("  ⚠ 服务启动后未进入 RUNNING 状态", "warning")
+            return
+
+        # 给 NtpClient 提供程序一点时间开始轮询
+        self.log("等待 NTP 客户端获取时间数据...", "info")
+        time.sleep(5)
 
         # 强制同步
         self.log("正在强制同步...", "info")
-        rc, out, err = run_command('w32tm /resync /rediscover')
-        if rc == 0:
-            self.log(f"✓ 强制同步成功: {out.strip()}", "success")
-        else:
-            self.log(f"⚠ 强制同步返回: {err.strip()}", "warning")
+        success, detail = self._run_resync_with_retry()
+        if success:
+            self.log(f"✓ 强制同步成功: {detail}", "success")
 
         # 验证配置
         self.log("\n=== 验证配置 ===", "info")
@@ -588,15 +681,13 @@ class ClockSyncApp:
                 self.log(f"  ✓ 已成功锁定到 {server_name} 时钟源", "success")
             else:
                 self.log(f"  ⚠ 同步源未指向预期服务器", "warning")
-                self.log("  建议：尝试切换其他配置模式", "warning")
-                time.sleep(1)
-                run_command('w32tm /resync')
+                self._diagnose_ntp_failure(ip)
 
         self.log("\n✓ NTP 配置完成！", "success")
         self.root.after(1000, self.check_status)
 
     def _restart_service(self):
-        """重启 w32time 服务"""
+        """重启 w32time 服务（失败时自动尝试恢复注册）"""
         import time
         self.log("正在重启 w32time 服务...", "info")
         run_command('net stop w32time')
@@ -605,9 +696,20 @@ class ClockSyncApp:
         if rc == 0:
             self.log(f"  ✓ 服务重启成功: {out.strip()}", "success")
             return True
-        else:
-            self.log(f"  ✗ 服务重启失败: {err.strip()}", "error")
-            return False
+
+        # 启动失败，尝试重新注册服务
+        err_text = (err + out).strip()
+        self.log(f"  ⚠ 启动失败: {err_text}", "warning")
+        if "找不到" in err_text or "2" in err_text or "not found" in err_text.lower():
+            self.log("  检测到服务未注册，正在恢复...", "warning")
+            run_command('w32tm /register')
+            time.sleep(2)
+            rc2, out2, err2 = run_command('net start w32time')
+            if rc2 == 0:
+                self.log(f"  ✓ 服务已恢复并启动", "success")
+                return True
+            self.log(f"  ✗ 恢复后仍无法启动: {err2.strip()}", "error")
+        return False
 
     def _configure_via_w32tm(self, ip, server_name):
         """模式1：使用 w32tm 命令配置（服务运行时）"""
@@ -616,11 +718,14 @@ class ClockSyncApp:
         # 1. 使用 w32tm /config 命令
         cmd = f'w32tm /config /manualpeerlist:"{ip},0x9" /syncfromflags:manual /reliable:YES /update'
         rc, out, err = run_command(cmd)
-        if rc == 0:
+        if rc == 0 and out.strip():
             self.log(f"  ✓ w32tm 配置成功: {out.strip()}", "success")
+        elif rc == 0:
+            self.log("  ✓ w32tm 配置命令已执行 (无输出)", "success")
         else:
-            self.log(f"  ✗ w32tm 配置失败: {err.strip()}", "error")
-            self.log("  建议：切换到「注册表直接配置」模式重试", "warning")
+            self.log(f"  ⚠ w32tm 配置命令返回错误: {err.strip() or '(空)'}", "warning")
+            self.log("  w32tm /config 可能被组策略阻止，自动回退到注册表直接配置...", "warning")
+            self._configure_via_registry(ip, server_name)
             return
 
         # 2. 启用 NtpClient
@@ -637,6 +742,10 @@ class ClockSyncApp:
 
         # 4. 设置自动启动
         run_command('sc config w32time start= auto')
+
+        # [高级选项] 如果启用了相位修正
+        if self.phase_correction_var.get():
+            self._set_phase_correction_registry()
 
         # 5. 重启服务
         if not self._restart_service():
@@ -704,6 +813,10 @@ class ClockSyncApp:
         rc, out, err = run_command('sc config w32time start= auto')
         if rc == 0:
             self.log(f"  设置自动启动: {out.strip()}", "success")
+
+        # [高级选项] 如果启用了相位修正
+        if self.phase_correction_var.get():
+            self._set_phase_correction_registry()
 
         # 3. 重启服务
         if not self._restart_service():
@@ -778,11 +891,11 @@ class ClockSyncApp:
 
     def _force_sync_thread(self):
         """后台强制同步"""
-        rc, out, err = run_command('w32tm /resync /rediscover')
-        if rc == 0:
-            self.log(f"✓ 同步成功: {out.strip()}", "success")
+        success, detail = self._run_resync_with_retry()
+        if success:
+            self.log(f"✓ 同步成功: {detail}", "success")
         else:
-            self.log(f"✗ 同步失败: {err.strip()}", "error")
+            self.log(f"✗ 同步均未成功，最终返回: {detail}", "error")
 
         # 同步后测量偏移
         server_name = self.server_var.get()
@@ -819,6 +932,375 @@ class ClockSyncApp:
                 ))
         else:
             self.log(f"偏移测量失败: {err.strip()}", "error")
+
+
+    def _toggle_debug_log(self):
+        """开启/关闭 W32Time 调试日志"""
+        if self.debug_log_var.get():
+            cmd = (
+                'w32tm /debug /enable /file:C:\\Windows\\Temp\\w32time_debug.log '
+                '/entries:0-300 /size:10000000'
+            )
+            rc, out, err = run_command(cmd)
+            if rc == 0:
+                self.log("✓ W32Time 调试日志已开启", "success")
+                self.log("  日志文件: C:\\Windows\\Temp\\w32time_debug.log", "info")
+                self.log("  执行同步操作后查看该文件可定位「没有时间数据」的原因", "info")
+            else:
+                self.log(f"✗ 开启调试日志失败: {err.strip()}", "error")
+                self.debug_log_var.set(False)
+        else:
+            rc, out, err = run_command('w32tm /debug /disable')
+            if rc == 0:
+                self.log("✓ W32Time 调试日志已关闭", "info")
+            else:
+                self.log(f"⚠ 关闭调试日志失败: {err.strip()}", "warning")
+
+    def _set_phase_correction_registry(self):
+        """写入放大相位修正范围的注册表键值"""
+        config_path = (
+            'HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\Config'
+        )
+        keys = {
+            'MaxAllowedPhaseOffset': 3600,
+            'MaxPosPhaseCorrection': 86400,
+            'MaxNegPhaseCorrection': 86400,
+        }
+        for name, value in keys.items():
+            rc, out, err = run_command(
+                f'reg add {config_path} /v {name} /t REG_DWORD /d {value} /f'
+            )
+            if rc == 0:
+                self.log(f"  ✓ 已设置 {name} = {value}s", "success")
+            else:
+                self.log(f"  ⚠ 设置 {name} 失败: {err.strip()}", "warning")
+
+    def _measure_after_calibrate(self, ip):
+        """校准后测量时间偏移（3 次采样）"""
+        import time
+        time.sleep(2)
+        self.log(f"\n校准后测量与 {ip} 的偏移...", "info")
+        rc, out, err = run_command(
+            f'w32tm /stripchart /computer:{ip} /samples:3 /dataonly'
+        )
+        if rc == 0:
+            lines = out.strip().split('\n')
+            offsets = []
+            self.log("=== 校准后偏移采样 ===", "info")
+            for line in lines:
+                self.log(f"  {line.strip()}")
+                match = re.search(r'd:([+-]\d+\.\d+)s', line)
+                if not match:
+                    match = re.search(r',\s*([+-]\d+\.\d+)s', line)
+                if match:
+                    offsets.append(float(match.group(1)))
+            if offsets:
+                avg = sum(offsets) / len(offsets)
+                self.log(f"\n校准后平均偏移: {avg*1000:.3f} ms", "success")
+                self.root.after(0, lambda: self.offset_label.config(
+                    text=f"{avg*1000:.1f} ms (校准后)",
+                    bootstyle="success" if abs(avg) < 0.05 else "info"
+                ))
+        else:
+            self.log(f"偏移测量失败: {err.strip()}", "error")
+
+    def coarse_calibrate(self):
+        """粗略校准时间（三级回退策略，解决大偏差无法同步问题）"""
+        if not is_admin():
+            self.log("✗ 需要管理员权限", "error")
+            return
+
+        server_name = self.server_var.get()
+        ip = NTP_SERVERS.get(server_name, "")
+        self.log(f"正在对 {server_name} ({ip}) 进行粗略校准...", "info")
+        self.log("  策略1: w32tm /resync /force", "info")
+        self.log("  回退策略2: net time \\\\server /set /y", "info")
+        self.log("  最终策略3: 写入相位修正注册表 + 重启服务", "info")
+        threading.Thread(
+            target=self._coarse_calibrate_thread,
+            args=(ip, server_name), daemon=True
+        ).start()
+
+    def _diagnose_ntp_failure(self, ip):
+        """NTP 同步失败时运行诊断，给出具体排查建议"""
+        self.log("\n=== NTP 同步诊断 ===", "info")
+        # 1. 检查远程 NTP 服务器状态
+        self.log("正在检查远程 NTP 服务器状态...", "info")
+        rc, out, err = run_command(f'w32tm /monitor /computers:{ip}')
+        if rc == 0 and out.strip():
+            for line in out.strip().split('\n'):
+                self.log(f"  {line.strip()}")
+            if "icmp" in out.lower() and "error" in out.lower():
+                self.log("  ⚠ ICMP 不可达，可能防火墙阻止了 ping", "warning")
+            if "NTP" in out and "error" in out.lower():
+                self.log("  ⚠ NTP 协议错误，服务器可能未正确配置 NTP 服务", "warning")
+        else:
+            err_text = (err or out).strip()
+            self.log(f"  ⚠ 无法获取远程服务器状态: {err_text}", "warning")
+
+        # 2. 检查本地 NTP 配置
+        self.log("\n正在检查本地 NTP 客户端配置...", "info")
+        rc, out, err = run_command('w32tm /query /configuration')
+        if rc == 0:
+            # 只输出关键行
+            for line in out.strip().split('\n'):
+                line_s = line.strip()
+                if any(k in line_s for k in [
+                    'NtpServer', 'Type', 'NTPServer',
+                    'PollInterval', 'Enabled',
+                    'AnnounceFlags', 'MaxPos', 'MaxNeg',
+                    'MaxAllowed', 'EventLogFlags'
+                ]):
+                    self.log(f"  {line_s}")
+
+        # 3. 排查建议
+        self.log("\n可能原因与排查步骤:", "warning")
+        self.log("  1. 检查 10.30.6.179 是否已配置为 NTP 服务器", "warning")
+        self.log("     在该服务器上运行: w32tm /query /status", "warning")
+        self.log("  2. 检查 Windows 防火墙是否对 w32time 服务放行 UDP 123", "warning")
+        self.log("     运行: netsh advfirewall firewall show rule name=all | findstr 123", "warning")
+        self.log("  3. 检查域策略是否锁定 NTP 配置", "warning")
+        self.log("     运行: gpresult /h gpreport.html 查看「Windows 时间服务」策略", "warning")
+        self.log("  4. 开启 W32Time 调试日志（点击下方按钮）", "warning")
+
+    def _coarse_calibrate_thread(self, ip, server_name):
+        """后台粗略校准 - 三级联回退"""
+        import time
+
+        # 策略1: w32tm /resync /force（跳过相位检测）
+        self.log("\n--- 策略1: w32tm /resync /force ---", "info")
+        success, detail = self._run_resync_with_retry()
+        if success:
+            self.log(f"✓ 策略1 成功: {detail}", "success")
+            self._measure_after_calibrate(ip)
+            return
+        self.log(f"⚠ 策略1 未成功: {detail}", "warning")
+
+        # 策略2: 确保 w32time 运行后通过 net time 直接设置
+        self.log("\n--- 策略2: net time 直接设置 ---", "info")
+        # 先确保 w32time 在运行（net time 远程同步需要本机服务运行）
+        run_command('sc start w32time')
+        time.sleep(2)
+        rc, out, err = run_command(f'net time \\\\{ip} /set /y')
+        if rc == 0:
+            self.log(f"✓ 策略2 成功: {out.strip()}", "success")
+            self._measure_after_calibrate(ip)
+            return
+        err_text = (err or out).strip()
+        if "2184" in err_text or "尚未启动" in err_text:
+            self.log("  ⚠ 策略2 失败: 远程服务器可能未开启 SMB 时间服务", "warning")
+            self.log("    (net time 使用 SMB 协议而非 NTP，与 w32tm 机制不同)", "warning")
+        elif "拒绝访问" in err_text or "access denied" in err_text.lower():
+            self.log("  ⚠ 策略2 失败: 访问被拒绝，可能需要域认证", "warning")
+        else:
+            self.log(f"⚠ 策略2 失败: {err_text}", "warning")
+
+        # 策略3: 写入相位修正注册表 + 重启服务 + 等待轮询 + resync
+        self.log("\n--- 策略3: 写入相位修正注册表 + 等待 NTP 轮询 ---", "info")
+        self._set_phase_correction_registry()
+
+        # 额外：设置更短的轮询间隔以便更快获取时间数据
+        rc, _, _ = run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\TimeProviders\\NtpClient '
+            '/v SpecialPollInterval /t REG_DWORD /d 64 /f'
+        )
+        if rc == 0:
+            self.log("  ✓ 临时轮询间隔已缩短为 64s (加快首次同步)", "success")
+
+        if self._restart_service():
+            # 等待 NTP 客户端完成首次轮询（至少需要 64s 或更短）
+            self.log("  等待 NTP 客户端首次轮询完成 (最多 30s)...", "info")
+            for i in range(15):
+                time.sleep(2)
+                rc, out, _ = run_command(f'w32tm /query /source')
+                if rc == 0 and ip in out:
+                    self.log(f"  ✓ 第 {i*2}s: 已检测到时钟源 {ip}", "success")
+                    break
+            else:
+                self.log("  ⚠ 30s 内未检测到预期时钟源", "warning")
+
+            # 再次尝试 resync
+            self.log("  最终尝试 resync...", "info")
+            success, detail = self._run_resync_with_retry()
+            if success:
+                self.log(f"✓ 策略3 resync 成功: {detail}", "success")
+            else:
+                self.log(f"⚠ 策略3 resync: {detail}", "warning")
+
+        self._measure_after_calibrate(ip)
+
+        # 如果仍然失败，输出诊断
+        rc, out, _ = run_command('w32tm /query /source')
+        if rc == 0 and ip not in out:
+            self._diagnose_ntp_failure(ip)
+
+        self.log("\n粗略校准流程完成，如偏移仍较大请手动设置系统时间后再试", "info")
+
+    def force_align(self):
+        """强制对齐时间 —— 直接用 PowerShell 设置系统时间（步进跳变）"""
+        if not is_admin():
+            self.log("✗ 需要管理员权限", "error")
+            return
+
+        server_name = self.server_var.get()
+        ip = NTP_SERVERS.get(server_name, "")
+        self.log(f"正在与 {server_name} ({ip}) 强制对齐时间...", "info")
+        self.log("  原理: 测偏移 → 重置w32time状态 → 直接修正时钟 → 重配NTP → 启动服务", "info")
+        threading.Thread(
+            target=self._force_align_thread,
+            args=(ip, server_name), daemon=True
+        ).start()
+
+    def _force_align_thread(self, ip, server_name):
+        """后台强制对齐 —— 步进跳变而非渐进修正"""
+        import time
+        import ctypes
+
+        class SYSTEMTIME(ctypes.Structure):
+            _fields_ = [
+                ("wYear", ctypes.c_ushort),
+                ("wMonth", ctypes.c_ushort),
+                ("wDayOfWeek", ctypes.c_ushort),
+                ("wDay", ctypes.c_ushort),
+                ("wHour", ctypes.c_ushort),
+                ("wMinute", ctypes.c_ushort),
+                ("wSecond", ctypes.c_ushort),
+                ("wMilliseconds", ctypes.c_ushort),
+            ]
+        kernel32 = ctypes.windll.kernel32
+
+        def _set_system_time_utc(delta_seconds):
+            """直接用 GetSystemTime/SetSystemTime 修正时钟，避免 datetime 时区问题"""
+            st = SYSTEMTIME()
+            kernel32.GetSystemTime(ctypes.byref(st))
+            self.log(f"  当前系统 UTC: {st.wYear}-{st.wMonth:02d}-{st.wDay:02d} "
+                     f"{st.wHour:02d}:{st.wMinute:02d}:{st.wSecond:02d}.{st.wMilliseconds:03d}", "info")
+
+            # 转换为总秒数 + 毫秒（忽略日期边界，仅处理 <1天的修正）
+            total_ms = (st.wHour * 3600 + st.wMinute * 60 + st.wSecond) * 1000 + st.wMilliseconds
+            total_ms += int(delta_seconds * 1000)
+
+            # 处理溢出（简化：只处理 24 小时内）
+            total_ms %= 86400000
+            st.wHour = (total_ms // 3600000) % 24
+            st.wMinute = (total_ms // 60000) % 60
+            st.wSecond = (total_ms // 1000) % 60
+            st.wMilliseconds = total_ms % 1000
+
+            self.log(f"  目标系统 UTC: {st.wYear}-{st.wMonth:02d}-{st.wDay:02d} "
+                     f"{st.wHour:02d}:{st.wMinute:02d}:{st.wSecond:02d}.{st.wMilliseconds:03d}", "info")
+
+            if kernel32.SetSystemTime(ctypes.byref(st)):
+                self.log(f"  ✓ SetSystemTime 成功", "success")
+                return True
+            else:
+                err = ctypes.get_last_error()
+                self.log(f"  ✗ SetSystemTime 失败 (错误码: {err})", "error")
+                return False
+
+        def _quick_offset_check(target_ip, label):
+            """快速测一次偏移（不启动服务）"""
+            rc, out, _ = run_command(
+                f'w32tm /stripchart /computer:{target_ip} /samples:1 /dataonly'
+            )
+            if rc == 0:
+                for line in out.strip().split('\n'):
+                    match = re.search(r',\s*([+-]\d+\.\d+)s', line)
+                    if not match:
+                        match = re.search(r'd:([+-]\d+\.\d+)s', line)
+                    if match:
+                        offset_s = float(match.group(1))
+                        self.log(f"  [{label}] 偏移: {offset_s*1000:.1f} ms", "info")
+                        return offset_s
+            self.log(f"  [{label}] 无法测量", "warning")
+            return None
+
+        # === 1. 测量当前偏移 ===
+        self.log("\n--- 步骤1: 测量当前偏移 ---", "info")
+        run_command('sc start w32time')
+        time.sleep(1)
+        offset_before = _quick_offset_check(ip, "修正前")
+        if offset_before is None:
+            self.log("✗ 无法测量偏移", "error")
+            return
+        if abs(offset_before) < 0.1:
+            self.log("✓ 偏移已 < 100ms，无需强制对齐", "success")
+            return
+
+        # === 2. 停止服务，直接修正时钟 ===
+        self.log("\n--- 步骤2: 停止服务并修正时钟 ---", "info")
+        run_command('net stop w32time')
+        time.sleep(1)
+
+        correction = -offset_before
+        self.log(f"  偏移: {offset_before*1000:.1f} ms → 修正量: {correction:+.3f}s", "info")
+        if not _set_system_time_utc(correction):
+            run_command('net start w32time')
+            return
+
+        # === 3. 立即验证 SetSystemTime 是否生效 ===
+        self.log("\n--- 步骤3: 验证修正效果 (w32time 未运行) ---", "info")
+        time.sleep(1)
+        offset_after_set = _quick_offset_check(ip, "修正后(无w32time)")
+        if offset_after_set is not None and abs(offset_after_set) < 0.5:
+            self.log("  ✓ 时钟修正成功，准备恢复时间服务", "success")
+        else:
+            self.log("  ⚠ 时钟修正后偏移仍较大，可能 SetSystemTime 未生效", "warning")
+
+        # === 4. 重置 w32time 状态并重新配置 ===
+        self.log("\n--- 步骤4: 重置时间服务并重配 NTP ---", "info")
+        self.log("  正在重置 w32time 状态...", "info")
+        rc, out, err = run_command('w32tm /unregister')
+        if rc != 0:
+            self.log(f"  ⚠ unregister 返回: {err.strip() or out.strip()}", "warning")
+        time.sleep(1)
+        rc, out, err = run_command('w32tm /register')
+        if rc == 0:
+            self.log("  ✓ w32time 已重新注册", "success")
+        else:
+            self.log(f"  ✗ register 失败: {err.strip() or out.strip()}", "error")
+            # 尝试用 sc create 作为后备
+            self.log("  尝试备用方式注册...", "warning")
+            run_command(
+                'sc create w32time binPath= '
+                '"C:\\Windows\\System32\\svchost.exe -k LocalService" '
+                'type= own start= auto'
+            )
+            run_command(
+                'sc config w32time depend= "" '
+            )
+        time.sleep(1)
+
+        run_command(
+            f'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters '
+            f'/v NtpServer /t REG_SZ /d "{ip},0x9" /f'
+        )
+        run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters '
+            '/v SyncFromFlags /t REG_DWORD /d 1 /f'
+        )
+        run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters '
+            '/v Reliable /t REG_DWORD /d 1 /f'
+        )
+        run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\TimeProviders\\NtpClient '
+            '/v Enabled /t REG_DWORD /d 1 /f'
+        )
+        run_command(
+            'reg add HKLM\\SYSTEM\\CurrentControlSet\\Services\\W32Time\\TimeProviders\\NtpClient '
+            '/v SpecialPollInterval /t REG_DWORD /d 900 /f'
+        )
+        run_command('sc config w32time start= auto')
+        self.log("  ✓ NTP 配置已重新应用", "success")
+
+        # === 5. 启动服务并最终验证 ===
+        self.log("\n--- 步骤5: 启动服务并最终验证 ---", "info")
+        time.sleep(1)
+        run_command('net start w32time')
+        time.sleep(3)
+        self._measure_after_calibrate(ip)
+        self.log("\n✓ 强制对齐完成", "success")
 
 
 # ============== 主函数 ==============
