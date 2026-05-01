@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xxd \"D:\\\\proiect\\\\工作\\\\图片随机切分\\\\需求.md\")",
+      "Bash(iconv *)",
+      "Bash(git *)",
+      "Bash(python *)"
+    ]
+  }
+}
