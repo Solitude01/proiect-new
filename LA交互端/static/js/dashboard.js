@@ -41,6 +41,9 @@ class DashboardManager {
         // Audio alert match switch (default: false = play all sounds without matching)
         this.audioAlertMatchEnabled = false;
 
+        // Global audio alerts enabled switch (default: true)
+        this.audioAlertsEnabled = true;
+
         // Server info (IP address)
         this.serverIp = null;
 
@@ -94,9 +97,6 @@ class DashboardManager {
             window.audioManager.setVolume(value / 100);
             this.updateVolumeSliderColor(value);
         });
-
-        // Initialize view link
-        this.initViewLink();
 
         // Load server info (IP address)
         this.loadServerInfo();
@@ -166,6 +166,12 @@ class DashboardManager {
                 this.instanceConfig = data.instance;
                 console.log('[Dashboard] Instance config loaded:', this.instanceConfig);
 
+                // Check if instance is disabled
+                if (this.instanceConfig.enabled === false) {
+                    console.warn('[Dashboard] Instance is disabled');
+                    this.showDisabledWarning();
+                }
+
                 // Render metrics with configuration
                 this.renderMetrics();
             }
@@ -174,31 +180,51 @@ class DashboardManager {
         }
     }
 
+    showDisabledWarning() {
+        // Remove existing warning if any
+        const existing = document.getElementById('disabledWarning');
+        if (existing) existing.remove();
+
+        const banner = document.createElement('div');
+        banner.id = 'disabledWarning';
+        banner.style.cssText = `
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 45, 45, 0.1);
+            border: 1px solid rgba(255, 45, 45, 0.3);
+            border-radius: 6px;
+            margin: 0 1rem 1rem;
+            color: var(--accent-red);
+            font-size: 0.875rem;
+        `;
+        banner.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="flex-shrink: 0;">
+                <path d="M9 6v4M9 12v1" stroke="var(--accent-red)" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="9" cy="9" r="7" stroke="var(--accent-red)" stroke-width="1.5"/>
+            </svg>
+            <span>此实例已被禁用 — WebSocket 连接和告警已停止</span>
+        `;
+
+        // Insert after header
+        const header = document.querySelector('.dashboard-header');
+        if (header && header.parentNode) {
+            header.parentNode.insertBefore(banner, header.nextSibling);
+        }
+
+        // Disable control buttons
+        document.querySelectorAll('.control-btn').forEach(btn => {
+            btn.disabled = true;
+            btn.style.opacity = '0.4';
+            btn.style.cursor = 'not-allowed';
+        });
+    }
+
     updateVolumeSliderColor(value) {
         const slider = document.getElementById('volumeSlider');
         if (!slider) return;
 
         const percentage = value;
         slider.style.background = `linear-gradient(to right, var(--accent-cyan) 0%, var(--accent-cyan) ${percentage}%, var(--bg-tertiary) ${percentage}%, var(--bg-tertiary) 100%)`;
-    }
-
-    initViewLink() {
-        const viewLinkInput = document.getElementById('viewLinkInput');
-        const copyBtn = document.getElementById('copyViewLinkBtn');
-        if (!viewLinkInput) return;
-
-        const viewUid = viewLinkInput.dataset.viewUid;
-
-        if (viewUid && viewUid !== 'None' && viewUid !== '') {
-            // Business view uses port 6010
-            const protocol = window.location.protocol;
-            const hostname = window.location.hostname;
-            viewLinkInput.value = `${protocol}//${hostname}:6010/view/${viewUid}`;
-            if (copyBtn) copyBtn.disabled = false;
-        } else {
-            viewLinkInput.value = '未配置';
-            if (copyBtn) copyBtn.disabled = true;
-        }
     }
 
     updateTime() {
@@ -210,6 +236,14 @@ class DashboardManager {
 
     async unlockAndConnect() {
         this.connectBtn.disabled = true;
+
+        // Check if instance is disabled
+        if (this.instanceConfig && this.instanceConfig.enabled === false) {
+            this.gateStatus.textContent = '实例已被禁用，无法连接';
+            this.connectBtn.disabled = false;
+            return;
+        }
+
         this.gateStatus.textContent = '正在初始化音频...';
 
         // Unlock audio context
@@ -380,7 +414,7 @@ class DashboardManager {
         this.addLog(level === 'critical' ? 'error' : level, `[${level.toUpperCase()}] ${message}`);
 
         // Find matching audio alert config and play
-        if (window.audioManager && !window.audioManager.isAudioMuted) {
+        if (window.audioManager && !window.audioManager.isAudioMuted && this.audioAlertsEnabled) {
             console.log('[Dashboard] Playing alert sound for:', message);
             this.playMatchingAlertSound(message, level);
         } else {
@@ -590,7 +624,7 @@ class DashboardManager {
 
         // Check for audio alerts using configured rules
         const payloadStr = JSON.stringify(payload);
-        if (window.audioManager && !window.audioManager.isAudioMuted) {
+        if (window.audioManager && !window.audioManager.isAudioMuted && this.audioAlertsEnabled) {
             this.playMatchingAlertSound(payloadStr, 'info');
         }
     }
@@ -1130,6 +1164,9 @@ class DashboardManager {
             this.audioAlertMatchEnabled = data.instance?.audio_alert_match_enabled === true;
             console.log('[Dashboard] Audio alert match enabled:', this.audioAlertMatchEnabled);
 
+            this.audioAlertsEnabled = data.instance?.audio_alerts_enabled !== false;
+            console.log('[Dashboard] Audio alerts enabled:', this.audioAlertsEnabled);
+
             this.audioAlertRules = rules;
             this.audioFiles = audioFiles;
 
@@ -1512,32 +1549,6 @@ class DashboardManager {
                 // Save instance config for metrics rendering
                 this.instanceConfig = instance;
 
-                // Load view UID
-                const viewUidInput = document.getElementById('settingsViewUid');
-                const viewLinkSpan = document.getElementById('settingsViewLink');
-
-                // Handle view UID - auto-generate if not exists
-                let currentUid = instance.view_uid;
-                console.log('[Dashboard] Current view_uid from server:', currentUid);
-                if (!currentUid) {
-                    currentUid = this.generateUid();
-                    console.log('[Dashboard] Generated new view_uid:', currentUid);
-                }
-
-                if (viewUidInput) {
-                    viewUidInput.value = currentUid;
-                    console.log('[Dashboard] Set viewUidInput value:', currentUid);
-                }
-
-                // Business view uses port 6010
-                if (viewLinkSpan) {
-                    const protocol = window.location.protocol;
-                    const hostname = window.location.hostname;
-                    const fullUrl = `${protocol}//${hostname}:6010/view/${currentUid}`;
-                    viewLinkSpan.innerHTML = `<a href="${fullUrl}" target="_blank" style="color: var(--accent-cyan);">${fullUrl}</a>`;
-                    console.log('[Dashboard] Set viewLinkSpan:', fullUrl);
-                }
-
                 // Load metrics mappings
                 this.tempMetricsMappings = instance.metrics_mappings || [];
                 this.renderSettingsMetricsList(this.tempMetricsMappings);
@@ -1553,9 +1564,11 @@ class DashboardManager {
                 this.tempAudioAlerts = instance.audio_alerts || [];
                 this.tempAudioFiles = instance.audio_files || [];
                 this.tempAudioAlertMatchEnabled = instance.audio_alert_match_enabled === true;
+                this.tempAudioAlertsEnabled = instance.audio_alerts_enabled !== false;
                 this.renderSettingsAudioAlerts(this.tempAudioAlerts);
                 this.renderSettingsAudioFiles(this.tempAudioFiles);
                 this.renderAudioAlertMatchSwitch(this.tempAudioAlertMatchEnabled);
+                this.renderAudioAlertsEnabledSwitch(this.tempAudioAlertsEnabled);
 
                 // Bind add audio alert button (re-bind each time panel opens)
                 const addAlertBtn = document.getElementById('settingsAddAudioAlertBtn');
@@ -1714,6 +1727,8 @@ class DashboardManager {
               <option value="red"    ${color==='red'?'selected':''}>红色</option>
               <option value="blue"   ${color==='blue'?'selected':''}>蓝色</option>
               <option value="orange" ${color==='orange'?'selected':''}>橙色</option>
+              <option value="yellow" ${color==='yellow'?'selected':''}>黄色</option>
+              <option value="purple" ${color==='purple'?'selected':''}>紫色</option>
             </select>
           </div>
           <div class="ctrl-btn-field">
@@ -1894,6 +1909,11 @@ class DashboardManager {
             const keyword = this.escapeHtml(rule.keyword || '');
             const name = this.escapeHtml(rule.name || '');
             const enabled = rule.enabled !== false;
+            // Sound display name for collapsed header
+            const soundName = rule.audio_file_id
+                ? ((this.tempAudioFiles || []).find(f => f.id === rule.audio_file_id)?.name || '自定义')
+                : (rule.sound || 'warning');
+            const soundLabel = rule.audio_file_id ? '(自定义)' : `(${soundName})`;
 
             return `
             <div class="alert-rule-card" data-index="${index}" data-enabled="${enabled}">
@@ -1902,6 +1922,7 @@ class DashboardManager {
                         <span class="alert-rule-seq">#${index + 1}</span>
                         <span class="alert-rule-keyword-badge">${keyword || '未设置'}</span>
                         <span class="alert-rule-name-label ${name ? '' : 'is-empty'}" id="alert-name-label-${index}">${name || '无名称'}</span>
+                        <span class="alert-rule-sound-tag">${soundLabel}</span>
                     </div>
                     <div class="alert-rule-header-right">
                         <label class="alert-rule-toggle">
@@ -2059,6 +2080,53 @@ class DashboardManager {
         }
     }
 
+    renderAudioAlertsEnabledSwitch(enabled) {
+        const container = document.getElementById('settingsAlertConfigList');
+        if (!container) return;
+
+        const switchHtml = `
+            <div class="alert-global-switch" style="padding: 0.75rem; background: var(--bg-secondary); border: 1px solid ${enabled ? 'var(--accent-green)' : 'var(--accent-red)'}; border-radius: 4px; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 0.875rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">播放音频告警</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">
+                            ${enabled ? '所有客户端均会播放告警声音' : '所有客户端均不播放告警声音'}
+                        </div>
+                    </div>
+                    <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                        <input type="checkbox" id="audioAlertsEnabledSwitch" ${enabled ? 'checked' : ''} style="opacity: 0; width: 0; height: 0;">
+                        <span style="position: absolute; cursor: pointer; inset: 0; background: ${enabled ? 'var(--accent-green)' : 'var(--border-subtle)'}; border-radius: 24px; transition: 0.3s;">
+                            <span style="position: absolute; content: ''; height: 18px; width: 18px; left: ${enabled ? '22px' : '3px'}; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s;"></span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+        `;
+
+        // Check if the switch already exists
+        const existingSwitch = container.querySelector('.alert-global-switch');
+        if (existingSwitch) {
+            existingSwitch.outerHTML = switchHtml;
+        } else {
+            // Insert before the match switch (or at the beginning)
+            const matchSwitch = container.querySelector('.alert-match-switch');
+            if (matchSwitch) {
+                matchSwitch.insertAdjacentHTML('beforebegin', switchHtml);
+            } else {
+                container.insertAdjacentHTML('afterbegin', switchHtml);
+            }
+        }
+
+        // Add change listener
+        const switchInput = document.getElementById('audioAlertsEnabledSwitch');
+        if (switchInput) {
+            switchInput.addEventListener('change', (e) => {
+                this.tempAudioAlertsEnabled = e.target.checked;
+                this.renderAudioAlertsEnabledSwitch(this.tempAudioAlertsEnabled);
+            });
+        }
+    }
+
     renderSettingsAudioFiles(files) {
         const container = document.getElementById('settingsAudioFilesList');
         if (!container) return;
@@ -2163,101 +2231,15 @@ class DashboardManager {
         }
     }
 
-    regenerateViewUid() {
-        const newUid = this.generateUid();
-        const viewUidInput = document.getElementById('settingsViewUid');
-        if (viewUidInput) {
-            viewUidInput.value = newUid;
-        }
-        this.updateSettingsViewLink(null, newUid);
-    }
-
-    generateUid() {
-        return Array.from({length: 16}, () =>
-            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 62)]
-        ).join('');
-    }
-
-    updateViewLink(uid) {
-        this.updateSettingsViewLink(uid);
-    }
-
-    updateSettingsViewLink(uid) {
-        const viewLinkSpan = document.getElementById('settingsViewLink');
-        const viewUidInput = document.getElementById('settingsViewUid');
-
-        if (!viewLinkSpan) return;
-
-        const currentUid = uid || viewUidInput?.value || this.generateUid();
-        // Business view uses port 6010
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        const fullUrl = `${protocol}//${hostname}:6010/view/${currentUid}`;
-
-        viewLinkSpan.innerHTML = `<a href="${fullUrl}" target="_blank" style="color: var(--accent-cyan);">${fullUrl}</a>`;
-    }
-
-    copyViewLink() {
-        const input = document.getElementById('viewLinkInput');
-        if (input && input.value && input.value !== '未配置') {
-            input.select();
-            document.execCommand('copy');
-            this.showToast('success', '已复制', '业务视图链接已复制到剪贴板');
-        } else {
-            this.showToast('warning', '无法复制', '请先配置业务视图');
-        }
-    }
-
-    /**
-     * Sync current configuration to business view via WebSocket broadcast
-     */
-    async syncConfigToBusinessView() {
-        try {
-            // Get current instance config
-            const response = await fetch(`/api/instances/${this.instanceId}`);
-            const data = await response.json();
-
-            if (!data.instance) {
-                this.showToast('error', '同步失败', '无法获取实例配置');
-                return;
-            }
-
-            const config = {
-                type: 'config_sync',
-                payload: {
-                    metrics_mappings: data.instance.metrics_mappings || [],
-                    audio_alerts: data.instance.audio_alerts || [],
-                    audio_files: data.instance.audio_files || [],
-                    control_buttons: data.instance.control_buttons || [],
-                    updated_at: new Date().toISOString()
-                }
-            };
-
-            // Send via WebSocket if connected
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                this.ws.send(JSON.stringify(config));
-                this.showToast('success', '配置已同步', '业务视图将接收最新配置');
-                console.log('[Dashboard] Config synced to business view:', config);
-            } else {
-                this.showToast('error', '同步失败', 'WebSocket 未连接，请先连接控制台');
-            }
-        } catch (error) {
-            console.error('[Dashboard] Failed to sync config:', error);
-            this.showToast('error', '同步失败', '网络错误或服务器无响应');
-        }
-    }
-
     async saveSettings() {
         try {
-            const viewUid = document.getElementById('settingsViewUid')?.value || '';
-
             const updates = {
-                view_uid: viewUid,
                 metrics_mappings: this.tempMetricsMappings || [],
                 control_buttons: this.tempControlButtons || [],
                 audio_alerts: this.tempAudioAlerts || [],
                 audio_files: this.tempAudioFiles || [],
-                audio_alert_match_enabled: this.tempAudioAlertMatchEnabled === true
+                audio_alert_match_enabled: this.tempAudioAlertMatchEnabled === true,
+                audio_alerts_enabled: this.tempAudioAlertsEnabled === true
             };
 
             const response = await fetch(`/api/instances/${this.instanceId}`, {
@@ -2270,7 +2252,6 @@ class DashboardManager {
                 this.showToast('success', '保存成功', '设置已保存');
                 // Update local config without reloading
                 await this.loadAudioAlertConfig();
-                this.initViewLink();
             } else {
                 const error = await response.text();
                 this.showToast('error', '保存失败', error);

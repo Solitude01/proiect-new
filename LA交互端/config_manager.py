@@ -62,6 +62,7 @@ class InstanceConfig(BaseModel):
     instance_id: str
     name: str
     description: str = ""
+    enabled: bool = True  # 实例启用/禁用开关，默认启用
     la_config: LAConfig
     view_port: int = 0  # 业务视图专用端口，0表示不启用
     view_uid: str = ""  # 业务视图访问UID
@@ -71,6 +72,8 @@ class InstanceConfig(BaseModel):
     audio_alerts: List[AudioAlert] = []
     audio_files: List[AudioFile] = []
     audio_alert_match_enabled: bool = False  # 音频告警关键词匹配开关，默认关闭
+    audio_alerts_enabled: bool = True  # 全局音频告警开关，默认开启
+    deleted_at: str = ""    # 软删除时间戳，空串表示未删除
     created_at: str = ""
     updated_at: str = ""
 
@@ -86,18 +89,30 @@ class ConfigManager:
         """Get the file path for an instance config"""
         return self.config_dir / f"{instance_id}.json"
 
-    def list_instances(self) -> List[Dict]:
-        """List all instance configurations"""
+    def list_instances(self, include_deleted: bool = False) -> List[Dict]:
+        """List instance configurations.
+        Args:
+            include_deleted: If True, return only trashed instances.
+                             If False (default), return only active instances.
+        """
         instances = []
         for config_file in self.config_dir.glob("*.json"):
             try:
                 with open(config_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
+                    is_deleted = bool(data.get("deleted_at", ""))
+                    # Filter based on include_deleted flag
+                    if include_deleted and not is_deleted:
+                        continue
+                    if not include_deleted and is_deleted:
+                        continue
                     # Return summary without full config details
                     instances.append({
                         "instance_id": data.get("instance_id"),
                         "name": data.get("name"),
                         "description": data.get("description", ""),
+                        "enabled": data.get("enabled", True),
+                        "deleted_at": data.get("deleted_at", ""),
                         "created_at": data.get("created_at", ""),
                         "la_ip": data.get("la_config", {}).get("ip"),
                         "la_port": data.get("la_config", {}).get("port")
@@ -134,7 +149,18 @@ class ConfigManager:
 
         config_path = self._get_config_path(config.instance_id)
         if config_path.exists():
-            raise ValueError(f"Instance {config.instance_id} already exists")
+            # If the existing instance is soft-deleted, auto-clean it
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    existing = json.load(f)
+                if existing.get("deleted_at", ""):
+                    config_path.unlink()  # Clean up old trashed file
+                else:
+                    raise ValueError(f"Instance {config.instance_id} already exists")
+            except ValueError:
+                raise
+            except Exception:
+                raise ValueError(f"Instance {config.instance_id} already exists")
 
         with open(config_path, "w", encoding="utf-8") as f:
             json.dump(config.model_dump(), f, indent=2, ensure_ascii=False)
@@ -182,8 +208,46 @@ class ConfigManager:
 
         return config
 
-    def delete_instance(self, instance_id: str) -> bool:
-        """Delete an instance configuration"""
+    def delete_instance(self, instance_id: str) -> Optional[str]:
+        """Soft-delete: mark instance as deleted. Returns deleted_at timestamp or None."""
+        config_path = self._get_config_path(instance_id)
+        if not config_path.exists():
+            return None
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            now = datetime.now().isoformat()
+            data["deleted_at"] = now
+            data["enabled"] = False
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return now
+        except Exception as e:
+            print(f"Error soft-deleting config {instance_id}: {e}")
+            return None
+
+    def restore_instance(self, instance_id: str) -> bool:
+        """Restore a soft-deleted instance."""
+        config_path = self._get_config_path(instance_id)
+        if not config_path.exists():
+            return False
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not data.get("deleted_at"):
+                return False  # Not deleted
+            data["deleted_at"] = ""
+            data["enabled"] = True
+            data["updated_at"] = datetime.now().isoformat()
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            print(f"Error restoring config {instance_id}: {e}")
+            return False
+
+    def permanently_delete_instance(self, instance_id: str) -> bool:
+        """Permanently remove an instance configuration from disk."""
         config_path = self._get_config_path(instance_id)
         if not config_path.exists():
             return False
@@ -191,12 +255,35 @@ class ConfigManager:
             config_path.unlink()
             return True
         except Exception as e:
-            print(f"Error deleting config {instance_id}: {e}")
+            print(f"Error permanently deleting config {instance_id}: {e}")
             return False
 
     def instance_exists(self, instance_id: str) -> bool:
-        """Check if an instance exists"""
-        return self._get_config_path(instance_id).exists()
+        """Check if an instance exists (not soft-deleted)."""
+        config_path = self._get_config_path(instance_id)
+        if not config_path.exists():
+            return False
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return not bool(data.get("deleted_at", ""))
+        except Exception:
+            return config_path.exists()  # fallback
+
+    def is_instance_enabled(self, instance_id: str) -> bool:
+        """Return False for disabled or soft-deleted instances.
+        Returns True for non-existent instances (caller should check existence separately)."""
+        config_path = self._get_config_path(instance_id)
+        if not config_path.exists():
+            return True
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if data.get("deleted_at", ""):
+                return False
+            return data.get("enabled", True)
+        except Exception:
+            return True
 
     def get_instance_by_view_uid(self, view_uid: str) -> Optional[InstanceConfig]:
         """Find instance configuration by view_uid (for business view access)"""

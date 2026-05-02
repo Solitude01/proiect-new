@@ -120,6 +120,28 @@ class ConnectionManager:
         """Get a summary of all rooms and their sizes"""
         return {room_id: len(connections) for room_id, connections in self.rooms.items()}
 
+    async def disconnect_room(self, instance_id: str, code: int = 4001, reason: str = "") -> int:
+        """Disconnect all clients in a room. Returns number of clients disconnected."""
+        if instance_id not in self.rooms:
+            return 0
+        count = 0
+        connections = list(self.rooms.get(instance_id, []))
+        for ws in connections:
+            try:
+                await ws.close(code=code, reason=reason)
+                count += 1
+            except Exception:
+                pass
+        # Clean up the room
+        if instance_id in self.rooms:
+            del self.rooms[instance_id]
+        # Clean up connection info
+        for ws in connections:
+            if ws in self.connection_info:
+                del self.connection_info[ws]
+        print(f"[WebSocket] Disconnected {count} clients from room '{instance_id}' (code={code})")
+        return count
+
     async def send_personal_message(self, websocket: WebSocket, message: dict) -> bool:
         """
         Send a message to a specific WebSocket connection.

@@ -163,6 +163,15 @@ if SINGLE_INSTANCE_MODE:
     print(f"[Config] Running in SINGLE-INSTANCE mode for: {SINGLE_INSTANCE_ID}")
 
 
+def _require_instance_enabled(instance_id: str):
+    """Raise HTTP 403 if the instance exists but is disabled."""
+    if not config_manager.is_instance_enabled(instance_id):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Instance '{instance_id}' is currently disabled"
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler"""
@@ -312,9 +321,17 @@ async def get_server_info():
 
 
 @app.get("/api/instances")
-async def list_instances():
-    """List all instances"""
-    return {"instances": config_manager.list_instances()}
+async def list_instances(type: str = "active"):
+    """List instances. type=active (default) or type=trash."""
+    include_deleted = (type == "trash")
+    instances = config_manager.list_instances(include_deleted=include_deleted)
+    # Inject live WebSocket connection count (only for active instances)
+    for inst in instances:
+        if include_deleted:
+            inst["connected_clients"] = 0
+        else:
+            inst["connected_clients"] = websocket_manager.get_room_size(inst["instance_id"])
+    return {"instances": instances}
 
 
 @app.post("/api/instances")
@@ -393,12 +410,57 @@ async def get_instance_by_view_uid(view_uid: str):
 
 @app.delete("/api/instances/{instance_id}")
 async def delete_instance(instance_id: str):
-    """Delete an instance"""
+    """Soft-delete an instance (move to trash)"""
     if not config_manager.instance_exists(instance_id):
         raise HTTPException(status_code=404, detail="Instance not found")
 
-    success = config_manager.delete_instance(instance_id)
-    return {"success": success}
+    # Disconnect all WebSocket clients in this instance's room
+    await websocket_manager.disconnect_room(instance_id, code=4001, reason="Instance deleted")
+
+    deleted_at = config_manager.delete_instance(instance_id)
+    if not deleted_at:
+        raise HTTPException(status_code=500, detail="Failed to delete instance")
+
+    return {"success": True, "deleted": True, "deleted_at": deleted_at}
+
+
+@app.post("/api/instances/{instance_id}/restore")
+async def restore_instance(instance_id: str):
+    """Restore a soft-deleted instance from trash"""
+    config_path = config_manager._get_config_path(instance_id)
+    if not config_path.exists():
+        raise HTTPException(status_code=404, detail="Instance not found")
+
+    success = config_manager.restore_instance(instance_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Instance is not deleted or restore failed")
+
+    return {"success": True, "restored": True}
+
+
+@app.delete("/api/instances/{instance_id}/permanent")
+async def permanently_delete_instance(instance_id: str):
+    """Permanently delete an instance (from trash)"""
+    config_path = config_manager._get_config_path(instance_id)
+    if not config_path.exists():
+        raise HTTPException(status_code=404, detail="Instance not found")
+
+    # Clean up log file
+    logs_manager.clear_logs(instance_id)
+
+    # Clean up associated audio files
+    try:
+        audio_files = AUDIO_DIR.glob(f"{instance_id}_*")
+        for af in audio_files:
+            af.unlink()
+    except Exception:
+        pass
+
+    success = config_manager.permanently_delete_instance(instance_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to permanently delete instance")
+
+    return {"success": True, "permanent": True}
 
 
 @app.put("/api/instances/{instance_id}")
@@ -457,6 +519,11 @@ async def websocket_endpoint(websocket: WebSocket, instance_id: str):
     # Verify instance exists
     if not config_manager.instance_exists(instance_id):
         await websocket.close(code=4004, reason="Instance not found")
+        return
+
+    # Reject disabled instances
+    if not config_manager.is_instance_enabled(instance_id):
+        await websocket.close(code=4003, reason="Instance is disabled")
         return
 
     # Accept connection
@@ -525,6 +592,7 @@ async def receive_webhook(instance_id: str, request: Request):
     # Verify instance exists
     if not config_manager.instance_exists(instance_id):
         raise HTTPException(status_code=404, detail="Instance not found")
+    _require_instance_enabled(instance_id)
 
     try:
         content_type = request.headers.get("content-type", "").lower()
@@ -597,6 +665,7 @@ async def receive_alert(instance_id: str, request: Request):
     """
     if not config_manager.instance_exists(instance_id):
         raise HTTPException(status_code=404, detail="Instance not found")
+    _require_instance_enabled(instance_id)
 
     try:
         print(f"\n[Alert] ========== 收到来自 {instance_id} 的告警请求 ==========")
@@ -717,6 +786,7 @@ async def receive_alert_get(instance_id: str, message: str = "", level: str = "i
     """
     if not config_manager.instance_exists(instance_id):
         raise HTTPException(status_code=404, detail="Instance not found")
+    _require_instance_enabled(instance_id)
 
     print(f"\n[Alert] ========== GET 请求来自 {instance_id} ==========")
     print(f"[Alert] message: {message}, level: {level}")
@@ -749,6 +819,7 @@ async def alert_debug(instance_id: str, request: Request):
     """
     if not config_manager.instance_exists(instance_id):
         raise HTTPException(status_code=404, detail="Instance not found")
+    _require_instance_enabled(instance_id)
 
     content_type = request.headers.get("content-type", "").lower()
     headers = dict(request.headers)
@@ -862,6 +933,7 @@ async def forward_control(instance_id: str, data: Dict[str, Any]):
     instance = config_manager.get_instance(instance_id)
     if not instance:
         raise HTTPException(status_code=404, detail="Instance not found")
+    _require_instance_enabled(instance_id)
 
     # Get button configuration if button_id is provided
     button_id = data.get("button_id")
@@ -1139,6 +1211,7 @@ async def receive_metrics(instance_id: str, request: Request):
     """
     if not config_manager.instance_exists(instance_id):
         raise HTTPException(status_code=404, detail="Instance not found")
+    _require_instance_enabled(instance_id)
 
     try:
         content_type = request.headers.get("content-type", "").lower()
@@ -1205,6 +1278,7 @@ if __name__ == "__main__":
     import uvicorn
     import logging
     import sys
+    import argparse
 
     # 修复 PyInstaller 打包后的 isatty 问题
     # 强制创建有效的 stdout/stderr
@@ -1220,10 +1294,17 @@ if __name__ == "__main__":
         handlers=[logging.StreamHandler(sys.stdout)]
     )
 
-    # Get configuration from environment
-    host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 8000))
-    reload = os.getenv("RELOAD", "false").lower() == "true"
+    # Parse command-line arguments (highest priority)
+    parser = argparse.ArgumentParser(description="LA IIoT Multi-Instance Middleware")
+    parser.add_argument("--port", type=int, help="Server port (default: 8000)")
+    parser.add_argument("--host", help="Server host (default: 0.0.0.0)")
+    parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
+    args = parser.parse_args()
+
+    # Priority: CLI arg > env var > default
+    host = args.host or os.getenv("HOST", "0.0.0.0")
+    port = args.port or int(os.getenv("PORT", 8000))
+    reload = args.reload or os.getenv("RELOAD", "false").lower() == "true"
 
     if SINGLE_INSTANCE_MODE:
         print(f"""

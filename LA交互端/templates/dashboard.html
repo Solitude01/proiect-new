@@ -43,14 +43,6 @@
     <header class="dashboard-header">
         <div class="header-content">
             <div class="header-left">
-                {% if not single_instance_mode %}
-                <a href="/" class="back-link">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    返回
-                </a>
-                {% endif %}
                 <div class="instance-title">
                     <h1>{{ instance.name }}</h1>
                     <span class="instance-id">{{ instance_id }}</span>
@@ -87,11 +79,6 @@
                         <input type="range" min="0" max="100" value="50" id="volumeSlider">
                     </div>
                 </div>
-                <button class="icon-btn" id="syncConfigBtn" title="同步配置到业务视图" onclick="window.dashboard.syncConfigToBusinessView()">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <path d="M4 10H16M16 10L12 6M16 10L12 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
                 <button class="icon-btn" id="settingsBtn" title="设置" onclick="window.dashboard.toggleSettingsPanel()">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                         <path d="M10 13C11.6569 13 13 11.6569 13 10C13 8.34315 11.6569 7 10 7C8.34315 7 7 8.34315 7 10C7 11.6569 8.34315 13 10 13Z" stroke="currentColor" stroke-width="1.5"/>
@@ -110,18 +97,6 @@
             <div class="section-header">
                 <h2>实时指标</h2>
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div class="view-link-container" style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">业务视图:</span>
-                        <input type="text"
-                               id="viewLinkInput"
-                               value="加载中..."
-                               data-view-uid="{{ instance.view_uid if instance.view_uid else '' }}"
-                               readonly
-                               style="width: 280px; padding: 0.375rem 0.5rem; font-size: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-primary);"
-                        >
-                        <button class="btn btn-secondary btn-small" id="copyViewLinkBtn" onclick="window.dashboard.copyViewLink()">复制</button>
-                        <button class="btn btn-primary btn-small" onclick="window.dashboard.toggleSettingsPanel()">配置</button>
-                    </div>
                     <div class="metrics-last-update" id="lastUpdate">等待数据...</div>
                 </div>
             </div>
@@ -260,13 +235,7 @@
         <div class="settings-body">
 
         <nav class="settings-sidenav">
-            <button class="settings-sidenav-item active" data-tab="view" onclick="switchSettingsTab(this,'view')">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 8H14M8 2L14 8L8 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>视图配置</span>
-            </button>
-            <button class="settings-sidenav-item" data-tab="metrics" onclick="switchSettingsTab(this,'metrics')">
+            <button class="settings-sidenav-item active" data-tab="metrics" onclick="switchSettingsTab(this,'metrics')">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                     <path d="M2 12L6 7L9 10L12 5L14 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M2 14H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -297,26 +266,8 @@
         <!-- Tab Content Area -->
         <div class="settings-panel-content">
 
-            <!-- Tab: 视图配置 -->
-            <div class="settings-tab-content active" id="settings-tab-view">
-                <div class="settings-tab-intro">
-                    <p>业务视图与控制台使用相同端口，通过唯一 UID 区分访问权限。</p>
-                </div>
-                <div class="form-group" id="viewUidGroup">
-                    <label class="settings-label">访问密钥 (UID)</label>
-                    <div class="settings-input-row">
-                        <input type="text" id="settingsViewUid" class="settings-input" readonly placeholder="点击重新生成获取 UID" style="font-family: var(--font-mono);">
-                        <button class="btn btn-secondary" onclick="window.dashboard.regenerateViewUid()">重新生成</button>
-                    </div>
-                    <div class="settings-info-box" style="margin-top: 0.75rem;">
-                        <span class="settings-info-label">业务视图访问链接</span>
-                        <span id="settingsViewLink" class="settings-info-value">-</span>
-                    </div>
-                </div>
-            </div>
-
             <!-- Tab: 指标映射 -->
-            <div class="settings-tab-content" id="settings-tab-metrics">
+            <div class="settings-tab-content active" id="settings-tab-metrics">
                 <div class="settings-tab-intro">
                     <p>配置 LA 发送的字段名与显示名称的映射关系，控制仪表板实时指标卡片的展示。</p>
                 </div>
@@ -350,12 +301,11 @@
                     <p>配置告警触发规则和自定义提示音，当接收到匹配数据时自动播放音频。</p>
                 </div>
 
-                <!-- 主体：左右两栏 -->
+                <!-- 主体：单列堆叠 -->
                 <div class="audio-tab-body">
 
-                    <!-- 左列：静态信息卡片 -->
-                    <div class="audio-left-col">
-
+                    <!-- 接口配置 + 音频文件（并排） -->
+                    <div class="audio-top-row">
                         <div class="settings-card-section">
                             <div class="settings-card-section-title">
                                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -375,7 +325,8 @@
                                 <div>
                                     <label class="settings-label">接口路径</label>
                                     <input type="text" id="settingsAlertEndpoint" class="settings-input"
-                                           value="/api/{{ instance_id }}/alert" readonly>
+                                           value="/api/{{ instance_id }}/alert" readonly
+                                           style="font-family: var(--font-mono); font-size: 0.75rem;">
                                 </div>
                             </div>
                             <div class="settings-code-hint">
@@ -401,33 +352,28 @@
                             </div>
                             <div class="settings-format-hint">支持格式: MP3 · WAV · OGG · M4A</div>
                         </div>
+                    </div>
 
-                    </div><!-- end .audio-left-col -->
-
-                    <!-- 右列：告警规则 -->
-                    <div class="audio-right-col">
-
-                        <div class="audio-rules-header-bar">
-                            <div class="settings-card-section-title" style="margin: 0;">
-                                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                                    <path d="M8 2L9.5 6H14L10.5 8.5L12 12.5L8 10L4 12.5L5.5 8.5L2 6H6.5L8 2Z"
-                                          stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                                </svg>
-                                告警规则
-                            </div>
-                            <button class="btn btn-secondary audio-add-rule-btn" id="settingsAddAudioAlertBtn">
-                                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                                    <path d="M7 2V12M2 7H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                </svg>
-                                添加规则
-                            </button>
+                    <!-- 告警规则区域 -->
+                    <div class="audio-rules-header-bar">
+                        <div class="settings-card-section-title" style="margin: 0;">
+                            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                <path d="M8 2L9.5 6H14L10.5 8.5L12 12.5L8 10L4 12.5L5.5 8.5L2 6H6.5L8 2Z"
+                                      stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                            </svg>
+                            告警规则
                         </div>
+                        <button class="btn btn-secondary audio-add-rule-btn" id="settingsAddAudioAlertBtn">
+                            <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                                <path d="M7 2V12M2 7H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                            添加规则
+                        </button>
+                    </div>
 
-                        <div class="audio-rules-scroll">
-                            <div class="alert-config-list" id="settingsAlertConfigList"></div>
-                        </div>
-
-                    </div><!-- end .audio-right-col -->
+                    <div class="audio-rules-scroll">
+                        <div class="alert-config-list" id="settingsAlertConfigList"></div>
+                    </div>
 
                 </div><!-- end .audio-tab-body -->
 
@@ -809,6 +755,8 @@
         .ctrl-btn-swatch-red    { background: var(--accent-red); }
         .ctrl-btn-swatch-orange { background: var(--accent-orange); }
         .ctrl-btn-swatch-blue   { background: var(--accent-cyan); }
+        .ctrl-btn-swatch-yellow { background: var(--accent-yellow); }
+        .ctrl-btn-swatch-purple { background: var(--accent-purple); }
         .ctrl-btn-name {
             flex: 1;
             font-size: 0.8125rem;
@@ -983,32 +931,16 @@
         }
         .audio-tab-body {
             display: flex;
-            flex-direction: row;
-            gap: 1rem;
+            flex-direction: column;
+            gap: 0.75rem;
             flex: 1;
             min-height: 0;
         }
-        .audio-left-col {
-            width: 300px;
+        .audio-top-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
             flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            overflow-y: auto;
-            overflow-x: hidden;
-            scrollbar-width: thin;
-            scrollbar-color: var(--border-subtle) transparent;
-        }
-        .audio-left-col::-webkit-scrollbar { width: 4px; }
-        .audio-left-col::-webkit-scrollbar-track { background: transparent; }
-        .audio-left-col::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
-        .audio-left-col::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
-        .audio-right-col {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
         }
         .audio-rules-header-bar {
             display: flex;
@@ -1017,7 +949,6 @@
             padding-bottom: 0.625rem;
             border-bottom: 1px solid var(--border-subtle);
             flex-shrink: 0;
-            margin-bottom: 0.5rem;
         }
         .audio-add-rule-btn {
             display: inline-flex;
@@ -1167,6 +1098,7 @@
             gap: 8px;
             flex: 1;
             min-width: 0;
+            overflow: hidden;
         }
         .alert-rule-header-right {
             display: flex;
@@ -1189,7 +1121,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 120px;
+            max-width: 180px;
             flex-shrink: 1;
         }
         .alert-rule-name-label.is-empty {
@@ -1221,9 +1153,18 @@
             padding: 2px 7px;
             border-radius: 10px;
             white-space: nowrap;
-            max-width: 140px;
+            max-width: 200px;
             overflow: hidden;
             text-overflow: ellipsis;
+            flex-shrink: 0;
+        }
+        .alert-rule-sound-tag {
+            font-size: 0.625rem;
+            color: var(--text-muted);
+            background: var(--bg-secondary);
+            padding: 1px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
             flex-shrink: 0;
         }
         /* Toggle switch (36×20) */

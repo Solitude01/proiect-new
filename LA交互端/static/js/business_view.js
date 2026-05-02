@@ -32,6 +32,7 @@ class BusinessViewManager {
         this.audioFiles = [];
         this.lastAlertTimes = {}; // For time filtering
         this.audioAlertMatchEnabled = false; // Default: play all sounds without matching
+        this.audioAlertsEnabled = true; // Global audio alerts switch, default: enabled
 
         // DOM elements
         this.connectionGate = document.getElementById('connectionGate');
@@ -167,6 +168,12 @@ class BusinessViewManager {
 
     async unlockAndConnect() {
         this.connectBtn.disabled = true;
+
+        // Check if already disabled
+        if (this.connectBtn.textContent === '已禁用') {
+            return;
+        }
+
         this.gateStatus.textContent = '正在初始化音频...';
 
         const audioUnlocked = await window.audioManager.initialize();
@@ -203,9 +210,29 @@ class BusinessViewManager {
                     }));
                 }
                 console.log('[BusinessView] Config loaded from console:', this.instanceId);
+
+                // Check if instance is disabled
+                if (instance.enabled === false) {
+                    console.warn('[BusinessView] Instance is disabled');
+                    this.showDisabledWarning();
+                    return;
+                }
             }
         } catch (error) {
             console.error('[BusinessView] Failed to load config:', error);
+        }
+    }
+
+    showDisabledWarning() {
+        if (this.connectionGate) {
+            this.connectionGate.style.display = 'flex';
+            this.gateStatus.textContent = '此实例已被禁用 — 无法查看实时数据';
+            if (this.connectBtn) {
+                this.connectBtn.disabled = true;
+                this.connectBtn.textContent = '已禁用';
+                this.connectBtn.style.opacity = '0.5';
+                this.connectBtn.style.cursor = 'not-allowed';
+            }
         }
     }
 
@@ -230,6 +257,9 @@ class BusinessViewManager {
                 // Load audio alert match switch (default: false)
                 this.audioAlertMatchEnabled = data.instance.audio_alert_match_enabled === true;
                 console.log('[BusinessView] Audio alert match enabled:', this.audioAlertMatchEnabled);
+
+                this.audioAlertsEnabled = data.instance.audio_alerts_enabled !== false;
+                console.log('[BusinessView] Audio alerts enabled:', this.audioAlertsEnabled);
 
                 this.renderAlertPreview(rules);
                 this.renderAudioAlertRules(rules);
@@ -458,6 +488,11 @@ class BusinessViewManager {
             this.renderAudioFilesList(this.audioFiles);
         }
 
+        if (payload.audio_alerts_enabled !== undefined) {
+            this.audioAlertsEnabled = payload.audio_alerts_enabled;
+            console.log('[BusinessView] Audio alerts enabled synced:', this.audioAlertsEnabled);
+        }
+
         this.showToast('info', '配置已更新', '从控制台接收到最新配置');
         this.addLog('info', '[配置同步] 已更新业务视图配置');
     }
@@ -509,7 +544,7 @@ class BusinessViewManager {
 
         this.addLog(level === 'critical' ? 'error' : level, `[${level.toUpperCase()}] ${message}`);
 
-        if (!window.audioManager.isAudioMuted) {
+        if (!window.audioManager.isAudioMuted && this.audioAlertsEnabled) {
             this.playMatchingAlertSound(message, level);
         }
     }

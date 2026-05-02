@@ -1,5 +1,11 @@
 @echo off
 chcp 65001 >nul
+
+:: ============================
+:: 端口配置 - 修改这里即可
+:: ============================
+set PORT=8000
+
 echo.
 echo ╔══════════════════════════════════════════════════════════════╗
 echo ║           LA IIoT Multi-Instance Middleware                  ║
@@ -33,9 +39,9 @@ if %errorlevel% neq 0 (
 )
 
 :: Add firewall rule for Python/FastAPI
-echo Adding firewall rule for port 8000...
+echo Adding firewall rule for port %PORT%...
 netsh advfirewall firewall delete rule name="LA Middleware" >nul 2>&1
-netsh advfirewall firewall add rule name="LA Middleware" dir=in action=allow protocol=tcp localport=8000
+netsh advfirewall firewall add rule name="LA Middleware" dir=in action=allow protocol=tcp localport=%PORT%
 
 if %errorlevel% equ 0 (
     echo [OK] Firewall rule added successfully.
@@ -48,8 +54,8 @@ echo.
 echo ╔══════════════════════════════════════════════════════════════╗
 echo ║  Starting server...                                          ║
 echo ╠══════════════════════════════════════════════════════════════╣
-echo ║  Server: http://localhost:8000                               ║
-echo ║  API Docs: http://localhost:8000/docs                        ║
+echo ║  Server: http://localhost:%PORT%                               ║
+echo ║  API Docs: http://localhost:%PORT%/docs                        ║
 echo ╚══════════════════════════════════════════════════════════════╝
 echo.
 echo Press Ctrl+C to stop the server

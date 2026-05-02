@@ -69,6 +69,25 @@
             </div>
         </div>
 
+        <!-- View Tabs -->
+        <div class="view-tabs" id="viewTabs">
+            <button class="view-tab active" data-view="active" onclick="switchView('active')">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M5.5 8h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+                活跃
+                <span class="tab-count" id="activeCount">0</span>
+            </button>
+            <button class="view-tab trash-tab" data-view="trash" onclick="switchView('trash')">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 4h10M6 4V2h4v2M5 4v10a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                回收站
+                <span class="tab-count" id="trashCount">0</span>
+            </button>
+        </div>
+
         <!-- Instance Grid -->
         <div class="instance-grid" id="instanceGrid">
             <!-- Instances will be loaded here -->
@@ -194,6 +213,16 @@
                     </div>
                 </div>
 
+                <div class="form-row" style="margin-top: 0.75rem;">
+                    <div class="form-group" style="display: flex; align-items: center; gap: 0.75rem;">
+                        <label for="editEnabled" style="margin-bottom: 0; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="editEnabled" name="enabled" checked style="width: 1rem; height: 1rem; accent-color: var(--accent-green); cursor: pointer;">
+                            启用实例
+                        </label>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">关闭后，数据转发和 WebSocket 连接将被拒绝</span>
+                    </div>
+                </div>
+
                 <p style="font-size:0.8125rem;color:var(--text-muted);margin:0.5rem 0 0.25rem;display:flex;align-items:center;gap:6px;">
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;">
                         <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
@@ -226,14 +255,34 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p class="warning-text">
-                    确定要删除实例 <strong id="deleteInstanceName"></strong> 吗？<br>
+                <p class="warning-text" style="margin-bottom: 1rem;">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align: -2px; margin-right: 4px; color: var(--accent-red);">
+                        <path d="M8 6v4M8 11v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
                     此操作不可撤销，所有配置数据将被永久删除。
                 </p>
+
+                <div class="confirm-name-display">
+                    <span class="confirm-name-label">实例名称</span>
+                    <strong id="deleteInstanceName" class="confirm-name-value"></strong>
+                </div>
+
+                <div class="confirm-input-group">
+                    <label class="confirm-input-label" for="deleteConfirmInput">请手动输入上方实例名称以确认删除</label>
+                    <input type="text"
+                           id="deleteConfirmInput"
+                           class="confirm-text-input"
+                           placeholder="在此输入实例名称..."
+                           autocomplete="off"
+                           onpaste="return false"
+                           ondrop="return false"
+                           autofocus>
+                </div>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">取消</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>
                     <span class="btn-text">删除实例</span>
                 </button>
             </div>
