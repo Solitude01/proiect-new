@@ -236,7 +236,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
-  # GUI模式（推荐）
+  # GUI模式（默认，无需参数）
+  python main.py
+
+  # 或显式指定
   python main.py --gui
 
   # 自动模式（命令行，从当前浏览器页面提取信息）
@@ -253,7 +256,7 @@ def main():
     parser.add_argument(
         "--gui", "-g",
         action="store_true",
-        help="GUI模式：启动图形界面（推荐）"
+        help="GUI模式：启动图形界面（默认）"
     )
 
     parser.add_argument(
@@ -299,15 +302,15 @@ def main():
     # 根据参数选择模式
     if args.export_coco:
         success = run_export_coco(Path(args.export_coco))
-    elif args.gui:
-        # GUI模式
-        success = run_gui_mode()
-    elif args.auto or (not args.dataset and not args.version):
-        # 自动模式
+    elif args.auto:
+        # 自动模式：显式通过 --auto 指定
         output_dir = Path(args.output) if args.output else None
         success = run_auto_mode(output_dir)
+    elif args.gui:
+        # GUI模式：显式通过 --gui 指定
+        success = run_gui_mode()
     elif args.dataset and args.version and args.token:
-        # 手动模式
+        # 手动模式：三项参数齐全
         base_dir = Path(args.output) if args.output else Path.home() / "Downloads"
         output_dir = generate_output_dir(base_dir, args.dataset)
         success = run_manual_mode(
@@ -316,10 +319,14 @@ def main():
             token=args.token,
             output_dir=output_dir
         )
-    else:
+    elif args.dataset or args.version or args.token:
+        # 手动模式参数不完整
         parser.print_help()
         print("\n错误: 手动模式需要同时指定 --dataset, --version 和 --token")
         return 1
+    else:
+        # 无任何参数，默认启动GUI
+        success = run_gui_mode()
 
     return 0 if success else 1
 

@@ -1,0 +1,25 @@
+{
+  "file_id": "3e8501daa9ea4728bbbf085e7e095980",
+  "file_name": "04271417_985_0002_2560_1440.jpg",
+  "width": 2560,
+  "height": 1440,
+  "tag_user": "Fxy999",
+  "create_time": "2026-04-27 15:02:00",
+  "annotations": [
+    {
+      "id": "d5bdbe68b8ff42e48c6996b619713c8e",
+      "label_id": "f57620cc62ca46c79ad1edaaa789d579",
+      "label_name": "无板件",
+      "label_item_name": null,
+      "label_set_name": null,
+      "bbox": {
+        "xmin": 838.0,
+        "ymin": 19.0,
+        "xmax": 1876.0,
+        "ymax": 1278.0
+      },
+      "property": null,
+      "order_num": "1"
+    }
+  ]
+}

@@ -22,7 +22,6 @@ sys.path.insert(0, str(project_root))
 from core.auth import AuthManager
 from core.downloader import DatasetDownloader, DownloadResult
 from core.converter import COCOConverter, ConversionResult
-from browser.bb_browser_bridge import BBBrowserBridge
 
 
 @dataclass
@@ -58,7 +57,7 @@ class MainWindow:
 
         # 初始化日志
         self.log("程序启动")
-        self.log("请确保已在浏览器中登录海康AI平台并打开数据集页面")
+        self.log("请输入Token、数据集ID和版本ID后点击连接")
 
         # 尝试加载上次配置
         self._load_config_on_startup()
@@ -73,20 +72,15 @@ class MainWindow:
         )
 
         # 认证区域
-        self.auth_frame = ttk.LabelFrame(self.root, text="浏览器连接", padding=10)
+        self.auth_frame = ttk.LabelFrame(self.root, text="认证信息", padding=10)
 
-        self.auth_method_var = tk.StringVar(value="手动输入Token")
-        self.auth_method_combo = ttk.Combobox(
-            self.auth_frame,
-            textvariable=self.auth_method_var,
-            values=["自动获取", "手动输入Token"],
-            state="readonly",
-            width=20
-        )
+        self.token_var = tk.StringVar()
+        self.dataset_id_input_var = tk.StringVar()
+        self.version_id_input_var = tk.StringVar()
 
         self.connect_btn = ttk.Button(
             self.auth_frame,
-            text="连接浏览器",
+            text="连接",
             command=self._on_connect
         )
 
@@ -196,10 +190,19 @@ class MainWindow:
 
         # 认证区域
         self.auth_frame.pack(fill=tk.X, padx=15, pady=5)
-        ttk.Label(self.auth_frame, text="认证方式:").grid(row=0, column=0, sticky=tk.W, padx=5)
-        self.auth_method_combo.grid(row=0, column=1, sticky=tk.W, padx=5)
-        self.connect_btn.grid(row=0, column=2, sticky=tk.W, padx=5)
-        self.status_label.grid(row=0, column=3, sticky=tk.W, padx=10)
+        self.auth_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(self.auth_frame, text="Token:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=3)
+        ttk.Entry(self.auth_frame, textvariable=self.token_var, width=55).grid(row=0, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=3)
+
+        ttk.Label(self.auth_frame, text="数据集ID:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=3)
+        ttk.Entry(self.auth_frame, textvariable=self.dataset_id_input_var, width=55).grid(row=1, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=3)
+
+        ttk.Label(self.auth_frame, text="版本ID:").grid(row=2, column=0, sticky=tk.W, padx=5, pady=3)
+        ttk.Entry(self.auth_frame, textvariable=self.version_id_input_var, width=55).grid(row=2, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=3)
+
+        self.connect_btn.grid(row=3, column=1, sticky=tk.W, padx=5, pady=5)
+        self.status_label.grid(row=3, column=2, sticky=tk.W, padx=10, pady=5)
 
         # 页面信息区域
         self.info_frame.pack(fill=tk.X, padx=15, pady=5)
@@ -261,182 +264,45 @@ class MainWindow:
             self.log(f"保存配置失败: {e}")
 
     def _load_config_on_startup(self):
-        """启动时加载配置"""
+        """启动时加载配置，预填充输入框"""
         cfg = self._load_config()
-        if cfg.get("token") and cfg.get("dataset_id") and cfg.get("version_id"):
-            # 自动恢复上次配置，无需弹窗
-            self._setup_connection(
-                token=cfg["token"],
-                cookies={"token": cfg["token"]},
-                dataset_id=cfg["dataset_id"],
-                version_id=cfg["version_id"],
-                title=f"数据集 {cfg['dataset_id']}",
-                labeled_count=0
-            )
-            self.log("已自动加载上次配置")
+        if cfg.get("token"):
+            self.token_var.set(cfg["token"])
+        if cfg.get("dataset_id"):
+            self.dataset_id_input_var.set(cfg["dataset_id"])
+        if cfg.get("version_id"):
+            self.version_id_input_var.set(cfg["version_id"])
+        if cfg.get("token") or cfg.get("dataset_id") or cfg.get("version_id"):
+            self.log("已加载上次配置")
 
     def _on_connect(self):
-        """连接浏览器按钮事件"""
-        auth_method = self.auth_method_var.get()
+        """连接按钮事件 - 使用手动输入的信息建立连接"""
+        token = self.token_var.get().strip()
+        dataset_id = self.dataset_id_input_var.get().strip()
+        version_id = self.version_id_input_var.get().strip()
 
-        # 手动输入Token模式
-        if "手动" in auth_method:
-            self._show_manual_token_dialog()
+        if not token:
+            messagebox.showwarning("提示", "Token不能为空")
+            return
+        if not dataset_id:
+            messagebox.showwarning("提示", "数据集ID不能为空")
+            return
+        if not version_id:
+            messagebox.showwarning("提示", "版本ID不能为空")
             return
 
-        self.log("正在连接浏览器...")
+        self.log(f"正在连接... Dataset: {dataset_id}, Version: {version_id}")
         self.status_label.config(text="连接中...", foreground="orange")
         self.root.update()
 
-        try:
-            bridge = BBBrowserBridge()
-
-            # 步骤1：通过HTTP CDP获取页面信息（不需要WebSocket）
-            page = bridge.find_hikvision_page()
-            if not page:
-                self.status_label.config(text="未找到页面", foreground="red")
-                self.log("未找到海康AI平台页面")
-                self.log("提示: 请确保浏览器已打开数据集页面（URL含 /overall/.../gallery）")
-                ask = messagebox.askyesno(
-                    "未找到页面",
-                    "未在浏览器中找到海康AI平台数据集页面\n\n"
-                    "请确保:\n"
-                    "1. Chrome/Edge 已启动并登录海康AI平台\n"
-                    "2. 已打开数据集页面（URL含 /overall/.../gallery）\n\n"
-                    "是否改用手动输入Token？"
-                )
-                if ask:
-                    self._show_manual_token_dialog()
-                return
-
-            url = page.get("url", "")
-            title = page.get("title", "")
-            page_id = page.get("id")
-
-            dataset_id, version_id = bridge.extract_ids_from_url(url)
-            if not dataset_id or not version_id:
-                self.log("错误: 无法从URL提取数据集ID")
-                self.status_label.config(text="ID提取失败", foreground="red")
-                return
-
-            self.log(f"找到页面: {title[:50]}")
-            self.log(f"Dataset ID: {dataset_id}, Version ID: {version_id}")
-
-            # 步骤2：获取cookies（优先browser_cookie3）
-            self.log("正在获取认证信息...")
-            self.root.update()
-            cookies = bridge.get_cookies(page_id)
-
-            token = cookies.get("token")
-            if not token:
-                self.log("未获取到token，请尝试手动输入")
-                self.status_label.config(text="无Token", foreground="red")
-                ask = messagebox.askyesno(
-                    "获取Token失败",
-                    "未能自动获取认证Token\n\n"
-                    "可能原因:\n"
-                    "• Chrome未登录海康AI平台\n"
-                    "• Cookie数据库被锁定（请关闭Chrome后重试）\n"
-                    "• browser_cookie3 未安装\n\n"
-                    "是否手动输入Token？"
-                )
-                if ask:
-                    self._show_manual_token_dialog(
-                        dataset_id=dataset_id,
-                        version_id=version_id,
-                        title=title
-                    )
-                return
-
-            # 步骤3：设置认证并更新UI
-            self._setup_connection(
-                token=token,
-                cookies=cookies,
-                dataset_id=dataset_id,
-                version_id=version_id,
-                title=title,
-                labeled_count=0  # 从API获取，此处先显示0
-            )
-
-        except Exception as e:
-            self.status_label.config(text="连接失败", foreground="red")
-            self.log(f"连接错误: {e}")
-            messagebox.showerror("连接失败", str(e))
-
-    def _show_manual_token_dialog(
-        self,
-        token: str = "",
-        dataset_id: str = "",
-        version_id: str = "",
-        title: str = ""
-    ):
-        """显示手动输入Token的对话框"""
-        # 如果没有传入参数，尝试从配置文件加载
-        if not token and not dataset_id and not version_id:
-            cfg = self._load_config()
-            token = cfg.get("token", "")
-            dataset_id = cfg.get("dataset_id", "")
-            version_id = cfg.get("version_id", "")
-
-        dialog = tk.Toplevel(self.root)
-        dialog.title("手动输入认证信息")
-        dialog.geometry("500x320")
-        dialog.resizable(False, False)
-        dialog.grab_set()  # 模态
-
-        ttk.Label(dialog, text="请输入认证信息", font=("Microsoft YaHei", 12, "bold")).pack(pady=10)
-
-        frame = ttk.Frame(dialog, padding=10)
-        frame.pack(fill=tk.BOTH, expand=True)
-
-        # Token
-        ttk.Label(frame, text="Token (必填):").grid(row=0, column=0, sticky=tk.W, pady=5)
-        token_var = tk.StringVar(value=token)
-        ttk.Entry(frame, textvariable=token_var, width=50, show="").grid(row=0, column=1, sticky=tk.EW, pady=5)
-
-        # Dataset ID
-        ttk.Label(frame, text="数据集ID:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        ds_var = tk.StringVar(value=dataset_id)
-        ttk.Entry(frame, textvariable=ds_var, width=50).grid(row=1, column=1, sticky=tk.EW, pady=5)
-
-        # Version ID
-        ttk.Label(frame, text="版本ID:").grid(row=2, column=0, sticky=tk.W, pady=5)
-        ver_var = tk.StringVar(value=version_id)
-        ttk.Entry(frame, textvariable=ver_var, width=50).grid(row=2, column=1, sticky=tk.EW, pady=5)
-
-        ttk.Label(
-            frame,
-            text="提示: 在浏览器F12开发者工具 → Application → Cookies → ai.hikvision.com 中找到token",
-            wraplength=450,
-            foreground="gray"
-        ).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=5)
-
-        frame.columnconfigure(1, weight=1)
-
-        def on_confirm():
-            t = token_var.get().strip()
-            d = ds_var.get().strip()
-            v = ver_var.get().strip()
-            if not t:
-                messagebox.showwarning("提示", "Token不能为空", parent=dialog)
-                return
-            if not d or not v:
-                messagebox.showwarning("提示", "数据集ID和版本ID不能为空", parent=dialog)
-                return
-            dialog.destroy()
-            self._setup_connection(
-                token=t,
-                cookies={"token": t},
-                dataset_id=d,
-                version_id=v,
-                title=title or f"数据集 {d}",
-                labeled_count=0
-            )
-
-        btn_frame = ttk.Frame(dialog)
-        btn_frame.pack(pady=10)
-        ttk.Button(btn_frame, text="确认", command=on_confirm, width=12).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="取消", command=dialog.destroy, width=12).pack(side=tk.LEFT, padx=5)
+        self._setup_connection(
+            token=token,
+            cookies={"token": token},
+            dataset_id=dataset_id,
+            version_id=version_id,
+            title=f"数据集 {dataset_id}",
+            labeled_count=0
+        )
 
     def _setup_connection(
         self,
@@ -643,13 +509,17 @@ class MainWindow:
             converter = COCOConverter(folder)
             result = converter.convert()
             self.root.after(0, lambda: self._export_coco_complete(result))
+        except FileNotFoundError as e:
+            self.root.after(0, lambda: self._export_coco_error(f"目录不完整: {e}"))
+        except ValueError as e:
+            self.root.after(0, lambda: self._export_coco_error(f"无有效数据: {e}"))
         except Exception as e:
-            msg = str(e)
-            self.root.after(0, lambda: self._export_coco_error(msg))
+            import traceback
+            traceback.print_exc()
+            self.root.after(0, lambda: self._export_coco_error(f"转换失败: {e}"))
 
     def _export_coco_complete(self, result: ConversionResult):
-        """转换完成，恢复按钮并显示结果"""
-        self.export_coco_btn.config(state=tk.NORMAL)
+        """转换完成，显示结果并恢复按钮"""
         self.log("=" * 40)
         self.log("COCO格式转换完成!")
         self.log(f"图片数: {result.images_count}")
@@ -668,12 +538,13 @@ class MainWindow:
             + (f"跳过: {result.skipped_count} 条\n" if result.skipped_count else "")
             + f"\nCOCO目录:\n{result.coco_dir}"
         )
+        self.export_coco_btn.config(state=tk.NORMAL)
 
     def _export_coco_error(self, msg: str):
-        """转换出错，恢复按钮并显示错误"""
-        self.export_coco_btn.config(state=tk.NORMAL)
+        """转换出错，显示错误并恢复按钮"""
         self.log(f"COCO转换失败: {msg}")
         messagebox.showerror("COCO转换失败", msg)
+        self.export_coco_btn.config(state=tk.NORMAL)
 
     def _on_cancel(self):
         """取消按钮事件"""

@@ -47,8 +47,12 @@ class COCOConverter:
         self.coco_anno_dir = self.coco_dir / "annotations"
         self.output_path = self.coco_anno_dir / "instances.json"
 
+        self._skipped_count = 0
+
         if not self.annotations_dir.exists():
             raise FileNotFoundError(f"annotations/目录不存在: {self.annotations_dir}")
+        if not self.images_dir.exists():
+            raise FileNotFoundError(f"images/目录不存在: {self.images_dir}")
 
     def convert(self) -> ConversionResult:
         """执行转换，返回统计结果"""
@@ -74,21 +78,30 @@ class COCOConverter:
         return sorted(self.annotations_dir.glob("*.json"))
 
     def _get_image_size(self, image_path: Path, w: int, h: int) -> Tuple[int, int]:
-        """获取图片尺寸，标注中有值则直接用，否则尝试PIL读取"""
+        """获取图片尺寸，任一维度有效则直接用于对应维度，否则尝试PIL读取"""
         if w > 0 and h > 0:
             return w, h
         try:
             from PIL import Image
             with Image.open(image_path) as img:
-                return img.size  # (width, height)
+                return img.size
+        except ImportError:
+            return w, h
         except Exception:
-            return 0, 0
+            return w, h
+
+    def _parse_annotations(self, data: dict) -> list:
+        """从标注JSON中提取annotations列表（统一处理dict/list两种形式）"""
+        anns = data.get("annotations") or data.get("annotation") or []
+        if isinstance(anns, dict):
+            anns = [anns]
+        return anns if isinstance(anns, list) else []
 
     def _build_coco(self, anno_files: List[Path]) -> dict:
         """两遍扫描构建COCO字典"""
         self._skipped_count = 0
 
-        # 第一遍：收集所有唯一 label_name，按首次出现顺序分配 category_id（从0开始）
+        # 第一遍：收集所有唯一 label_name，按首次出现顺序分配 category_id（从1开始）
         category_map: Dict[str, int] = {}  # label_name -> category_id
         valid_files = []
 
@@ -96,25 +109,23 @@ class COCOConverter:
             try:
                 with open(anno_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"  跳过无效JSON文件: {anno_path.name} ({e})")
                 self._skipped_count += 1
                 continue
 
-            valid_files.append((anno_path, data))
-
-            annotations = data.get("annotations") or data.get("annotation") or []
-            if isinstance(annotations, dict):
-                annotations = [annotations]
+            annotations = self._parse_annotations(data)
+            valid_files.append((anno_path, data, annotations))
 
             for ann in annotations:
                 label = ann.get("label_name") or ann.get("label") or ""
                 if label and label not in category_map:
-                    category_map[label] = len(category_map)
+                    category_map[label] = len(category_map) + 1
 
         # 构建 categories 列表
         categories = [
             {"id": cat_id, "name": name}
-            for name, cat_id in sorted(category_map.items(), key=lambda x: x[1])
+            for name, cat_id in category_map.items()
         ]
 
         # 第二遍：构建 images 和 annotations
@@ -122,22 +133,32 @@ class COCOConverter:
         annotations_list = []
         ann_id = 1
 
-        for image_id, (anno_path, data) in enumerate(valid_files, start=1):
-            # 查找对应图片文件
+        for image_id, (anno_path, data, anns) in enumerate(valid_files, start=1):
+            # 查找对应图片文件：优先用标注中的 file_name，否则按 stem 匹配扩展名
             stem = anno_path.stem
             image_file = None
-            for ext in (".jpg", ".jpeg", ".png", ".bmp", ".webp"):
-                candidate = self.images_dir / (stem + ext)
+            orig_file_name = data.get("file_name", "")
+            if orig_file_name:
+                candidate = self.images_dir / orig_file_name
                 if candidate.exists():
                     image_file = candidate
-                    break
+            if image_file is None:
+                for ext in (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"):
+                    candidate = self.images_dir / (stem + ext)
+                    if candidate.exists():
+                        image_file = candidate
+                        break
 
             # 获取宽高
-            raw_w = data.get("width") or data.get("imageWidth") or 0
-            raw_h = data.get("height") or data.get("imageHeight") or 0
+            raw_w_val = data.get("width")
+            raw_h_val = data.get("height")
+            if raw_w_val is None:
+                raw_w_val = data.get("imageWidth", 0)
+            if raw_h_val is None:
+                raw_h_val = data.get("imageHeight", 0)
             try:
-                raw_w = int(raw_w)
-                raw_h = int(raw_h)
+                raw_w = int(raw_w_val)
+                raw_h = int(raw_h_val)
             except (TypeError, ValueError):
                 raw_w, raw_h = 0, 0
 
@@ -146,7 +167,7 @@ class COCOConverter:
                 file_name = image_file.name
             else:
                 img_w, img_h = raw_w, raw_h
-                file_name = stem + ".jpg"
+                file_name = orig_file_name or (stem + ".jpg")
 
             images.append({
                 "id": image_id,
@@ -155,36 +176,42 @@ class COCOConverter:
                 "height": img_h
             })
 
-            # 解析标注
-            anns = data.get("annotations") or data.get("annotation") or []
-            if isinstance(anns, dict):
-                anns = [anns]
-
             for ann in anns:
                 label = ann.get("label_name") or ann.get("label") or ""
                 if not label:
                     self._skipped_count += 1
                     continue
 
-                # 支持两种bbox格式
-                bbox_data = ann.get("bbox") or ann.get("bndbox") or {}
-                if isinstance(bbox_data, list) and len(bbox_data) == 4:
-                    # [xmin, ymin, xmax, ymax] 或 [x, y, w, h]
+                # 解析bbox：支持 dict {xmin,ymin,xmax,ymax} 和 list [xmin,ymin,xmax,ymax] 两种格式
+                bbox_data = ann.get("bbox")
+                if bbox_data is None:
+                    bbox_data = ann.get("bndbox", {})
+
+                if isinstance(bbox_data, dict):
+                    v = bbox_data.get("xmin")
+                    xmin = float(v) if v is not None else float(bbox_data.get("x1") or bbox_data.get("left") or 0)
+                    v = bbox_data.get("ymin")
+                    ymin = float(v) if v is not None else float(bbox_data.get("y1") or bbox_data.get("top") or 0)
+                    v = bbox_data.get("xmax")
+                    xmax = float(v) if v is not None else float(bbox_data.get("x2") or bbox_data.get("right") or 0)
+                    v = bbox_data.get("ymax")
+                    ymax = float(v) if v is not None else float(bbox_data.get("y2") or bbox_data.get("bottom") or 0)
+                elif isinstance(bbox_data, list) and len(bbox_data) == 4:
+                    # 始终按 [xmin, ymin, w, h] 处理（COCO 标准列表格式）
                     xmin, ymin = float(bbox_data[0]), float(bbox_data[1])
-                    if bbox_data[2] > xmin and bbox_data[3] > ymin:
-                        # 已经是 xmax, ymax
-                        xmax, ymax = float(bbox_data[2]), float(bbox_data[3])
-                    else:
-                        xmax = xmin + float(bbox_data[2])
-                        ymax = ymin + float(bbox_data[3])
-                elif isinstance(bbox_data, dict):
-                    xmin = float(bbox_data.get("xmin") or bbox_data.get("x1") or bbox_data.get("left") or 0)
-                    ymin = float(bbox_data.get("ymin") or bbox_data.get("y1") or bbox_data.get("top") or 0)
-                    xmax = float(bbox_data.get("xmax") or bbox_data.get("x2") or bbox_data.get("right") or 0)
-                    ymax = float(bbox_data.get("ymax") or bbox_data.get("y2") or bbox_data.get("bottom") or 0)
+                    xmax = xmin + float(bbox_data[2])
+                    ymax = ymin + float(bbox_data[3])
                 else:
                     self._skipped_count += 1
                     continue
+
+                # 裁剪到图片尺寸范围内
+                if img_w > 0:
+                    xmin = max(0.0, min(xmin, img_w))
+                    xmax = max(0.0, min(xmax, img_w))
+                if img_h > 0:
+                    ymin = max(0.0, min(ymin, img_h))
+                    ymax = max(0.0, min(ymax, img_h))
 
                 bw = xmax - xmin
                 bh = ymax - ymin
@@ -193,8 +220,7 @@ class COCOConverter:
                     continue
 
                 category_id = category_map.get(label, 0)
-                area = bw * bh
-                segmentation = [[xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax]]
+                area = int(bw * bh)
 
                 annotations_list.append({
                     "id": ann_id,
@@ -202,12 +228,19 @@ class COCOConverter:
                     "category_id": category_id,
                     "bbox": [xmin, ymin, bw, bh],
                     "area": area,
-                    "segmentation": segmentation,
+                    "segmentation": [[xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax]],
                     "iscrowd": 0
                 })
                 ann_id += 1
 
+        from datetime import datetime
+
         return {
+            "info": {
+                "description": "Converted from Hikvision dataset",
+                "date_created": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            },
+            "licenses": [],
             "images": images,
             "annotations": annotations_list,
             "categories": categories
@@ -229,8 +262,8 @@ class COCOConverter:
             if src.exists() and not dst.exists():
                 try:
                     shutil.copy2(src, dst)
-                except Exception:
-                    pass  # 忽略拷贝失败
+                except Exception as e:
+                    print(f"  图片复制失败: {file_name} ({e})")
 
         # 写出 instances.json
         with open(self.output_path, 'w', encoding='utf-8') as f:
