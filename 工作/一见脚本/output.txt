@@ -1,0 +1,292 @@
+Last login: Wed May  6 18:42:01 2026 from fortress.scc.com.cn
+[root@yijian-01 ~]# bash /usr/local/bin/xpu_central_check.sh
+
+╔══════════════════════════════════════════════════════════╗
+║    XPU 中心巡检  2026-05-06 18:46:41                 ║
+╚══════════════════════════════════════════════════════════╝
+  中心节点：10.10.99.159
+  目标节点：8 台
+
+  [!] 并行模式：同时连接所有节点...
+  [✘] [广芯边缘-2] 10.65.233.46 — 失败 (rc=255)：ssh: connect to host 10.65.233.46 port 22: Connection refused
+  [✘] [广芯边缘-1] 10.65.233.21 — 失败 (rc=255)：ssh: connect to host 10.65.233.21 port 22: Connection refused
+  [✔] [深圳转换服] 10.10.108.239 — 采集完成
+  [✔] [无锡边缘-1] 10.20.7.165 — 采集完成
+  [✔] [无锡边缘-2] 10.20.7.166 — 采集完成
+  [✔] [南通边缘-2] 10.30.4.34 — 采集完成
+  [✔] [深圳边缘-1] 10.10.99.78 — 采集完成
+  [✔] [南通边缘-1] 10.30.4.33 — 采集完成
+
+╔══════════════════════════════════════════════════════════╗
+║    全局边缘节点 XPU 资源总表                   ║
+╚══════════════════════════════════════════════════════════╝
+边缘节点 服务器数 总显存(MB)   已用(MB)   空闲(MB) 使用率 平均利用 最高温度 型号    
+────────── ────── ────────── ────────── ────────── ─────── ─────── ─────── ──────────
+广芯边缘              -          N/A          N/A          N/A       N/A       N/A       N/A N/A       
+无锡边缘              2        65536         8384        57152    12.79%     9.50%       56°C R200      
+南通边缘              2       131072        35310        95762    26.94%     2.00%       45°C R200      
+深圳边缘              1        65536        19895        45641    30.36%     0.00%       47°C R200      
+深圳转换服             1        65536         2456        63080     3.75%     0.00%       42°C R200      
+──────────   ──────   ──────────   ──────────   ──────────   ───────   ───────   ─────── ──────────
+【合计】              6       327680        66045       261635    20.16%
+
+▶▶▶  广芯边缘 (2 台服务器, 0 台在线)  ◀◀◀
+  该组所有节点均采集失败，无可用数据
+
+▶▶▶  无锡边缘 (2 台服务器, 2 台在线)  ◀◀◀
+
+  ═══ 1) 节点 XPU 汇总：K8s 申请量 vs 实际消耗 ═══
+
+  [无锡边缘-1 / 10.20.7.165]
+  │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
+  │  spi-master165      10.20.7.165     kunlun_r200            32768            0        32768        32768            0        32768      0.00%      0.00%        44C            0
+  │  spi-master166      10.20.7.166     kunlun_r200            32768        22800         9968          N/A          N/A          N/A        N/A        N/A        N/A          N/A
+  │  
+
+  [无锡边缘-2 / 10.20.7.166]
+  │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
+  │  spi-master165      10.20.7.165     kunlun_r200            32768            0        32768          N/A          N/A          N/A        N/A        N/A        N/A          N/A
+  │  spi-master166      10.20.7.166     kunlun_r200            32768        22800         9968        32768         8384        24384     25.59%     19.00%        56C       -14416
+  │  
+
+  ═══ 2) 单卡实际消耗明细：来自 xpu_smi ═══
+  [无锡边缘-1]
+  │  NODE                DevID Model    State   UseRate      USED_MB     TOTAL_MB      FREE_MB   Power(W)     Temp
+  │  spi-master165           0 R200     N            0%            0        16384        16384         64      40C
+  │  spi-master165           1 R200     N            0%            0        16384        16384         65      44C
+  [无锡边缘-2]
+  │  spi-master166           0 R200     N           29%         7058        16384         9326         76      56C
+  │  spi-master166           1 R200     N            9%         1326        16384        15058         65      46C
+
+  ═══ 3) XPU 进程实际消耗明细：来自 xpu_smi ═══
+  [无锡边缘-1]
+  │  NODE                DevID        PID  Streams         L3     MEM_MB Command             
+  │  本机未采集到 XPU 进程数据
+  [无锡边缘-2]
+  │  spi-master166           0     115878        2       0 MB        960 tritonserver        
+  │  spi-master166           0      67058        2       0 MB       5799 tritonserver        
+  │  spi-master166           0      74762        2      63 MB        299 tritonserver        
+  │  spi-master166           1      18995        2      31 MB        640 tritonserver        
+  │  spi-master166           1      40906        2      16 MB        686 tritonserver        
+
+  ═══ 4) XPU Pod 申请明细：来自 K8s limits (已去重) ═══
+  (数据来源: 无锡边缘-1 / 10.20.7.165)
+  │  空间       Pod                                              节点                申请MiB
+  │  default      ep-bygucjty-b494cf845-lfl85                      spi-master166              7500
+  │  default      ep-bgygdqhi-667c75998-fnlgr                      spi-master166              2500
+  │  default      ep-nktpvcdt-5b969c8fb-l6pkx                      spi-master166              2500
+  │  default      ep-fjmarcrp-6654c46bdb-nsbl7                     spi-master166              7800
+  │  default      ep-fiidjxng-5f8c69bf69-4bxs8                     spi-master166              2500
+  │  
+
+  ═══ 5) Deployment 副本情况 (已去重) ═══
+  (数据来源: 无锡边缘-1 / 10.20.7.165)
+  │  空间     名称                                   期望副本 可用副本
+  │  default    ep-bgygdqhi                                       1          1
+  │  default    ep-bygucjty                                       1          1
+  │  default    ep-fiidjxng                                       1          1
+  │  default    ep-fjmarcrp                                       1          1
+  │  default    ep-nktpvcdt                                       1          1
+  │  default    tn-controller-manager-ep-package                  1          1
+  │  
+
+▶▶▶  南通边缘 (2 台服务器, 2 台在线)  ◀◀◀
+
+  ═══ 1) 节点 XPU 汇总：K8s 申请量 vs 实际消耗 ═══
+
+  [南通边缘-1 / 10.30.4.33]
+  │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
+  │  baidu              10.30.4.33      kunlun_r200            65536        53100        12436        65536        17641        47895     26.92%      1.50%        43C       -35459
+  │  yj-spi-node01      10.30.4.34      kunlun_r200            65536        55600         9936          N/A          N/A          N/A        N/A        N/A        N/A          N/A
+  │  
+
+  [南通边缘-2 / 10.30.4.34]
+  │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
+  │  baidu              10.30.4.33      kunlun_r200            65536        53100        12436          N/A          N/A          N/A        N/A        N/A        N/A          N/A
+  │  yj-spi-node01      10.30.4.34      kunlun_r200            65536        55600         9936        65536        17669        47867     26.96%      2.50%        45C       -37931
+  │  
+
+  ═══ 2) 单卡实际消耗明细：来自 xpu_smi ═══
+  [南通边缘-1]
+  │  NODE                DevID Model    State   UseRate      USED_MB     TOTAL_MB      FREE_MB   Power(W)     Temp
+  │  baidu                   0 R200     N            0%         6661        16384         9723         61      43C
+  │  baidu                   1 R200     N            0%         3441        16384        12943         61      42C
+  │  baidu                   2 R200     N            6%         6625        16384         9759         63      40C
+  │  baidu                   3 R200     N            0%          914        16384        15470         61      42C
+  [南通边缘-2]
+  │  yj-spi-node01           0 R200     N            0%         3441        16384        12943         61      43C
+  │  yj-spi-node01           1 R200     N           10%         6713        16384         9671         62      45C
+  │  yj-spi-node01           2 R200     N            0%         4349        16384        12035         65      44C
+  │  yj-spi-node01           3 R200     N            0%         3166        16384        13218         63      45C
+
+  ═══ 3) XPU 进程实际消耗明细：来自 xpu_smi ═══
+  [南通边缘-1]
+  │  NODE                DevID        PID  Streams         L3     MEM_MB Command             
+  │  baidu                   0    1038938        3       0 MB       5747 tritonserver        
+  │  baidu                   0     646623        2      63 MB        914 tritonserver        
+  │  baidu                   1     652659        2      63 MB        914 tritonserver        
+  │  baidu                   1     652665        2       0 MB       2527 tritonserver        
+  │  baidu                   2    1550927        3       0 MB       5711 tritonserver        
+  │  baidu                   2     707320        2      63 MB        914 tritonserver        
+  │  baidu                   3     627266        2      63 MB        914 tritonserver        
+  [南通边缘-2]
+  │  yj-spi-node01           0    2534219        2      63 MB        914 tritonserver        
+  │  yj-spi-node01           0    2534226        2       0 MB       2527 tritonserver        
+  │  yj-spi-node01           1    2349293        3       0 MB       5799 tritonserver        
+  │  yj-spi-node01           1    2540664        2      63 MB        914 tritonserver        
+  │  yj-spi-node01           2    2540657        2       0 MB       2527 tritonserver        
+  │  yj-spi-node01           2    3703879        3      63 MB       1822 tritonserver        
+  │  yj-spi-node01           3    2546648        2       0 MB       2527 tritonserver        
+  │  yj-spi-node01           3     781077        2      63 MB        639 tritonserver        
+
+  ═══ 4) XPU Pod 申请明细：来自 K8s limits (已去重) ═══
+  (数据来源: 南通边缘-1 / 10.30.4.33)
+  │  空间       Pod                                              节点                申请MiB
+  │  default      ep-xmyuqqsw-5bccc4b6d-6b75j                      baidu                      7500
+  │  default      ep-xmyuqqsw-5bccc4b6d-f2tjp                      baidu                      7500
+  │  default      ep-xmyuqqsw-5bccc4b6d-fc84v                      baidu                      7500
+  │  default      ep-xmyuqqsw-5bccc4b6d-gqkfv                      baidu                      7500
+  │  default      ep-xmyuqqsw-5bccc4b6d-ppt69                      baidu                      7500
+  │  default      ep-iaacysvz-5846bc87cb-mvnh4                     baidu                      7800
+  │  default      ep-iaacysvz-5846bc87cb-tkk4h                     baidu                      7800
+  │  default      ep-xmyuqqsw-5bccc4b6d-4mjvr                      yj-spi-node01              7500
+  │  default      ep-xmyuqqsw-5bccc4b6d-bbs55                      yj-spi-node01              7500
+  │  default      ep-xmyuqqsw-5bccc4b6d-hfhkq                      yj-spi-node01              7500
+  │  default      ep-xmyuqqsw-5bccc4b6d-kkklt                      yj-spi-node01              7500
+  │  default      ep-xmyuqqsw-5bccc4b6d-vdqcz                      yj-spi-node01              7500
+  │  default      ep-iaacysvz-5846bc87cb-lt5vs                     yj-spi-node01              7800
+  │  default      ep-iaacysvz-5846bc87cb-x26sd                     yj-spi-node01              7800
+  │  default      ep-vnkaewpj-764f758d88-tkqg9                     yj-spi-node01              2500
+  │  
+
+  ═══ 5) Deployment 副本情况 (已去重) ═══
+  (数据来源: 南通边缘-1 / 10.30.4.33)
+  │  空间     名称                                   期望副本 可用副本
+  │  default    ep-iaacysvz                                       4          4
+  │  default    ep-vnkaewpj                                       1          1
+  │  default    ep-xmyuqqsw                                      10         10
+  │  
+
+▶▶▶  深圳边缘 (1 台服务器, 1 台在线)  ◀◀◀
+
+  ═══ 1) 节点 XPU 汇总：K8s 申请量 vs 实际消耗 ═══
+
+  [深圳边缘-1 / 10.10.99.78]
+  │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
+  │  yj-spi-master1     10.10.99.78     kunlun_r200            65536        36000        29536        65536        19895        45641     30.36%      0.00%        47C       -16105
+  │  
+
+  ═══ 2) 单卡实际消耗明细：来自 xpu_smi ═══
+  [深圳边缘-1]
+  │  NODE                DevID Model    State   UseRate      USED_MB     TOTAL_MB      FREE_MB   Power(W)     Temp
+  │  yj-spi-master1          0 R200     N            0%         6480        16384         9904         64      46C
+  │  yj-spi-master1          1 R200     N            0%         7237        16384         9147         64      45C
+  │  yj-spi-master1          2 R200     N            0%         2573        16384        13811         62      45C
+  │  yj-spi-master1          3 R200     N            0%         3605        16384        12779         64      47C
+
+  ═══ 3) XPU 进程实际消耗明细：来自 xpu_smi ═══
+  [深圳边缘-1]
+  │  NODE                DevID        PID  Streams         L3     MEM_MB Command             
+  │  yj-spi-master1          0     252990        2      63 MB        914 tritonserver        
+  │  yj-spi-master1          0     256051        3       0 MB       5566 tritonserver        
+  │  yj-spi-master1          1     252967        2       0 MB        928 tritonserver        
+  │  yj-spi-master1          1     252984        3      63 MB        640 tritonserver        
+  │  yj-spi-master1          1     257462        3       0 MB       5668 tritonserver        
+  │  yj-spi-master1          2     258707        2      16 MB        686 tritonserver        
+  │  yj-spi-master1          2     258743        3      47 MB       1886 tritonserver        
+  │  yj-spi-master1          3     258670        2       0 MB        992 tritonserver        
+  │  yj-spi-master1          3     258680        2      63 MB        298 tritonserver        
+  │  yj-spi-master1          3     258690        2       0 MB        996 tritonserver        
+  │  yj-spi-master1          3     258696        2       0 MB       1317 tritonserver        
+
+  ═══ 4) XPU Pod 申请明细：来自 K8s limits (已去重) ═══
+  (数据来源: 深圳边缘-1 / 10.10.99.78)
+  │  空间       Pod                                              节点                申请MiB
+  │  default      ep-phvkdgdn-78c4df9fd-52v2z                      <none>                     2500
+  │  default      ep-qtedgbcp-d9766bcdf-xlgpj                      <none>                     2500
+  │  default      ep-xdcmymdc-5cc68d4c98-sblk8                     <none>                     7500
+  │  default      ep-wcjzypkg-5d4d94d5bc-4mvmd                     <none>                     2500
+  │  default      ep-erewyndb-6bb94c555-jjr9x                      yj-spi-master1             7500
+  │  default      ep-xqhevwve-9f5fcf6bc-bjcv9                      yj-spi-master1             2500
+  │  default      ep-rcrhzyxh-54659f8fb9-pv4h2                     yj-spi-master1             7500
+  │  default      ep-yprbakam-596b89585f-xwg9t                     yj-spi-master1             7500
+  │  default      ep-awcqavxv-675dc5d95b-js94q                     yj-spi-master1             3500
+  │  default      ep-edcjqdah-5d65878c4c-pjsqg                     yj-spi-master1             2500
+  │  default      ep-pzzijyjt-6b7785cf8b-cn8fr                     yj-spi-master1             2500
+  │  default      ep-vggqciga-6d96bc9cfb-hqf8g                     yj-spi-master1             2500
+  │  
+
+  ═══ 5) Deployment 副本情况 (已去重) ═══
+  (数据来源: 深圳边缘-1 / 10.10.99.78)
+  │  空间     名称                                   期望副本 可用副本
+  │  default    ep-awcqavxv                                       1          1
+  │  default    ep-edcjqdah                                       1          1
+  │  default    ep-ekvfmrra                                       1          1
+  │  default    ep-erewyndb                                       1          1
+  │  default    ep-mtkpfgaf                                       1          1
+  │  default    ep-phvkdgdn                                       1          0
+  │  default    ep-pmuxennc                                       1          1
+  │  default    ep-pzzijyjt                                       1          1
+  │  default    ep-qtedgbcp                                       1          0
+  │  default    ep-rcrhzyxh                                       1          1
+  │  default    ep-vggqciga                                       1          1
+  │  default    ep-wcjzypkg                                       1          0
+  │  default    ep-xdcmymdc                                       1          0
+  │  default    ep-xqhevwve                                       1          1
+  │  default    ep-yprbakam                                       1          1
+  │  
+
+▶▶▶  深圳转换服 (1 台服务器, 1 台在线)  ◀◀◀
+
+  ═══ 1) 节点 XPU 汇总：K8s 申请量 vs 实际消耗 ═══
+
+  [深圳转换服 / 10.10.108.239]
+  │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
+  │  yijian-node1       10.10.108.239   kunlun_r200            65536        14000        51536        65536         2456        63080      3.75%      0.00%        42C       -11544
+  │  
+
+  ═══ 2) 单卡实际消耗明细：来自 xpu_smi ═══
+  [深圳转换服]
+  │  NODE                DevID Model    State   UseRate      USED_MB     TOTAL_MB      FREE_MB   Power(W)     Temp
+  │  yijian-node1            0 R200     N            0%          640        16384        15744         60      42C
+  │  yijian-node1            1 R200     N            0%         1816        16384        14568         64      38C
+  │  yijian-node1            2 R200     N            0%            0        16384        16384         63      42C
+  │  yijian-node1            3 R200     N            0%            0        16384        16384         63      40C
+
+  ═══ 3) XPU 进程实际消耗明细：来自 xpu_smi ═══
+  [深圳转换服]
+  │  NODE                DevID        PID  Streams         L3     MEM_MB Command             
+  │  yijian-node1            0      72840        3      63 MB        640 tritonserver        
+  │  yijian-node1            1      37782        3      63 MB       1816 tritonserver        
+
+  ═══ 4) XPU Pod 申请明细：来自 K8s limits (已去重) ═══
+  (数据来源: 深圳转换服 / 10.10.108.239)
+  │  空间       Pod                                              节点                申请MiB
+  │  default      ep-gyuumsgq-86647766b5-7zmwj                     yijian-node1              10500
+  │  default      ep-hqfsbhsj-67b44f9bc4-pqj9m                     yijian-node1               3500
+  │  
+
+  ═══ 5) Deployment 副本情况 (已去重) ═══
+  (数据来源: 深圳转换服 / 10.10.108.239)
+  │  空间     名称                                   期望副本 可用副本
+  │  default    ep-gyuumsgq                                       1          1
+  │  default    ep-hqfsbhsj                                       1          1
+  │  default    tn-controller-manager-ep-package                  1          1
+  │  
+
+╔══════════════════════════════════════════════════════════╗
+║    采集状态汇总                                    ║
+╚══════════════════════════════════════════════════════════╝
+节点名    IP                 状态     分组
+────────── ────────────────── ──────── ────────
+广芯边缘-1 10.65.233.21       ✘ 失败   广芯边缘
+广芯边缘-2 10.65.233.46       ✘ 失败   广芯边缘
+无锡边缘-1 10.20.7.165        ✔ 成功   无锡边缘
+无锡边缘-2 10.20.7.166        ✔ 成功   无锡边缘
+南通边缘-1 10.30.4.33         ✔ 成功   南通边缘
+南通边缘-2 10.30.4.34         ✔ 成功   南通边缘
+深圳边缘-1 10.10.99.78        ✔ 成功   深圳边缘
+深圳转换服 10.10.108.239      ✔ 成功   深圳转换服
+
+巡检结束  2026-05-06 18:46:51
+[root@yijian-01 ~]# 
