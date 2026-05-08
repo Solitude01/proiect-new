@@ -5,10 +5,25 @@ Handles CRUD operations for instance configurations using JSON files.
 
 import json
 import os
+import sys
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+
+
+def _get_config_base_dir() -> str:
+    """Return the base directory for config storage.
+
+    In development, resolves relative to CWD.
+    When packaged by PyInstaller, resolves relative to the directory
+    containing the EXE so that configs persist across runs.
+    """
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.abspath(".")
+
+
 from pydantic import BaseModel
 
 
@@ -81,7 +96,9 @@ class InstanceConfig(BaseModel):
 class ConfigManager:
     """Manages instance configurations with JSON persistence"""
 
-    def __init__(self, config_dir: str = "configs/instances"):
+    def __init__(self, config_dir: str = None):
+        if config_dir is None:
+            config_dir = os.path.join(_get_config_base_dir(), "configs", "instances")
         self.config_dir = Path(config_dir)
         self.config_dir.mkdir(parents=True, exist_ok=True)
 

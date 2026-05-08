@@ -290,6 +290,27 @@ log_err()  { printf "${COLOR_RED}  [✘] %s${COLOR_RESET}\n"   "$*"; }
 log_warn() { printf "${COLOR_YELLOW}  [!] %s${COLOR_RESET}\n"  "$*"; }
 
 # ─────────────────────────────────────────────
+# 2.4 从中心端 MySQL 拉取 endpoint→模型中文名映射
+#    数据来源: windmill.deploy_endpoint_job + endpoint + model
+#    输出: ep_id | 服务名 | 模型英文名 | 模型中文名 | gpu | vgpu | cpu | compute
+# ─────────────────────────────────────────────
+query_model_lookup() {
+  local lookup_file="$1"
+  kubectl exec -n middleware xdbmysql57-0 -- \
+    /mysql/bin/mysql --defaults-file=/mysql/etc/user.root.cnf \
+    -D windmill --default-character-set=utf8mb4 -N -e \
+    "SELECT DISTINCT SUBSTRING_INDEX(e.uri, '/', -1), e.local_name, m.local_name, m.display_name, JSON_UNQUOTE(JSON_EXTRACT(m.prefer_model_server_parameters, '$.resource.gpu')), JSON_UNQUOTE(JSON_EXTRACT(m.prefer_model_server_parameters, '$.resource.vgpuEnabled')), JSON_UNQUOTE(JSON_EXTRACT(m.prefer_model_server_parameters, '$.resource.limits.cpu')), SUBSTRING_INDEX(dej.endpoint_compute_name, '/', -1) FROM deploy_endpoint_job dej JOIN endpoint e ON e.local_name = dej.endpoint_name JOIN model m ON m.local_name = SUBSTRING_INDEX(SUBSTRING_INDEX(dej.artifact_name, 'models/', -1), '/versions', 1) WHERE m.local_name NOT LIKE '%pre%' AND m.local_name NOT LIKE '%post%' ORDER BY SUBSTRING_INDEX(e.uri, '/', -1);" \
+    2>/dev/null > "$lookup_file"
+  return $?
+}
+
+lookup_model() {
+  local ep_id="$1"
+  local lookup_file="$2"
+  awk -F'\t' -v id="$ep_id" '$1 == id { print $0; exit }' "$lookup_file"
+}
+
+# ─────────────────────────────────────────────
 # 2.5 从节点 .out 文件中提取指定 section 的内容
 # ─────────────────────────────────────────────
 extract_section_lines() {
@@ -580,6 +601,43 @@ print_group_details() {
     else
       printf "  ${COLOR_RED}无可用数据${COLOR_RESET}\n"
     fi
+
+    # ── 7) 服务-模型映射表（从 MySQL 拉取）──
+    printf "\n${COLOR_CYAN}  ═══ 7) 服务-模型映射表 ═══${COLOR_RESET}\n"
+
+    # 收集该组所有 Deployment 名称 (ep-xxxxxxxx)
+    local dep_names
+    dep_names=$(for inner_ip2 in "${group_ips[@]}"; do
+      out_file2="${RESULT_DIR}/${inner_ip2}.out"
+      inner_rc2=1
+      [ -f "${RESULT_DIR}/${inner_ip2}.status" ] && inner_rc2=$(cat "${RESULT_DIR}/${inner_ip2}.status")
+      [ "$inner_rc2" -ne 0 ] && continue
+      extract_section_lines "$out_file2" 5 | awk 'NR>1 && $2 ~ /^ep-/ { print $2 }'
+    done | sort -u)
+
+    if [ -n "$dep_names" ] && [ -s "$MODEL_LOOKUP_FILE" ]; then
+      printf "  %-14s %-40s %-36s %-24s %6s %6s %5s %-10s\n" \
+        "Endpoint" "服务名" "模型英文名" "模型中文名" "GPU" "vGPU" "CPU" "Compute"
+      printf "  %-14s %-40s %-36s %-24s %6s %6s %5s %-10s\n" \
+        "────────────" "──────────────────────────────────────" "──────────────────────────────────" "──────────────────────" "──────" "──────" "─────" "────────"
+
+      local ep_id found
+      while IFS= read -r ep_id; do
+        found=$(lookup_model "$ep_id" "$MODEL_LOOKUP_FILE")
+        if [ -n "$found" ]; then
+          local _eid _svc _men _mcn _gpu _vgpu _cpu _comp
+          IFS=$'\t' read -r _eid _svc _men _mcn _gpu _vgpu _cpu _comp <<< "$found"
+          printf "  %-14s %-40s %-36s %-24s %6s %6s %5s %-10s\n" \
+            "$_eid" "$_svc" "$_men" "$_mcn" "$_gpu" "$_vgpu" "$_cpu" "$_comp"
+        else
+          printf "  %-14s ${COLOR_YELLOW}%-40s${COLOR_RESET}\n" "$ep_id" "(未关联模型)"
+        fi
+      done <<< "$dep_names"
+    elif [ -z "$dep_names" ]; then
+      printf "  ${COLOR_RED}该组无 deployment 数据${COLOR_RESET}\n"
+    else
+      printf "  ${COLOR_YELLOW}模型映射缓存不可用 (MySQL 查询失败)，跳过映射展示${COLOR_RESET}\n"
+    fi
   done
 }
 
@@ -605,6 +663,15 @@ fi
 
 # 并行结束后再解析（保证所有 .out 都已落盘）
 parse_all_xpusmi
+
+# 构建模型名映射缓存（从 MySQL 拉取 endpoint→模型中文名）
+MODEL_LOOKUP_FILE="${RESULT_DIR}/model_lookup.tsv"
+if query_model_lookup "$MODEL_LOOKUP_FILE"; then
+  log_ok "模型映射缓存已就绪 ($(wc -l < "$MODEL_LOOKUP_FILE") 条)"
+else
+  log_warn "MySQL 模型映射查询失败，将跳过服务-模型映射展示"
+  rm -f "$MODEL_LOOKUP_FILE"
+fi
 
 # 总表优先展示
 print_total_table

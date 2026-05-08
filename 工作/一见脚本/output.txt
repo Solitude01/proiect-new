@@ -1,62 +1,116 @@
-Last login: Wed May  6 18:42:01 2026 from fortress.scc.com.cn
+Last login: Thu May  7 15:45:35 2026 from fortress.scc.com.cn
 [root@yijian-01 ~]# bash /usr/local/bin/xpu_central_check.sh
 
 ╔══════════════════════════════════════════════════════════╗
-║    XPU 中心巡检  2026-05-06 18:46:41                 ║
+║    XPU 中心巡检  2026-05-07 15:57:37                 ║
 ╚══════════════════════════════════════════════════════════╝
   中心节点：10.10.99.159
   目标节点：8 台
 
   [!] 并行模式：同时连接所有节点...
-  [✘] [广芯边缘-2] 10.65.233.46 — 失败 (rc=255)：ssh: connect to host 10.65.233.46 port 22: Connection refused
-  [✘] [广芯边缘-1] 10.65.233.21 — 失败 (rc=255)：ssh: connect to host 10.65.233.21 port 22: Connection refused
+  [✔] [广芯边缘-1] 10.65.233.21 — 采集完成
   [✔] [深圳转换服] 10.10.108.239 — 采集完成
-  [✔] [无锡边缘-1] 10.20.7.165 — 采集完成
+  [✔] [广芯边缘-2] 10.65.233.46 — 采集完成
   [✔] [无锡边缘-2] 10.20.7.166 — 采集完成
-  [✔] [南通边缘-2] 10.30.4.34 — 采集完成
+  [✔] [无锡边缘-1] 10.20.7.165 — 采集完成
   [✔] [深圳边缘-1] 10.10.99.78 — 采集完成
+  [✔] [南通边缘-2] 10.30.4.34 — 采集完成
   [✔] [南通边缘-1] 10.30.4.33 — 采集完成
 
 ╔══════════════════════════════════════════════════════════╗
 ║    全局边缘节点 XPU 资源总表                   ║
 ╚══════════════════════════════════════════════════════════╝
-边缘节点 服务器数 总显存(MB)   已用(MB)   空闲(MB) 使用率 平均利用 最高温度 型号    
-────────── ────── ────────── ────────── ────────── ─────── ─────── ─────── ──────────
-广芯边缘              -          N/A          N/A          N/A       N/A       N/A       N/A N/A       
-无锡边缘              2        65536         8384        57152    12.79%     9.50%       56°C R200      
-南通边缘              2       131072        35310        95762    26.94%     2.00%       45°C R200      
-深圳边缘              1        65536        19895        45641    30.36%     0.00%       47°C R200      
-深圳转换服             1        65536         2456        63080     3.75%     0.00%       42°C R200      
-──────────   ──────   ──────────   ──────────   ──────────   ───────   ───────   ─────── ──────────
-【合计】              6       327680        66045       261635    20.16%
+边缘节点     服务器数  总显存(MB)     已用(MB)     空闲(MB)  使用率 平均利用 最高温度 型号    
+────────────── ──────── ────────────── ────────────── ────────────── ────────── ────────── ────────── ────────
+广芯边缘                    2          65536           9583          55953     14.62%     36.25%       49°C R200      
+无锡边缘                    2          65536           8384          57152     12.79%     10.75%       58°C R200      
+南通边缘                    2         131072          35329          95743     26.95%      3.75%       46°C R200      
+深圳边缘                    1          65536          19895          45641     30.36%      0.00%       48°C R200      
+深圳转换服                   1          65536           8364          57172     12.76%      0.00%       46°C R200      
+────────────────   ──────   ────────────   ────────────   ────────────   ────────   ────────   ──────── ────────  
+【合计】                    8         393216          81555         311661     20.74%
 
-▶▶▶  广芯边缘 (2 台服务器, 0 台在线)  ◀◀◀
-  该组所有节点均采集失败，无可用数据
+▶▶▶  广芯边缘 (2 台服务器, 2 台在线)  ◀◀◀
+
+  ═══ 1) 节点 XPU 汇总：K8s 申请量 vs 实际消耗 ═══
+  (合并 2 个节点数据)
+  │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
+  │  i                  10.65.233.21    kunlun_r200            32768        30600         2168        32768         2990        29778      9.12%     31.50%        49C       -27610
+  │  master1            10.65.233.46    kunlun_r200            32768        27800         4968        32768         6593        26175     20.12%     41.00%        41C       -21207
+
+  ═══ 2) 单卡实际消耗明细：来自 xpu_smi ═══
+  [广芯边缘-1]
+  │  NODE                DevID Model    State   UseRate      USED_MB     TOTAL_MB      FREE_MB   Power(W)     Temp
+  │  i                       0 R200     N            0%          422        16384        15962         65      49C
+  │  i                       1 R200     N           63%         2568        16384        13816         71      49C
+  [广芯边缘-2]
+  │  master1                 0 R200     N           38%         2657        16384        13727         67      39C
+  │  master1                 1 R200     N           44%         3936        16384        12448         70      41C
+
+  ═══ 3) XPU 进程实际消耗明细：来自 xpu_smi ═══
+  [广芯边缘-1]
+  │  NODE                DevID        PID  Streams         L3     MEM_MB Command             
+  │  i                       0      53598        2       0 MB        422 tritonserver        
+  │  i                       1      80055        3      47 MB       1881 tritonserver        
+  │  i                       1      82237        2      16 MB        686 tritonserver        
+  [广芯边缘-2]
+  │  master1                 0     117641        2      16 MB        686 tritonserver        
+  │  master1                 0      39510        3      47 MB       1970 tritonserver        
+  │  master1                 1     105990        2       0 MB       1401 tritonserver        
+  │  master1                 1     106026        2       0 MB        475 tritonserver        
+  │  master1                 1     106038        2      63 MB        639 tritonserver        
+  │  master1                 1      36342        2       0 MB        414 tritonserver        
+  │  master1                 1      41614        2       0 MB       1005 tritonserver        
+
+  ═══ 4) XPU Pod 申请明细：来自 K8s limits (已去重) ═══
+  (数据来源: 广芯边缘-1 / 10.65.233.21)
+  │  空间       Pod                                              节点                申请MiB
+  │  default      ep-ghgjaysz-6f545bb579-76nwn                     i                          7800
+  │  default      ep-rqumhitz-7959b5996b-ppf6t                     i                          7800
+  │  default      ep-myfpyeha-84dbdcdcbc-6r4b2                     i                          7500
+  │  default      ep-xduheqvz-7b885df9df-v29zk                     i                          7500
+  │  default      ep-rqumhitz-7959b5996b-vqt44                     master1                    7800
+  │  default      ep-arjwgtgx-58b5558694-58lpz                     master1                    7500
+  │  default      ep-hitqdxma-77f9f676df-9lz7k                     master1                    2500
+  │  default      ep-pndyavgt-7bb8769978-8zszj                     master1                    2500
+  │  default      ep-yujvaqxx-589ff4c4f4-lzh69                     master1                    2500
+  │  default      ep-ceyxbbre-f6b7bbc9c-2p7k9                      master1                    2500
+  │  default      ep-hsbkzhsu-b4c859d5c-kh5mc                      master1                    2500
+  │  default      ep-rqumhitz-7959b5996b-qstmm                     <none>                     7800
+  │  
+
+  ═══ 5) Deployment 副本情况 (已去重) ═══
+  (数据来源: 广芯边缘-1 / 10.65.233.21)
+  │  空间     名称                                   期望副本 可用副本
+  │  default    ep-arjwgtgx                                       1          1
+  │  default    ep-ceyxbbre                                       1          1
+  │  default    ep-ghgjaysz                                       1          0
+  │  default    ep-hitqdxma                                       1          1
+  │  default    ep-hsbkzhsu                                       1          1
+  │  default    ep-myfpyeha                                       1          1
+  │  default    ep-pndyavgt                                       1          1
+  │  default    ep-rqumhitz                                       3          2
+  │  default    ep-xduheqvz                                       1          1
+  │  default    ep-yujvaqxx                                       1          1
+  │  default    tn-controller-manager-ep-package                  1          1
+  │  
 
 ▶▶▶  无锡边缘 (2 台服务器, 2 台在线)  ◀◀◀
 
   ═══ 1) 节点 XPU 汇总：K8s 申请量 vs 实际消耗 ═══
-
-  [无锡边缘-1 / 10.20.7.165]
+  (合并 2 个节点数据)
   │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
-  │  spi-master165      10.20.7.165     kunlun_r200            32768            0        32768        32768            0        32768      0.00%      0.00%        44C            0
-  │  spi-master166      10.20.7.166     kunlun_r200            32768        22800         9968          N/A          N/A          N/A        N/A        N/A        N/A          N/A
-  │  
-
-  [无锡边缘-2 / 10.20.7.166]
-  │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
-  │  spi-master165      10.20.7.165     kunlun_r200            32768            0        32768          N/A          N/A          N/A        N/A        N/A        N/A          N/A
-  │  spi-master166      10.20.7.166     kunlun_r200            32768        22800         9968        32768         8384        24384     25.59%     19.00%        56C       -14416
-  │  
+  │  spi-master165      10.20.7.165     kunlun_r200            32768            0        32768        32768            0        32768      0.00%      0.00%        45C            0
+  │  spi-master166      10.20.7.166     kunlun_r200            32768        22800         9968        32768         8384        24384     25.59%     21.50%        58C       -14416
 
   ═══ 2) 单卡实际消耗明细：来自 xpu_smi ═══
   [无锡边缘-1]
   │  NODE                DevID Model    State   UseRate      USED_MB     TOTAL_MB      FREE_MB   Power(W)     Temp
-  │  spi-master165           0 R200     N            0%            0        16384        16384         64      40C
-  │  spi-master165           1 R200     N            0%            0        16384        16384         65      44C
+  │  spi-master165           0 R200     N            0%            0        16384        16384         64      42C
+  │  spi-master165           1 R200     N            0%            0        16384        16384         65      45C
   [无锡边缘-2]
-  │  spi-master166           0 R200     N           29%         7058        16384         9326         76      56C
-  │  spi-master166           1 R200     N            9%         1326        16384        15058         65      46C
+  │  spi-master166           0 R200     N           32%         7058        16384         9326         81      58C
+  │  spi-master166           1 R200     N           11%         1326        16384        15058         67      49C
 
   ═══ 3) XPU 进程实际消耗明细：来自 xpu_smi ═══
   [无锡边缘-1]
@@ -93,31 +147,23 @@ Last login: Wed May  6 18:42:01 2026 from fortress.scc.com.cn
 ▶▶▶  南通边缘 (2 台服务器, 2 台在线)  ◀◀◀
 
   ═══ 1) 节点 XPU 汇总：K8s 申请量 vs 实际消耗 ═══
-
-  [南通边缘-1 / 10.30.4.33]
+  (合并 2 个节点数据)
   │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
-  │  baidu              10.30.4.33      kunlun_r200            65536        53100        12436        65536        17641        47895     26.92%      1.50%        43C       -35459
-  │  yj-spi-node01      10.30.4.34      kunlun_r200            65536        55600         9936          N/A          N/A          N/A        N/A        N/A        N/A          N/A
-  │  
-
-  [南通边缘-2 / 10.30.4.34]
-  │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
-  │  baidu              10.30.4.33      kunlun_r200            65536        53100        12436          N/A          N/A          N/A        N/A        N/A        N/A          N/A
-  │  yj-spi-node01      10.30.4.34      kunlun_r200            65536        55600         9936        65536        17669        47867     26.96%      2.50%        45C       -37931
-  │  
+  │  baidu              10.30.4.33      kunlun_r200            65536        53100        12436        65536        17659        47877     26.95%      3.00%        43C       -35441
+  │  yj-spi-node01      10.30.4.34      kunlun_r200            65536        55600         9936        65536        17670        47866     26.96%      4.50%        46C       -37930
 
   ═══ 2) 单卡实际消耗明细：来自 xpu_smi ═══
   [南通边缘-1]
   │  NODE                DevID Model    State   UseRate      USED_MB     TOTAL_MB      FREE_MB   Power(W)     Temp
-  │  baidu                   0 R200     N            0%         6661        16384         9723         61      43C
+  │  baidu                   0 R200     N            0%         6661        16384         9723         62      43C
   │  baidu                   1 R200     N            0%         3441        16384        12943         61      42C
-  │  baidu                   2 R200     N            6%         6625        16384         9759         63      40C
-  │  baidu                   3 R200     N            0%          914        16384        15470         61      42C
+  │  baidu                   2 R200     N            8%         6643        16384         9741         66      41C
+  │  baidu                   3 R200     N            4%          914        16384        15470         61      42C
   [南通边缘-2]
   │  yj-spi-node01           0 R200     N            0%         3441        16384        12943         61      43C
-  │  yj-spi-node01           1 R200     N           10%         6713        16384         9671         62      45C
-  │  yj-spi-node01           2 R200     N            0%         4349        16384        12035         65      44C
-  │  yj-spi-node01           3 R200     N            0%         3166        16384        13218         63      45C
+  │  yj-spi-node01           1 R200     N           18%         6713        16384         9671         63      46C
+  │  yj-spi-node01           2 R200     N            0%         4350        16384        12034         61      43C
+  │  yj-spi-node01           3 R200     N            0%         3166        16384        13218         71      45C
 
   ═══ 3) XPU 进程实际消耗明细：来自 xpu_smi ═══
   [南通边缘-1]
@@ -126,7 +172,7 @@ Last login: Wed May  6 18:42:01 2026 from fortress.scc.com.cn
   │  baidu                   0     646623        2      63 MB        914 tritonserver        
   │  baidu                   1     652659        2      63 MB        914 tritonserver        
   │  baidu                   1     652665        2       0 MB       2527 tritonserver        
-  │  baidu                   2    1550927        3       0 MB       5711 tritonserver        
+  │  baidu                   2    1550927        3       0 MB       5729 tritonserver        
   │  baidu                   2     707320        2      63 MB        914 tritonserver        
   │  baidu                   3     627266        2      63 MB        914 tritonserver        
   [南通边缘-2]
@@ -135,7 +181,7 @@ Last login: Wed May  6 18:42:01 2026 from fortress.scc.com.cn
   │  yj-spi-node01           1    2349293        3       0 MB       5799 tritonserver        
   │  yj-spi-node01           1    2540664        2      63 MB        914 tritonserver        
   │  yj-spi-node01           2    2540657        2       0 MB       2527 tritonserver        
-  │  yj-spi-node01           2    3703879        3      63 MB       1822 tritonserver        
+  │  yj-spi-node01           2    4184271        3      63 MB       1823 tritonserver        
   │  yj-spi-node01           3    2546648        2       0 MB       2527 tritonserver        
   │  yj-spi-node01           3     781077        2      63 MB        639 tritonserver        
 
@@ -170,19 +216,17 @@ Last login: Wed May  6 18:42:01 2026 from fortress.scc.com.cn
 ▶▶▶  深圳边缘 (1 台服务器, 1 台在线)  ◀◀◀
 
   ═══ 1) 节点 XPU 汇总：K8s 申请量 vs 实际消耗 ═══
-
-  [深圳边缘-1 / 10.10.99.78]
+  (合并 1 个节点数据)
   │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
-  │  yj-spi-master1     10.10.99.78     kunlun_r200            65536        36000        29536        65536        19895        45641     30.36%      0.00%        47C       -16105
-  │  
+  │  yj-spi-master1     10.10.99.78     kunlun_r200            65536        36000        29536        65536        19895        45641     30.36%      0.00%        48C       -16105
 
   ═══ 2) 单卡实际消耗明细：来自 xpu_smi ═══
   [深圳边缘-1]
   │  NODE                DevID Model    State   UseRate      USED_MB     TOTAL_MB      FREE_MB   Power(W)     Temp
-  │  yj-spi-master1          0 R200     N            0%         6480        16384         9904         64      46C
-  │  yj-spi-master1          1 R200     N            0%         7237        16384         9147         64      45C
-  │  yj-spi-master1          2 R200     N            0%         2573        16384        13811         62      45C
-  │  yj-spi-master1          3 R200     N            0%         3605        16384        12779         64      47C
+  │  yj-spi-master1          0 R200     N            0%         6480        16384         9904         64      48C
+  │  yj-spi-master1          1 R200     N            0%         7237        16384         9147         64      47C
+  │  yj-spi-master1          2 R200     N            0%         2573        16384        13811         63      45C
+  │  yj-spi-master1          3 R200     N            0%         3605        16384        12779         64      46C
 
   ═══ 3) XPU 进程实际消耗明细：来自 xpu_smi ═══
   [深圳边缘-1]
@@ -239,36 +283,40 @@ Last login: Wed May  6 18:42:01 2026 from fortress.scc.com.cn
 ▶▶▶  深圳转换服 (1 台服务器, 1 台在线)  ◀◀◀
 
   ═══ 1) 节点 XPU 汇总：K8s 申请量 vs 实际消耗 ═══
-
-  [深圳转换服 / 10.10.108.239]
+  (合并 1 个节点数据)
   │  NODE               INTERNAL_IP     XPU_TYPE           K8S_TOTAL     K8S_USED     K8S_FREE   REAL_TOTAL    REAL_USED    REAL_FREE   REAL_USE   AVG_UTIL   MAX_TEMP     REAL-K8S
-  │  yijian-node1       10.10.108.239   kunlun_r200            65536        14000        51536        65536         2456        63080      3.75%      0.00%        42C       -11544
-  │  
+  │  yijian-node1       10.10.108.239   kunlun_r200            65536        27000        38536        65536         8364        57172     12.76%      0.00%        46C       -18636
 
   ═══ 2) 单卡实际消耗明细：来自 xpu_smi ═══
   [深圳转换服]
   │  NODE                DevID Model    State   UseRate      USED_MB     TOTAL_MB      FREE_MB   Power(W)     Temp
-  │  yijian-node1            0 R200     N            0%          640        16384        15744         60      42C
-  │  yijian-node1            1 R200     N            0%         1816        16384        14568         64      38C
-  │  yijian-node1            2 R200     N            0%            0        16384        16384         63      42C
-  │  yijian-node1            3 R200     N            0%            0        16384        16384         63      40C
+  │  yijian-node1            0 R200     N            0%         6137        16384        10247         61      46C
+  │  yijian-node1            1 R200     N            0%         2227        16384        14157         64      43C
+  │  yijian-node1            2 R200     N            0%            0        16384        16384         64      45C
+  │  yijian-node1            3 R200     N            0%            0        16384        16384         64      43C
 
   ═══ 3) XPU 进程实际消耗明细：来自 xpu_smi ═══
   [深圳转换服]
   │  NODE                DevID        PID  Streams         L3     MEM_MB Command             
+  │  yijian-node1            0      61640        3       0 MB       5497 tritonserver        
   │  yijian-node1            0      72840        3      63 MB        640 tritonserver        
   │  yijian-node1            1      37782        3      63 MB       1816 tritonserver        
+  │  yijian-node1            1      72385        2       0 MB        411 tritonserver        
 
   ═══ 4) XPU Pod 申请明细：来自 K8s limits (已去重) ═══
   (数据来源: 深圳转换服 / 10.10.108.239)
   │  空间       Pod                                              节点                申请MiB
+  │  default      ep-fuqwdxkt-7bd6d8d6c5-bq7rk                     yijian-node1              10500
   │  default      ep-gyuumsgq-86647766b5-7zmwj                     yijian-node1              10500
   │  default      ep-hqfsbhsj-67b44f9bc4-pqj9m                     yijian-node1               3500
+  │  default      ep-ctyuefmy-698db454f9-pwxjx                     yijian-node1               2500
   │  
 
   ═══ 5) Deployment 副本情况 (已去重) ═══
   (数据来源: 深圳转换服 / 10.10.108.239)
   │  空间     名称                                   期望副本 可用副本
+  │  default    ep-ctyuefmy                                       1          1
+  │  default    ep-fuqwdxkt                                       1          1
   │  default    ep-gyuumsgq                                       1          1
   │  default    ep-hqfsbhsj                                       1          1
   │  default    tn-controller-manager-ep-package                  1          1
@@ -279,8 +327,8 @@ Last login: Wed May  6 18:42:01 2026 from fortress.scc.com.cn
 ╚══════════════════════════════════════════════════════════╝
 节点名    IP                 状态     分组
 ────────── ────────────────── ──────── ────────
-广芯边缘-1 10.65.233.21       ✘ 失败   广芯边缘
-广芯边缘-2 10.65.233.46       ✘ 失败   广芯边缘
+广芯边缘-1 10.65.233.21       ✔ 成功   广芯边缘
+广芯边缘-2 10.65.233.46       ✔ 成功   广芯边缘
 无锡边缘-1 10.20.7.165        ✔ 成功   无锡边缘
 无锡边缘-2 10.20.7.166        ✔ 成功   无锡边缘
 南通边缘-1 10.30.4.33         ✔ 成功   南通边缘
@@ -288,5 +336,5 @@ Last login: Wed May  6 18:42:01 2026 from fortress.scc.com.cn
 深圳边缘-1 10.10.99.78        ✔ 成功   深圳边缘
 深圳转换服 10.10.108.239      ✔ 成功   深圳转换服
 
-巡检结束  2026-05-06 18:46:51
-[root@yijian-01 ~]# 
+巡检结束  2026-05-07 15:57:46
+[root@yijian-01 ~]# ~

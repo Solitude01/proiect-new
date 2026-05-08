@@ -31,6 +31,8 @@ pyinstaller ^
     --name "LAdmin" ^
     --onefile ^
     --console ^
+    --bootloader-ignore-signals ^
+    --clean ^
     --add-data "templates;templates" ^
     --add-data "static;static" ^
     --add-data "configs;configs" ^
@@ -74,6 +76,8 @@ pyinstaller ^
     --name "LView" ^
     --onefile ^
     --console ^
+    --bootloader-ignore-signals ^
+    --clean ^
     --add-data "templates;templates" ^
     --add-data "static;static" ^
     --add-data "configs;configs" ^

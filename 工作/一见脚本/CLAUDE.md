@@ -8,14 +8,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 仓库结构
 
+### XPU 集群巡检（主项目）
+
 | 文件 | 用途 |
 |------|------|
 | `需求.md` | 集群架构说明和需求描述 |
-| `xpu_central_check.sh.txt` | 中心调度脚本，部署于中心节点 `/usr/local/bin/xpu_central_check.sh` |
+| `xpu_central_check.sh` | 中心调度脚本的当前可执行版本 |
+| `xpu_central_check.sh.txt` | 中心调度脚本的文本归档，部署于中心节点 `/usr/local/bin/xpu_central_check.sh` |
 | `xpu_check.sh.txt` | 边缘采集脚本，由中心脚本通过 SSH 推送到各节点 `/tmp/xpu_check.sh` 执行 |
 | `output.txt` | 某次实际运行的输出样例 |
+| `readme.md` | 对象存储位置、执行方式备忘 |
 
-**注意：** `.sh.txt` 后缀是因为脚本通过 `cat` heredoc 方式写入目标服务器，实际部署后为 `.sh` 文件。
+**注意：** `.sh.txt` 后缀是因为脚本通过 `cat` heredoc 方式写入目标服务器，实际部署后为 `.sh` 文件。`xpu_central_check.sh`（无 `.txt`）是可直接执行的版本。
+
+### 模型包查询 (`模型包查询/`)
+
+MySQL 5.7 查询命令备忘，用于查询 K8s 中 `xdbmysql57-0` Pod 的 `windmill` 数据库内模型包（`model` 表）的资源分配情况。
+
+- **数据库**: MySQL 5.7.38（不支持窗口函数，需用用户变量模拟序号）
+- **连接方式**: `kubectl exec -it -n middleware xdbmysql57-0 -- /mysql/bin/mysql --defaults-file=/mysql/etc/user.root.cnf -D windmill --default-character-set=utf8mb4`
+- `查询指令.md` 包含 3 组常用 SQL 查询：模型包 vGPU/GPU 分布、特定条件筛选、全资源明细汇总
+
+### 网络请求分析 (`网络请求/`)
+
+Firefox HAR（HTTP Archive）导出文件，记录 `10.10.99.159:8412` 上 vistudio-proxy-api 和 windmill API 的请求/响应详情，用于调试 API 调用链和模型仓库交互。
 
 ## 集群架构
 
@@ -61,3 +77,5 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `##XPUSMI##` 行格式是中心聚合的协议，修改字段需同步更新 `parse_all_xpusmi()` 和 `print_total_table()` 中的 awk 解析逻辑
 - 边缘脚本通过 bash heredoc (`<<<`) 传递，内部避免使用会提前展开的变量；已在中心脚本中用 `cat <<'SCRIPT_BODY'`（带引号）避免变量展开
 - 边缘脚本在目标节点 `/tmp` 下创建临时文件，通过 `trap ... EXIT` 确保清理
+- `query_model_lookup()` 通过 kubectl exec 查询 MySQL 获取 endpoint↔模型中文名映射；修改 SQL 字段需同步更新 Section 7 中 `lookup_model()` 的 awk 解析和 printf 格式化
+- `MODEL_LOOKUP_FILE` 在 `RESULT_DIR` 下创建为临时 TSV，随 `trap ... EXIT` 自动清理

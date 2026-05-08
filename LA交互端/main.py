@@ -5,6 +5,7 @@ FastAPI backend with WebSocket room isolation.
 
 import json
 import os
+import sys
 import socket
 import uuid
 import shutil
@@ -14,6 +15,32 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List
+
+
+def resource_path(relative_path: str) -> str:
+    """Get absolute path to a READ-ONLY bundled resource.
+
+    In development (python main.py), resolves relative to CWD.
+    When packaged by PyInstaller (--onefile EXE), resolves relative to
+    sys._MEIPASS -- the temp directory where PyInstaller extracts bundled
+    data files at runtime.
+    """
+    if getattr(sys, "frozen", False):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+
+def runtime_path(relative_path: str) -> str:
+    """Get absolute path to WRITABLE runtime data.
+
+    In development, resolves relative to CWD.
+    When packaged by PyInstaller, resolves relative to the directory
+    containing the EXE so that data persists across runs.
+    """
+    if getattr(sys, "frozen", False):
+        return os.path.join(os.path.dirname(sys.executable), relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
 
 import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, UploadFile, File
@@ -73,15 +100,15 @@ def decode_rfc2047_header(header: str) -> str:
 
 
 # Initialize managers
-config_manager = ConfigManager()
+config_manager = ConfigManager(config_dir=runtime_path("configs/instances"))
 websocket_manager = ConnectionManager()
 
 # HTTP client for forwarding to LA
 http_client = httpx.AsyncClient(timeout=30.0)
 
 # Logs storage directory
-LOGS_DIR = Path("logs")
-LOGS_DIR.mkdir(exist_ok=True)
+LOGS_DIR = Path(runtime_path("logs"))
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class LogsManager:
@@ -192,15 +219,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount writable audio directory FIRST so /static/audio routes are not
+# swallowed by the read-only /static mount below.
+# Ensure the directory exists before mounting — StaticFiles requires it.
+Path(runtime_path("static/audio")).mkdir(parents=True, exist_ok=True)
+app.mount("/static/audio", StaticFiles(directory=runtime_path("static/audio")), name="static_audio")
+
+# Mount static files (read-only bundled resources)
+app.mount("/static", StaticFiles(directory=resource_path("static")), name="static")
 
 # Templates
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=resource_path("templates"))
 
-# Cache-busting version for dashboard.js — updated each server restart so
-# browsers always re-download when the server is restarted after file changes.
-_dash_js = Path("static/js/dashboard.js")
+# Cache-busting version for dashboard.js
+_dash_js = Path(resource_path("static/js/dashboard.js"))
 JS_VERSION = int(_dash_js.stat().st_mtime) if _dash_js.exists() else 1
 
 
@@ -1058,7 +1090,7 @@ async def forward_control(instance_id: str, data: Dict[str, Any]):
 # Audio File Management
 # ============================================================================
 
-AUDIO_DIR = Path("static/audio")
+AUDIO_DIR = Path(runtime_path("static/audio"))
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -1275,6 +1307,9 @@ async def readonly_view(request: Request, instance_id: str):
 # ============================================================================
 
 if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()
+
     import uvicorn
     import logging
     import sys
