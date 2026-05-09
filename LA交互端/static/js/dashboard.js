@@ -391,6 +391,10 @@ class DashboardManager {
                 this.handleAlert(data.payload);
                 break;
 
+            case 'config_sync':
+                this.handleConfigSync(data.payload);
+                break;
+
             case 'error':
                 this.addLog('error', data.message);
                 break;
@@ -422,6 +426,72 @@ class DashboardManager {
                 hasAudioManager: !!window.audioManager,
                 isMuted: window.audioManager && window.audioManager.isAudioMuted
             });
+        }
+    }
+
+    handleConfigSync(payload) {
+        let changed = false;
+
+        if (payload.audio_alerts !== undefined) {
+            this.audioAlertRules = payload.audio_alerts;
+            changed = true;
+        }
+        if (payload.audio_files !== undefined) {
+            this.audioFiles = payload.audio_files;
+            changed = true;
+        }
+        if (payload.audio_alert_match_enabled !== undefined) {
+            this.audioAlertMatchEnabled = payload.audio_alert_match_enabled;
+            changed = true;
+        }
+        if (payload.audio_alerts_enabled !== undefined) {
+            this.audioAlertsEnabled = payload.audio_alerts_enabled;
+            changed = true;
+        }
+        if (payload.metrics_mappings !== undefined) {
+            this.metricsMappings = payload.metrics_mappings;
+            this.renderMetrics();
+            changed = true;
+        }
+        if (payload.control_buttons !== undefined) {
+            this.controlButtons = payload.control_buttons;
+            changed = true;
+        }
+
+        if (!changed) return;
+
+        // Re-render UI if settings panel is open
+        const settingsPanel = document.getElementById('settingsPanel');
+        if (settingsPanel && settingsPanel.style.display !== 'none') {
+            if (payload.audio_alerts !== undefined) {
+                this.tempAudioAlerts = [...payload.audio_alerts];
+                this.renderAudioAlertRules(this.tempAudioAlerts);
+                this.renderAlertPreview(this.tempAudioAlerts);
+            }
+            if (payload.audio_files !== undefined) {
+                this.tempAudioFiles = [...payload.audio_files];
+                this.renderAudioFilesList(this.tempAudioFiles);
+            }
+            if (payload.audio_alert_match_enabled !== undefined) {
+                this.tempAudioAlertMatchEnabled = payload.audio_alert_match_enabled;
+                this.renderAudioAlertMatchSwitch(this.tempAudioAlertMatchEnabled);
+            }
+            if (payload.audio_alerts_enabled !== undefined) {
+                this.tempAudioAlertsEnabled = payload.audio_alerts_enabled;
+                this.renderAudioAlertsEnabledSwitch(this.tempAudioAlertsEnabled);
+            }
+            if (payload.metrics_mappings !== undefined) {
+                this.tempMetricsMappings = [...payload.metrics_mappings];
+                this.renderSettingsMetricsList(this.tempMetricsMappings);
+            }
+            if (payload.control_buttons !== undefined) {
+                this.tempControlButtons = [...payload.control_buttons];
+                this.renderSettingsControlButtons(this.tempControlButtons);
+            }
+        } else {
+            if (payload.audio_alerts !== undefined) {
+                this.renderAlertPreview(this.audioAlertRules);
+            }
         }
     }
 
@@ -2252,6 +2322,14 @@ class DashboardManager {
                 this.showToast('success', '保存成功', '设置已保存');
                 // Update local config without reloading
                 await this.loadAudioAlertConfig();
+
+                // Broadcast config_sync to all clients in the room
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({
+                        type: 'config_sync',
+                        payload: updates
+                    }));
+                }
             } else {
                 const error = await response.text();
                 this.showToast('error', '保存失败', error);

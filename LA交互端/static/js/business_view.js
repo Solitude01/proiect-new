@@ -493,6 +493,11 @@ class BusinessViewManager {
             console.log('[BusinessView] Audio alerts enabled synced:', this.audioAlertsEnabled);
         }
 
+        if (payload.audio_alert_match_enabled !== undefined) {
+            this.audioAlertMatchEnabled = payload.audio_alert_match_enabled;
+            console.log('[BusinessView] Audio alert match enabled synced:', this.audioAlertMatchEnabled);
+        }
+
         this.showToast('info', '配置已更新', '从控制台接收到最新配置');
         this.addLog('info', '[配置同步] 已更新业务视图配置');
     }
