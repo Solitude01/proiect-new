@@ -9,6 +9,7 @@ import sys
 import argparse
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 # 添加项目目录到Python路径
 project_root = Path(__file__).parent
@@ -18,6 +19,7 @@ from core.auth import AuthManager
 from core.downloader import DatasetDownloader
 from core.converter import COCOConverter
 from browser.bb_browser_bridge import BBBrowserBridge
+from core.hikvision_format_converter import HikvisionFormatConverter
 
 
 def generate_output_dir(base_dir: Path, dataset_id: str) -> Path:
@@ -220,6 +222,96 @@ def run_export_coco(folder_path: Path) -> bool:
         return False
 
 
+def run_export_hikvision(folder_path: Path, output_dir: Optional[Path] = None) -> bool:
+    """
+    将已下载的数据集文件夹转换为海康本地平台 calibInfo 格式
+    """
+    from core.hikvision_format_converter import HikvisionFormatConverter
+
+    print("=" * 60)
+    print("海康威视AI平台数据集导出工具 - 海康本地格式导出")
+    print("=" * 60)
+    print(f"\n数据集目录: {folder_path}")
+
+    try:
+        converter = HikvisionFormatConverter(folder_path, output_dir)
+        result = converter.convert()
+
+        format_label = "混合标注" if result.format_type == "mixed" else "单检测"
+        print(f"\n导出完成!")
+        print(f"  格式:     {format_label}")
+        print(f"  图片数:   {result.images_count}")
+        print(f"  标注数:   {result.annotations_count}")
+        if result.no_target_count > 0:
+            print(f"  无标注:   {result.no_target_count} 张 → 不包含目标/")
+        if result.skipped_count > 0:
+            print(f"  跳过:     {result.skipped_count}")
+        print(f"\n输出目录: {result.output_dir}")
+        print(f"  - 有标注图片: {result.output_dir / '包含目标'}")
+        if result.no_target_count > 0:
+            print(f"  - 无标注图片: {result.output_dir / '不包含目标'}")
+        if result.summary_path:
+            print(f"  - 汇总JSON: {result.summary_path}")
+        return True
+
+    except FileNotFoundError as e:
+        print(f"\n错误: {e}")
+        return False
+    except ValueError as e:
+        print(f"\n错误: {e}")
+        return False
+    except Exception as e:
+        print(f"\n导出失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def run_export_hikvision_official(folder_path: Path, output_dir: Optional[Path] = None) -> bool:
+    """
+    将已下载的数据集文件夹转换为海康官方完整格式（与标注工具导出一致）
+    """
+    from core.hikvision_format_converter import HikvisionFormatConverter
+
+    print("=" * 60)
+    print("海康威视AI平台数据集导出工具 - 海康官方完整格式导出")
+    print("=" * 60)
+    print(f"\n数据集目录: {folder_path}")
+
+    try:
+        converter = HikvisionFormatConverter(folder_path, output_dir, mode="official")
+        result = converter.convert()
+
+        format_label = "混合标注" if result.format_type == "mixed" else "单检测"
+        print(f"\n导出完成!")
+        print(f"  格式:     {format_label}")
+        print(f"  图片数:   {result.images_count}")
+        print(f"  标注数:   {result.annotations_count}")
+        if result.no_target_count > 0:
+            print(f"  无标注:   {result.no_target_count} 张 → 不包含目标/")
+        if result.skipped_count > 0:
+            print(f"  跳过:     {result.skipped_count}")
+        print(f"\n输出目录: {result.output_dir}")
+        print(f"  - 有标注图片: {result.output_dir / '包含目标'}")
+        if result.no_target_count > 0:
+            print(f"  - 无标注图片: {result.output_dir / '不包含目标'}")
+        if result.summary_path:
+            print(f"  - 汇总JSON: {result.summary_path}")
+        return True
+
+    except FileNotFoundError as e:
+        print(f"\n错误: {e}")
+        return False
+    except ValueError as e:
+        print(f"\n错误: {e}")
+        return False
+    except Exception as e:
+        print(f"\n导出失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def run_gui_mode():
     """
     GUI模式：启动图形界面
@@ -297,11 +389,38 @@ def main():
         help="将已下载的数据集文件夹转换为COCO格式"
     )
 
+    parser.add_argument(
+        "--export-hikvision",
+        type=str,
+        metavar="FOLDER",
+        help="将已下载的数据集文件夹转换为海康本地平台 calibInfo 格式（简化版）"
+    )
+
+    parser.add_argument(
+        "--export-hikvision-official",
+        type=str,
+        metavar="FOLDER",
+        help="将已下载的数据集文件夹转换为海康官方完整格式（与标注工具导出一致，含汇总JSON）"
+    )
+
+    parser.add_argument(
+        "--hikvision-output",
+        type=str,
+        default=None,
+        help="海康格式导出目标目录（默认: 源目录同级 *_hikvision）"
+    )
+
     args = parser.parse_args()
 
     # 根据参数选择模式
     if args.export_coco:
         success = run_export_coco(Path(args.export_coco))
+    elif args.export_hikvision:
+        output_dir = Path(args.hikvision_output) if args.hikvision_output else None
+        success = run_export_hikvision(Path(args.export_hikvision), output_dir)
+    elif args.export_hikvision_official:
+        output_dir = Path(args.hikvision_output) if args.hikvision_output else None
+        success = run_export_hikvision_official(Path(args.export_hikvision_official), output_dir)
     elif args.auto:
         # 自动模式：显式通过 --auto 指定
         output_dir = Path(args.output) if args.output else None

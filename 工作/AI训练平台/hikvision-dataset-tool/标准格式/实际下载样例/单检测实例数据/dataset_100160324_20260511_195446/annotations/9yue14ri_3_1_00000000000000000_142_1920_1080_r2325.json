@@ -1,0 +1,85 @@
+{
+  "file_id": "81577c75f741477db52a3958f99476b7",
+  "file_name": "9yue14ri_3_1_00000000000000000_142_1920_1080_r2325.jpg",
+  "width": 1920,
+  "height": 1080,
+  "tag_user": "ZXY6699",
+  "create_time": "2026-05-11 19:51:19",
+  "annotations": [
+    {
+      "id": "af5eae37e30f4608ab06a9defe04e0d0",
+      "label_id": "66566b18bc314103b76599668fd26d94",
+      "label_name": "小王子",
+      "label_item_name": null,
+      "label_set_name": null,
+      "bbox": {
+        "xmin": 197.0,
+        "ymin": 184.0,
+        "xmax": 460.0,
+        "ymax": 406.0
+      },
+      "property": null,
+      "order_num": "1"
+    },
+    {
+      "id": "5ab55aff9900418ba198372d83daacab",
+      "label_id": "2c89103bd93e4936a3aec66063c19918",
+      "label_name": "奥特曼",
+      "label_item_name": null,
+      "label_set_name": null,
+      "bbox": {
+        "xmin": 360.0,
+        "ymin": 571.0,
+        "xmax": 958.0,
+        "ymax": 810.0
+      },
+      "property": null,
+      "order_num": "4"
+    },
+    {
+      "id": "3b1fe95e62434383ae72c240f64fbd9f",
+      "label_id": "2c89103bd93e4936a3aec66063c19918",
+      "label_name": "奥特曼",
+      "label_item_name": null,
+      "label_set_name": null,
+      "bbox": {
+        "xmin": 699.0,
+        "ymin": 178.0,
+        "xmax": 1127.0,
+        "ymax": 442.0
+      },
+      "property": null,
+      "order_num": "2"
+    },
+    {
+      "id": "39d07ffb4104438483797be57aa43629",
+      "label_id": "66566b18bc314103b76599668fd26d94",
+      "label_name": "小王子",
+      "label_item_name": null,
+      "label_set_name": null,
+      "bbox": {
+        "xmin": 1216.0,
+        "ymin": 193.0,
+        "xmax": 1575.0,
+        "ymax": 443.0
+      },
+      "property": null,
+      "order_num": "3"
+    },
+    {
+      "id": "1b58b90554bf446f9391491140189aed",
+      "label_id": "66566b18bc314103b76599668fd26d94",
+      "label_name": "小王子",
+      "label_item_name": null,
+      "label_set_name": null,
+      "bbox": {
+        "xmin": 1121.0,
+        "ymin": 595.0,
+        "xmax": 1544.0,
+        "ymax": 863.0
+      },
+      "property": null,
+      "order_num": "5"
+    }
+  ]
+}

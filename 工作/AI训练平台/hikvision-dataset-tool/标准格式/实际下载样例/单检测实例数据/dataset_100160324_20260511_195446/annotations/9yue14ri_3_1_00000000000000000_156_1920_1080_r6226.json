@@ -1,0 +1,25 @@
+{
+  "file_id": "f26e19dbe8b84a58a8d56448a2acd184",
+  "file_name": "9yue14ri_3_1_00000000000000000_156_1920_1080_r6226.jpg",
+  "width": 1920,
+  "height": 1080,
+  "tag_user": "ZXY6699",
+  "create_time": "2026-05-11 19:51:19",
+  "annotations": [
+    {
+      "id": "6094988b258647b4bbef0554ee56a5b2",
+      "label_id": "66566b18bc314103b76599668fd26d94",
+      "label_name": "小王子",
+      "label_item_name": null,
+      "label_set_name": null,
+      "bbox": {
+        "xmin": 262.0,
+        "ymin": 352.0,
+        "xmax": 912.0,
+        "ymax": 889.0
+      },
+      "property": null,
+      "order_num": "1"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "file_id": "b2f39ed0adb543fea6c980ccff541c59",
+  "file_name": "9yue14ri_3_1_00000000000000000_128_1920_1080_r5414.jpg",
+  "width": 1920,
+  "height": 1080,
+  "tag_user": "ZXY6699",
+  "create_time": "2026-05-11 19:51:18",
+  "annotations": [
+    {
+      "id": "2729bf61272947e3a8e6c4707b6b2455",
+      "label_id": "2c89103bd93e4936a3aec66063c19918",
+      "label_name": "奥特曼",
+      "label_item_name": null,
+      "label_set_name": null,
+      "bbox": {
+        "xmin": 646.0,
+        "ymin": 282.0,
+        "xmax": 1576.0,
+        "ymax": 938.0
+      },
+      "property": null,
+      "order_num": "1"
+    }
+  ]
+}

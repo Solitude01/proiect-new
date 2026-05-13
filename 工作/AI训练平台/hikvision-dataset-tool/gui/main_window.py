@@ -22,6 +22,7 @@ sys.path.insert(0, str(project_root))
 from core.auth import AuthManager
 from core.downloader import DatasetDownloader, DownloadResult
 from core.converter import COCOConverter, ConversionResult
+from core.hikvision_format_converter import HikvisionFormatConverter, HikvisionExportResult
 
 
 @dataclass
@@ -41,8 +42,8 @@ class MainWindow:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("海康威视AI平台数据集导出工具")
-        self.root.geometry("700x600")
-        self.root.minsize(600, 500)
+        self.root.geometry("850x720")
+        self.root.minsize(650, 620)
 
         # 状态变量
         self.page_info: Optional[PageInfo] = None
@@ -108,7 +109,7 @@ class MainWindow:
         ttk.Label(self.info_frame, textvariable=self.labeled_count_var).grid(row=2, column=1, sticky=tk.W, pady=2)
 
         ttk.Label(self.info_frame, text="页面标题:").grid(row=3, column=0, sticky=tk.W, pady=2)
-        ttk.Label(self.info_frame, textvariable=self.page_title_var, wraplength=400).grid(row=3, column=1, sticky=tk.W, pady=2)
+        ttk.Label(self.info_frame, textvariable=self.page_title_var, wraplength=600).grid(row=3, column=1, sticky=tk.W, pady=2)
 
         # 下载设置区域
         self.download_frame = ttk.LabelFrame(self.root, text="下载设置", padding=10)
@@ -118,7 +119,7 @@ class MainWindow:
         self.output_dir_var.set(default_dir)
 
         ttk.Label(self.download_frame, text="下载目录:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        ttk.Entry(self.download_frame, textvariable=self.output_dir_var, width=50).grid(row=0, column=1, sticky=tk.EW, pady=5, padx=5)
+        ttk.Entry(self.download_frame, textvariable=self.output_dir_var).grid(row=0, column=1, sticky=tk.EW, pady=5, padx=5)
         ttk.Button(self.download_frame, text="浏览...", command=self._on_browse).grid(row=0, column=2, sticky=tk.W, pady=5)
 
         ttk.Label(self.download_frame, text="并发数:").grid(row=1, column=0, sticky=tk.W, pady=5)
@@ -139,22 +140,57 @@ class MainWindow:
             self.button_frame,
             text="开始下载",
             command=self._on_start_download,
-            width=15
+            width=16
         )
 
         self.cancel_btn = ttk.Button(
             self.button_frame,
             text="取消",
             command=self._on_cancel,
-            width=15,
+            width=16,
             state=tk.DISABLED
         )
+
+        self.btn_separator = ttk.Separator(self.button_frame, orient=tk.VERTICAL)
 
         self.export_coco_btn = ttk.Button(
             self.button_frame,
             text="导出COCO格式",
             command=self._on_export_coco,
-            width=15
+            width=16
+        )
+
+        self.export_hikvision_btn = ttk.Button(
+            self.button_frame,
+            text="导出海康本地格式",
+            command=self._on_export_hikvision,
+            width=16
+        )
+
+        self.export_hikvision_official_btn = ttk.Button(
+            self.button_frame,
+            text="导出海康官方格式",
+            command=self._on_export_hikvision_official,
+            width=16
+        )
+
+        # 导出设置
+        self.export_settings_frame = ttk.LabelFrame(self.root, text="导出设置", padding=8)
+
+        self.use_default_export_var = tk.BooleanVar(value=False)
+        self.default_export_check = ttk.Checkbutton(
+            self.export_settings_frame,
+            text="使用默认导出目录",
+            variable=self.use_default_export_var,
+        )
+
+        self.export_output_dir_var = tk.StringVar(value="")
+        self.export_output_entry = ttk.Entry(self.export_settings_frame, textvariable=self.export_output_dir_var)
+        self.export_browse_btn = ttk.Button(
+            self.export_settings_frame,
+            text="浏览...",
+            command=self._on_browse_export_dir,
+            width=8
         )
 
         # 进度区域
@@ -165,13 +201,12 @@ class MainWindow:
             self.progress_frame,
             variable=self.progress_var,
             maximum=100,
-            length=500,
             mode='determinate'
         )
 
-        self.progress_label = ttk.Label(self.progress_frame, text="就绪")
+        self.progress_label = ttk.Label(self.progress_frame, text="就绪", wraplength=700)
         self.current_file_var = tk.StringVar(value="")
-        self.current_file_label = ttk.Label(self.progress_frame, textvariable=self.current_file_var)
+        self.current_file_label = ttk.Label(self.progress_frame, textvariable=self.current_file_var, wraplength=700)
 
         # 日志区域
         self.log_frame = ttk.LabelFrame(self.root, text="日志", padding=10)
@@ -179,7 +214,7 @@ class MainWindow:
         self.log_text = scrolledtext.ScrolledText(
             self.log_frame,
             wrap=tk.WORD,
-            height=10,
+            height=6,
             state=tk.DISABLED
         )
 
@@ -190,33 +225,39 @@ class MainWindow:
 
         # 认证区域
         self.auth_frame.pack(fill=tk.X, padx=15, pady=5)
-        self.auth_frame.columnconfigure(1, weight=1)
 
         ttk.Label(self.auth_frame, text="Token:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=3)
-        ttk.Entry(self.auth_frame, textvariable=self.token_var, width=55).grid(row=0, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=3)
+        ttk.Entry(self.auth_frame, textvariable=self.token_var).grid(row=0, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=3)
 
         ttk.Label(self.auth_frame, text="数据集ID:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=3)
-        ttk.Entry(self.auth_frame, textvariable=self.dataset_id_input_var, width=55).grid(row=1, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=3)
+        ttk.Entry(self.auth_frame, textvariable=self.dataset_id_input_var).grid(row=1, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=3)
 
         ttk.Label(self.auth_frame, text="版本ID:").grid(row=2, column=0, sticky=tk.W, padx=5, pady=3)
-        ttk.Entry(self.auth_frame, textvariable=self.version_id_input_var, width=55).grid(row=2, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=3)
+        ttk.Entry(self.auth_frame, textvariable=self.version_id_input_var).grid(row=2, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=3)
 
         self.connect_btn.grid(row=3, column=1, sticky=tk.W, padx=5, pady=5)
         self.status_label.grid(row=3, column=2, sticky=tk.W, padx=10, pady=5)
 
         # 页面信息区域
         self.info_frame.pack(fill=tk.X, padx=15, pady=5)
-        self.info_frame.columnconfigure(1, weight=1)
 
         # 下载设置区域
         self.download_frame.pack(fill=tk.X, padx=15, pady=5)
-        self.download_frame.columnconfigure(1, weight=1)
 
         # 操作按钮
-        self.button_frame.pack(pady=10)
+        self.button_frame.pack(fill=tk.X, pady=10)
         self.download_btn.pack(side=tk.LEFT, padx=5)
         self.cancel_btn.pack(side=tk.LEFT, padx=5)
+        self.btn_separator.pack(side=tk.LEFT, fill=tk.Y, padx=8, pady=4)
         self.export_coco_btn.pack(side=tk.LEFT, padx=5)
+        self.export_hikvision_btn.pack(side=tk.LEFT, padx=5)
+        self.export_hikvision_official_btn.pack(side=tk.LEFT, padx=5)
+
+        # 导出设置
+        self.export_settings_frame.pack(fill=tk.X, padx=15, pady=5)
+        self.default_export_check.pack(side=tk.LEFT, padx=(5, 15))
+        self.export_output_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        self.export_browse_btn.pack(side=tk.LEFT, padx=5)
 
         # 进度区域
         self.progress_frame.pack(fill=tk.X, padx=15, pady=5)
@@ -229,11 +270,17 @@ class MainWindow:
         self.log_text.pack(fill=tk.BOTH, expand=True)
 
     def log(self, message: str):
-        """添加日志"""
+        """添加日志（含时间戳，上限 2000 行）"""
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}\n"
 
         self.log_text.configure(state=tk.NORMAL)
+
+        # 限制日志行数，超出时删除旧行
+        line_count = int(float(self.log_text.index('end-1c')))
+        if line_count > 2000:
+            self.log_text.delete('1.0', f'{line_count - 2000}.0')
+
         self.log_text.insert(tk.END, log_entry)
         self.log_text.see(tk.END)
         self.log_text.configure(state=tk.DISABLED)
@@ -354,6 +401,24 @@ class MainWindow:
             self.output_dir_var.set(dir_path)
             self.log(f"下载目录: {dir_path}")
 
+    def _on_browse_export_dir(self):
+        """浏览导出目录按钮事件"""
+        initial = self.export_output_dir_var.get() or str(Path.home() / "Downloads")
+        dir_path = filedialog.askdirectory(
+            initialdir=initial,
+            title="选择导出目标目录"
+        )
+        if dir_path:
+            self.export_output_dir_var.set(dir_path)
+            self.log(f"导出目录: {dir_path}")
+
+    def _get_export_output_dir(self) -> Optional[Path]:
+        """获取导出目标目录：勾选默认则 None（自动生成），否则取输入框路径"""
+        if self.use_default_export_var.get():
+            return None
+        path_str = self.export_output_dir_var.get().strip()
+        return Path(path_str) if path_str else None
+
     def _generate_output_dir(self) -> Path:
         """生成带时间戳的输出目录"""
         base_dir = Path(self.output_dir_var.get())
@@ -427,10 +492,11 @@ class MainWindow:
             result = downloader.run(labeled_only=True)
 
             # 在主线程更新UI
-            self.root.after(0, lambda: self._download_complete(result, output_dir))
+            self.root.after(0, lambda r=result, d=output_dir: self._download_complete(r, d))
 
         except Exception as e:
-            self.root.after(0, lambda: self._download_error(str(e)))
+            msg = str(e)
+            self.root.after(0, lambda m=msg: self._download_error(m))
 
     def _update_progress(self, pct: float, current: int, total: int, filename: str):
         """更新进度"""
@@ -484,7 +550,6 @@ class MainWindow:
 
     def _on_export_coco(self):
         """导出COCO格式按钮事件"""
-        # 默认打开上次下载目录，否则 home/Downloads
         initial_dir = str(self.last_download_dir) if self.last_download_dir else str(Path.home() / "Downloads")
         folder = filedialog.askdirectory(
             initialdir=initial_dir,
@@ -496,27 +561,38 @@ class MainWindow:
         self.export_coco_btn.config(state=tk.DISABLED)
         self.log(f"开始转换COCO格式: {folder}")
 
+        export_dir = self._get_export_output_dir()
         t = threading.Thread(
             target=self._export_coco_worker,
-            args=(Path(folder),),
+            args=(Path(folder), export_dir),
             daemon=True
         )
         t.start()
 
-    def _export_coco_worker(self, folder: Path):
+    def _export_coco_worker(self, folder: Path, export_dir: Optional[Path] = None):
         """后台线程执行转换"""
         try:
             converter = COCOConverter(folder)
             result = converter.convert()
-            self.root.after(0, lambda: self._export_coco_complete(result))
+            # COCO 格式始终输出到 dataset/COCO/ 下；如指定了导出目录则额外复制
+            if export_dir and result.coco_dir:
+                import shutil
+                dst = export_dir / result.coco_dir.name
+                if not dst.exists():
+                    shutil.copytree(result.coco_dir, dst)
+                    self.root.after(0, lambda: self.log(f"COCO已复制到: {dst}"))
+            self.root.after(0, lambda r=result: self._export_coco_complete(r))
         except FileNotFoundError as e:
-            self.root.after(0, lambda: self._export_coco_error(f"目录不完整: {e}"))
+            msg = f"目录不完整: {e}"
+            self.root.after(0, lambda m=msg: self._export_coco_error(m))
         except ValueError as e:
-            self.root.after(0, lambda: self._export_coco_error(f"无有效数据: {e}"))
+            msg = f"无有效数据: {e}"
+            self.root.after(0, lambda m=msg: self._export_coco_error(m))
         except Exception as e:
             import traceback
             traceback.print_exc()
-            self.root.after(0, lambda: self._export_coco_error(f"转换失败: {e}"))
+            msg = f"转换失败: {e}"
+            self.root.after(0, lambda m=msg: self._export_coco_error(m))
 
     def _export_coco_complete(self, result: ConversionResult):
         """转换完成，显示结果并恢复按钮"""
@@ -545,6 +621,154 @@ class MainWindow:
         self.log(f"COCO转换失败: {msg}")
         messagebox.showerror("COCO转换失败", msg)
         self.export_coco_btn.config(state=tk.NORMAL)
+
+    def _on_export_hikvision(self):
+        """导出海康本地格式按钮事件"""
+        initial_dir = str(self.last_download_dir) if self.last_download_dir else str(Path.home() / "Downloads")
+        folder = filedialog.askdirectory(
+            initialdir=initial_dir,
+            title="选择已下载的数据集目录"
+        )
+        if not folder:
+            return
+
+        self.export_hikvision_btn.config(state=tk.DISABLED)
+        self.log(f"开始转换海康本地格式: {folder}")
+
+        export_dir = self._get_export_output_dir()
+        t = threading.Thread(
+            target=self._export_hikvision_worker,
+            args=(Path(folder), export_dir),
+            daemon=True
+        )
+        t.start()
+
+    def _export_hikvision_worker(self, folder: Path, export_dir: Optional[Path] = None):
+        """后台线程执行转换"""
+        try:
+            converter = HikvisionFormatConverter(folder, export_dir)
+            result = converter.convert()
+            self.root.after(0, lambda r=result: self._export_hikvision_complete(r))
+        except FileNotFoundError as e:
+            msg = f"目录不完整: {e}"
+            self.root.after(0, lambda m=msg: self._export_hikvision_error(m))
+        except ValueError as e:
+            msg = f"无有效数据: {e}"
+            self.root.after(0, lambda m=msg: self._export_hikvision_error(m))
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            msg = f"转换失败: {e}"
+            self.root.after(0, lambda m=msg: self._export_hikvision_error(m))
+
+    def _export_hikvision_complete(self, result: HikvisionExportResult):
+        """转换完成，显示结果并恢复按钮"""
+        format_label = "混合标注" if result.format_type == "mixed" else "单检测"
+        self.log("=" * 40)
+        self.log("海康本地格式转换完成!")
+        self.log(f"格式: {format_label}")
+        self.log(f"图片数: {result.images_count}")
+        self.log(f"标注数: {result.annotations_count}")
+        if result.skipped_count > 0:
+            self.log(f"跳过: {result.skipped_count} 条")
+        self.log(f"输出: {result.output_dir}")
+        if result.summary_path:
+            self.log(f"汇总: {result.summary_path}")
+
+        msg = (f"导出成功!\n\n"
+               f"格式: {format_label}\n"
+               f"图片数: {result.images_count}\n"
+               f"标注数: {result.annotations_count}\n"
+               + (f"跳过: {result.skipped_count} 条\n" if result.skipped_count else "")
+               + f"\n输出目录:\n{result.output_dir}\n"
+               + f"标注目录:\n{result.result_dir}")
+        if result.summary_path:
+            msg += f"\n\n汇总JSON:\n{result.summary_path}"
+
+        messagebox.showinfo("海康本地格式转换完成", msg)
+        self.export_hikvision_btn.config(state=tk.NORMAL)
+
+    def _export_hikvision_error(self, msg: str):
+        """转换出错，显示错误并恢复按钮"""
+        self.log(f"海康本地格式转换失败: {msg}")
+        messagebox.showerror("海康本地格式转换失败", msg)
+        self.export_hikvision_btn.config(state=tk.NORMAL)
+
+    def _on_export_hikvision_official(self):
+        """导出海康官方完整格式按钮事件"""
+        initial_dir = str(self.last_download_dir) if self.last_download_dir else str(Path.home() / "Downloads")
+        folder = filedialog.askdirectory(
+            initialdir=initial_dir,
+            title="选择已下载的数据集目录"
+        )
+        if not folder:
+            return
+
+        self.export_hikvision_official_btn.config(state=tk.DISABLED)
+        self.log(f"开始转换海康官方完整格式: {folder}")
+
+        export_dir = self._get_export_output_dir()
+        t = threading.Thread(
+            target=self._export_hikvision_official_worker,
+            args=(Path(folder), export_dir),
+            daemon=True
+        )
+        t.start()
+
+    def _export_hikvision_official_worker(self, folder: Path, export_dir: Optional[Path] = None):
+        """后台线程执行官方格式转换"""
+        try:
+            converter = HikvisionFormatConverter(folder, export_dir, mode="official")
+            result = converter.convert()
+            self.root.after(0, lambda r=result: self._export_hikvision_official_complete(r))
+        except FileNotFoundError as e:
+            msg = f"目录不完整: {e}"
+            self.root.after(0, lambda m=msg: self._export_hikvision_official_error(m))
+        except ValueError as e:
+            msg = f"无有效数据: {e}"
+            self.root.after(0, lambda m=msg: self._export_hikvision_official_error(m))
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            msg = f"转换失败: {e}"
+            self.root.after(0, lambda m=msg: self._export_hikvision_official_error(m))
+
+    def _export_hikvision_official_complete(self, result: HikvisionExportResult):
+        """官方格式转换完成"""
+        format_label = "混合标注" if result.format_type == "mixed" else "单检测"
+        self.log("=" * 40)
+        self.log("海康官方完整格式导出完成!")
+        self.log(f"格式: {format_label}")
+        self.log(f"有标注图片: {result.images_count}")
+        self.log(f"标注数: {result.annotations_count}")
+        if result.no_target_count > 0:
+            self.log(f"无标注图片: {result.no_target_count} → 不包含目标/")
+        if result.skipped_count > 0:
+            self.log(f"跳过: {result.skipped_count} 条")
+        self.log(f"输出: {result.output_dir}")
+        if result.summary_path:
+            self.log(f"汇总: {result.summary_path}")
+
+        msg = (f"导出成功!\n\n"
+               f"格式: {format_label}\n"
+               f"有标注图片: {result.images_count}\n"
+               f"标注数: {result.annotations_count}\n"
+               + (f"无标注图片: {result.no_target_count}\n" if result.no_target_count else "")
+               + (f"跳过: {result.skipped_count} 条\n" if result.skipped_count else "")
+               + f"\n输出目录:\n{result.output_dir}\n"
+               + f"汇总JSON:\n{result.result_dir}")
+        if result.summary_path:
+            msg += f"\n\n汇总文件:\n{result.summary_path}"
+
+        messagebox.showinfo("海康官方格式导出完成", msg)
+        self.export_hikvision_official_btn.config(state=tk.NORMAL)
+
+    def _export_hikvision_official_error(self, msg: str):
+        """官方格式转换出错"""
+        self.log(f"海康官方格式导出失败: {msg}")
+        messagebox.showerror("海康官方格式导出失败", msg)
+        self.export_hikvision_official_btn.config(state=tk.NORMAL)
+
 
     def _on_cancel(self):
         """取消按钮事件"""

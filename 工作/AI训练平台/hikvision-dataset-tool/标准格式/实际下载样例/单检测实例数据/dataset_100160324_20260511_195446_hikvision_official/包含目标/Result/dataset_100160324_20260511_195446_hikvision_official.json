@@ -1,0 +1,374 @@
+{
+	"calibInfo": {
+		"cereal_class_version": 22,
+		"FormatVersion": "1.0",
+		"VideoChannels": [
+			{
+				"cereal_class_version": 22,
+				"VideoChannelID": 0,
+				"VideoChanInfo": {
+					"cereal_class_version": 22,
+					"Description": ""
+				},
+				"MediaInfo": {
+					"cereal_class_version": 22,
+					"MediaType": 3,
+					"FilePath": "D:/proiect/工作/AI训练平台/hikvision-dataset-tool/标准格式/实际下载样例/单检测实例数据/dataset_100160324_20260511_195446_hikvision_official/包含目标",
+					"FileTime": 0,
+					"FrameNum": 3,
+					"FrameWidth": -1,
+					"FrameHeight": -1,
+					"breakFrameNum": "9yue14ri_3_1_00000000000000000_128_1920_1080_r5414.jpg"
+				},
+				"BasicConfig": {
+					"cereal_class_version": 22,
+					"AlgorithmValue": 1,
+					"EventValue": 1,
+					"FrameStepLength": 10,
+					"MinObjWidth": 10,
+					"MinObjHeight": 10
+				},
+				"GeneralTag": {
+					"cereal_class_version": 22,
+					"SceneType": -1,
+					"Weather": ""
+				},
+				"VideoInfo": {
+					"cereal_class_version": 22,
+					"MainTagPage": {
+						"cereal_class_version": 22,
+						"PropertyPageName": "",
+						"PropertyPageDescript": "",
+						"TagGroups": [],
+						"IsDisplay": ""
+					},
+					"mapFrameInfos": [
+						{
+							"key": {
+								"cereal_class_version": 22,
+								"FrameNum": "9yue14ri_3_1_00000000000000000_128_1920_1080_r5414.jpg",
+								"MediaType": 3
+							},
+							"value": {
+								"cereal_class_version": 22,
+								"FrameNum": "9yue14ri_3_1_00000000000000000_128_1920_1080_r5414.jpg",
+								"TimeStamp": 0,
+								"OsdTime": 0,
+								"mapRules": [],
+								"mapTargets": [
+									{
+										"key": 1,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 1,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.33645833333333336,
+													"fY": 0.2611111111111111,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.8208333333333333,
+													"fY": 0.2611111111111111
+												},
+												{
+													"fX": 0.8208333333333333,
+													"fY": 0.8685185185185185
+												},
+												{
+													"fX": 0.33645833333333336,
+													"fY": 0.8685185185185185
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "0",
+													"PropertyPageDescript": "奥特曼",
+													"IsDisplay": "1",
+													"TagGroups": []
+												}
+											]
+										}
+									}
+								],
+								"mapFrameEvents": [],
+								"PropertyPages": [
+									{
+										"PropertyPageName": "",
+										"PropertyPageDescript": "",
+										"TagGroups": [],
+										"IsDisplay": ""
+									}
+								]
+							}
+						},
+						{
+							"key": {
+								"cereal_class_version": 22,
+								"FrameNum": "9yue14ri_3_1_00000000000000000_142_1920_1080_r2325.jpg",
+								"MediaType": 3
+							},
+							"value": {
+								"cereal_class_version": 22,
+								"FrameNum": "9yue14ri_3_1_00000000000000000_142_1920_1080_r2325.jpg",
+								"TimeStamp": 0,
+								"OsdTime": 0,
+								"mapRules": [],
+								"mapTargets": [
+									{
+										"key": 2,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 2,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.10260416666666666,
+													"fY": 0.17037037037037037,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.23958333333333334,
+													"fY": 0.17037037037037037
+												},
+												{
+													"fX": 0.23958333333333334,
+													"fY": 0.37592592592592594
+												},
+												{
+													"fX": 0.10260416666666666,
+													"fY": 0.37592592592592594
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "1",
+													"PropertyPageDescript": "小王子",
+													"IsDisplay": "1",
+													"TagGroups": []
+												}
+											]
+										}
+									},
+									{
+										"key": 3,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 3,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.1875,
+													"fY": 0.5287037037037037,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.49895833333333334,
+													"fY": 0.5287037037037037
+												},
+												{
+													"fX": 0.49895833333333334,
+													"fY": 0.75
+												},
+												{
+													"fX": 0.1875,
+													"fY": 0.75
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "2",
+													"PropertyPageDescript": "奥特曼",
+													"IsDisplay": "1",
+													"TagGroups": []
+												}
+											]
+										}
+									},
+									{
+										"key": 4,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 4,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.3640625,
+													"fY": 0.1648148148148148,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.5869791666666667,
+													"fY": 0.1648148148148148
+												},
+												{
+													"fX": 0.5869791666666667,
+													"fY": 0.40925925925925927
+												},
+												{
+													"fX": 0.3640625,
+													"fY": 0.40925925925925927
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "3",
+													"PropertyPageDescript": "奥特曼",
+													"IsDisplay": "1",
+													"TagGroups": []
+												}
+											]
+										}
+									},
+									{
+										"key": 5,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 5,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.6333333333333333,
+													"fY": 0.1787037037037037,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.8203125,
+													"fY": 0.1787037037037037
+												},
+												{
+													"fX": 0.8203125,
+													"fY": 0.4101851851851852
+												},
+												{
+													"fX": 0.6333333333333333,
+													"fY": 0.4101851851851852
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "4",
+													"PropertyPageDescript": "小王子",
+													"IsDisplay": "1",
+													"TagGroups": []
+												}
+											]
+										}
+									},
+									{
+										"key": 6,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 6,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.5838541666666667,
+													"fY": 0.5509259259259259,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.8041666666666667,
+													"fY": 0.5509259259259259
+												},
+												{
+													"fX": 0.8041666666666667,
+													"fY": 0.799074074074074
+												},
+												{
+													"fX": 0.5838541666666667,
+													"fY": 0.799074074074074
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "5",
+													"PropertyPageDescript": "小王子",
+													"IsDisplay": "1",
+													"TagGroups": []
+												}
+											]
+										}
+									}
+								],
+								"mapFrameEvents": [],
+								"PropertyPages": [
+									{
+										"PropertyPageName": "",
+										"PropertyPageDescript": "",
+										"TagGroups": [],
+										"IsDisplay": ""
+									}
+								]
+							}
+						},
+						{
+							"key": {
+								"cereal_class_version": 22,
+								"FrameNum": "9yue14ri_3_1_00000000000000000_156_1920_1080_r6226.jpg",
+								"MediaType": 3
+							},
+							"value": {
+								"cereal_class_version": 22,
+								"FrameNum": "9yue14ri_3_1_00000000000000000_156_1920_1080_r6226.jpg",
+								"TimeStamp": 0,
+								"OsdTime": 0,
+								"mapRules": [],
+								"mapTargets": [
+									{
+										"key": 7,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 7,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.13645833333333332,
+													"fY": 0.32592592592592595,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.475,
+													"fY": 0.32592592592592595
+												},
+												{
+													"fX": 0.475,
+													"fY": 0.8231481481481482
+												},
+												{
+													"fX": 0.13645833333333332,
+													"fY": 0.8231481481481482
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "6",
+													"PropertyPageDescript": "小王子",
+													"IsDisplay": "1",
+													"TagGroups": []
+												}
+											]
+										}
+									}
+								],
+								"mapFrameEvents": [],
+								"PropertyPages": [
+									{
+										"PropertyPageName": "",
+										"PropertyPageDescript": "",
+										"TagGroups": [],
+										"IsDisplay": ""
+									}
+								]
+							}
+						}
+					],
+					"VideoChanEvents": []
+				}
+			}
+		],
+		"AudioChannels": [],
+		"GlobalEvents": []
+	}
+}

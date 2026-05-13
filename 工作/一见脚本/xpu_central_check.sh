@@ -87,7 +87,7 @@ parse_xpu_smi() {
   local node="$1"
   awk -v node="$node" '
   function trim(s){ gsub(/^[ \t]+|[ \t]+$/,"",s); return s }
-  function num(s) { gsub(/[^0-9.]/,"",s); return s+0 }
+  function num(s) { gsub(/^[ \t]+|[ \t]+$/,"",s); if(s~/[kK]$/){ sub(/[kK]$/,"",s); return s*1000 } if(s~/[mM]$/){ sub(/[mM]$/,"",s); return s*1000000 } if(s~/[gG]$/){ sub(/[gG]$/,"",s); return s*1000000000 } gsub(/[^0-9.]/,"",s); return s+0 }
   BEGIN{ mode=""; last_dev="" }
   $0~/^  DEVICES/ { mode="dev";  next }
   $0~/^  VIDEO/   { mode="video"; next }
@@ -149,11 +149,11 @@ printf "%-18s %-15s %-15s %12s %12s %12s %12s %12s %12s %10s %10s %10s %12s\n" \
   "REAL_TOTAL" "REAL_USED" "REAL_FREE" "REAL_USE" "AVG_UTIL" "MAX_TEMP" "REAL-K8S"
 
 awk '
-function add_mem(start,   i,j,arr,v,s) {
+function add_mem(start,   i,j,arr,v,val,s) {
   s=0
   for(i=start;i<=NF;i++){
     split($i,arr,",")
-    for(j in arr){ v=arr[j]; gsub(/^[ \t]+|[ \t]+$/,"",v); if(v~/^[0-9]+$/) s+=v+0 }
+    for(j in arr){ v=arr[j]; gsub(/^[ \t]+|[ \t]+$/,"",v); val=v+0; if(v~/[kK]$/)val*=1000; else if(v~/[mM]$/)val*=1000000; else if(v~/[gG]$/)val*=1000000000; if(val>0)s+=val }
   }
   return s
 }
@@ -201,6 +201,14 @@ if [ -s "$tmp_actual_devices" ]; then
     printf "%-18s %6s %-8s %-6s %7d%% %12d %12d %12d %10d %7dC\n",
       $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
   }' "$tmp_actual_devices" | sort -k1,1 -k2,2n
+  awk -F'\t' '{
+    used+=$6; total+=$7; free+=$8; power+=$9; util+=$5; cnt++
+  }
+  END {
+    if(cnt>0)
+      printf "%-18s %6s %-8s %-6s %6.1f%% %12d %12d %12d %10d %7s\n",
+        "[合计]", "", "", "", util/cnt, used, total, free, power, ""
+  }' "$tmp_actual_devices"
 else
   echo "本机未采集到 xpu_smi 数据"
 fi
@@ -213,6 +221,14 @@ if [ -s "$tmp_actual_procs" ]; then
     printf "%-18s %6s %10s %8s %10s %10d %-20s\n",
       $1,$2,$3,$4,$5,$6,$7
   }' "$tmp_actual_procs" | sort -k1,1 -k2,2n -k6,6nr
+  awk -F'\t' '{
+    mem+=$6; cnt++
+  }
+  END {
+    if(cnt>0)
+      printf "%-18s %6s %10d %8s %10s %10d %-20s\n",
+        "[合计]", "", cnt, "", "", mem, "(进程数/总内存MiB)"
+  }' "$tmp_actual_procs"
 else
   echo "本机未采集到 XPU 进程数据"
 fi
@@ -220,11 +236,11 @@ fi
 section "4) XPU Pod 申请明细：来自 K8s limits"
 printf "%-12s %-48s %-18s %12s\n" "空间" "Pod" "节点" "申请MiB"
 awk '
-function add_mem(start,   i,j,arr,v,s) {
+function add_mem(start,   i,j,arr,v,val,s) {
   s=0
   for(i=start;i<=NF;i++){
     split($i,arr,",")
-    for(j in arr){ v=arr[j]; gsub(/^[ \t]+|[ \t]+$/,"",v); if(v~/^[0-9]+$/) s+=v+0 }
+    for(j in arr){ v=arr[j]; gsub(/^[ \t]+|[ \t]+$/,"",v); val=v+0; if(v~/[kK]$/)val*=1000; else if(v~/[mM]$/)val*=1000000; else if(v~/[gG]$/)val*=1000000000; if(val>0)s+=val }
   }
   return s
 }
@@ -234,6 +250,33 @@ function add_mem(start,   i,j,arr,v,s) {
   if(mem>0) printf "%-12s %-48s %-18s %12d\n",$1,$2,$3,mem
 }
 ' "$tmp_pods" | sort -k3,3 -k4,4nr
+
+awk '
+function add_mem(start,   i,j,arr,v,val,s) {
+  s=0
+  for(i=start;i<=NF;i++){
+    split($i,arr,",")
+    for(j in arr){ v=arr[j]; gsub(/^[ \t]+|[ \t]+$/,"",v); val=v+0; if(v~/[kK]$/)val*=1000; else if(v~/[mM]$/)val*=1000000; else if(v~/[gG]$/)val*=1000000000; if(val>0)s+=val }
+  }
+  return s
+}
+{
+  if($1==""||$1=="<none>") next
+  mem=add_mem(4)
+  if(mem>0){
+    pod_cnt++
+    pod_mem+=mem
+    ns_set[$1]=1
+    if($3!=""&&$3!="<none>") node_set[$3]=1
+  }
+}
+END {
+  for(n in ns_set) ns_cnt++
+  for(n in node_set) node_cnt++
+  printf "%-12s %-48s %-18s %12d\n",
+    "[合计]", "(Pod:" pod_cnt " 空间:" ns_cnt " 节点:" node_cnt ")", "", pod_mem
+}
+' "$tmp_pods"
 
 section "5) Deployment 副本情况"
 printf "%-10s %-40s %10s %10s\n" "空间" "名称" "期望副本" "可用副本"
@@ -245,6 +288,13 @@ $1~/^ep-/ || $1=="tn-controller-manager-ep-package" {
   if(desired=="<none>"||desired=="")   desired=0
   if(available=="<none>"||available=="") available=0
   printf "%-10s %-40s %10s %10s\n","default",$1,desired,available
+  cnt++
+  tot_desired+=desired
+  tot_available+=available
+}
+END {
+  if(cnt>0)
+    printf "%-10s %-40s %10d %10d\n","[合计]","(共" cnt "个Deployment)",tot_desired,tot_available
 }'
 
 section "6) 结构化摘要（中心端聚合专用）"

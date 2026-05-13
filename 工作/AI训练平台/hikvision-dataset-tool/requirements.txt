@@ -18,3 +18,6 @@ browser-cookie3>=0.19.1
 
 # 图片解密（海康威视AES-ECB加密）
 pycryptodome>=3.15.0
+
+# 可选：图片尺寸读取（标注 JSON 无尺寸时的后备方案）
+# Pillow>=10.0.0

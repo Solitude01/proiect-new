@@ -1,0 +1,205 @@
+{
+  "file_id": "146a3476262f4f8da29b2c134781f1d3",
+  "file_name": "8_13_1_00000000000000000_7_2560_1440_r1556.jpg",
+  "width": 2560,
+  "height": 1440,
+  "tag_user": "ZXY6699",
+  "create_time": "2026-05-11 19:47:11",
+  "annotations": [
+    {
+      "id": "51114feb61984a98b262c962f1cc35b7",
+      "label_id": "696d3552010b4142bc253b52ac6609bf",
+      "label_name": "人",
+      "label_item_name": "右手",
+      "label_set_name": "手部",
+      "bbox": {
+        "xmin": 506.0,
+        "ymin": 394.0,
+        "xmax": 822.0,
+        "ymax": 620.0
+      },
+      "property": null,
+      "order_num": "2"
+    },
+    {
+      "id": "0a6587b44d9949a1970eaa8fa3ae9979",
+      "label_id": "696d3552010b4142bc253b52ac6609bf",
+      "label_name": "人",
+      "label_item_name": "左手",
+      "label_set_name": "手部",
+      "bbox": {
+        "xmin": 1079.0,
+        "ymin": 626.0,
+        "xmax": 1334.0,
+        "ymax": 860.0
+      },
+      "property": null,
+      "order_num": "12"
+    },
+    {
+      "id": "be14702a6f0f4902a106357f30ebcc77",
+      "label_id": "696d3552010b4142bc253b52ac6609bf",
+      "label_name": "人",
+      "label_item_name": "左手",
+      "label_set_name": "手部",
+      "bbox": {
+        "xmin": 237.0,
+        "ymin": 483.0,
+        "xmax": 459.0,
+        "ymax": 679.0
+      },
+      "property": null,
+      "order_num": "1"
+    },
+    {
+      "id": "496a78235de2429483427ccafdff9458",
+      "label_id": "696d3552010b4142bc253b52ac6609bf",
+      "label_name": "人",
+      "label_item_name": "右手",
+      "label_set_name": "手部",
+      "bbox": {
+        "xmin": 1464.0,
+        "ymin": 1074.0,
+        "xmax": 1749.0,
+        "ymax": 1322.0
+      },
+      "property": null,
+      "order_num": "11"
+    },
+    {
+      "id": "294183a1232a4077b33f05dd2a7485fd",
+      "label_id": "1c8722cd03604f9b86485e25806819c4",
+      "label_name": "手机",
+      "label_item_name": "折叠屏",
+      "label_set_name": "类别",
+      "bbox": {
+        "xmin": 1515.0,
+        "ymin": 630.0,
+        "xmax": 2006.0,
+        "ymax": 868.0
+      },
+      "property": null,
+      "order_num": "5"
+    },
+    {
+      "id": "84cb01d3aff7421a80d7db5512e24bd0",
+      "label_id": "696d3552010b4142bc253b52ac6609bf",
+      "label_name": "人",
+      "label_item_name": "右手",
+      "label_set_name": "手部",
+      "bbox": {
+        "xmin": 1937.0,
+        "ymin": 170.0,
+        "xmax": 2169.0,
+        "ymax": 367.0
+      },
+      "property": null,
+      "order_num": "13"
+    },
+    {
+      "id": "d9f17ed7a0c8467aa91bd1adfe3991af",
+      "label_id": "1c8722cd03604f9b86485e25806819c4",
+      "label_name": "手机",
+      "label_item_name": "折叠屏",
+      "label_set_name": "类别",
+      "bbox": {
+        "xmin": 626.0,
+        "ymin": 752.0,
+        "xmax": 983.0,
+        "ymax": 942.0
+      },
+      "property": null,
+      "order_num": "7"
+    },
+    {
+      "id": "579857b64ef3430ea93d5e48d4e2d4fa",
+      "label_id": "1c8722cd03604f9b86485e25806819c4",
+      "label_name": "手机",
+      "label_item_name": "直屏",
+      "label_set_name": "类别",
+      "bbox": {
+        "xmin": 1492.0,
+        "ymin": 119.0,
+        "xmax": 1721.0,
+        "ymax": 416.0
+      },
+      "property": null,
+      "order_num": "4"
+    },
+    {
+      "id": "15db90bc6a4d47a9b9dd2caa48111ad8",
+      "label_id": "1c8722cd03604f9b86485e25806819c4",
+      "label_name": "手机",
+      "label_item_name": "直屏",
+      "label_set_name": "类别",
+      "bbox": {
+        "xmin": 967.0,
+        "ymin": 221.0,
+        "xmax": 1221.0,
+        "ymax": 440.0
+      },
+      "property": null,
+      "order_num": "3"
+    },
+    {
+      "id": "357afa83e4e24ee4bda62f5bcd35bb69",
+      "label_id": "696d3552010b4142bc253b52ac6609bf",
+      "label_name": "人",
+      "label_item_name": "左手",
+      "label_set_name": "手部",
+      "bbox": {
+        "xmin": 1022.0,
+        "ymin": 1074.0,
+        "xmax": 1311.0,
+        "ymax": 1284.0
+      },
+      "property": null,
+      "order_num": "10"
+    },
+    {
+      "id": "a2f2389f43db4c169a7a7fafedb36a1e",
+      "label_id": "696d3552010b4142bc253b52ac6609bf",
+      "label_name": "人",
+      "label_item_name": null,
+      "label_set_name": null,
+      "bbox": {
+        "xmin": 626.0,
+        "ymin": 1054.0,
+        "xmax": 938.0,
+        "ymax": 1333.0
+      },
+      "property": null,
+      "order_num": "9"
+    },
+    {
+      "id": "63f03531671c4929bb9b30932ff6a764",
+      "label_id": "1c8722cd03604f9b86485e25806819c4",
+      "label_name": "手机",
+      "label_item_name": "直屏",
+      "label_set_name": "类别",
+      "bbox": {
+        "xmin": 131.0,
+        "ymin": 752.0,
+        "xmax": 388.0,
+        "ymax": 933.0
+      },
+      "property": null,
+      "order_num": "6"
+    },
+    {
+      "id": "c6d407cd04c74cffb05b395bd96165a8",
+      "label_id": "1c8722cd03604f9b86485e25806819c4",
+      "label_name": "手机",
+      "label_item_name": null,
+      "label_set_name": null,
+      "bbox": {
+        "xmin": 94.0,
+        "ymin": 1121.0,
+        "xmax": 431.0,
+        "ymax": 1365.0
+      },
+      "property": null,
+      "order_num": "8"
+    }
+  ]
+}

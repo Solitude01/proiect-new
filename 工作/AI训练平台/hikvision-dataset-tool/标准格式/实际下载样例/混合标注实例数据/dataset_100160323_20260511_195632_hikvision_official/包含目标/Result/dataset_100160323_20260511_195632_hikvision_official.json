@@ -1,0 +1,2229 @@
+{
+	"calibInfo": {
+		"cereal_class_version": 22,
+		"FormatVersion": "1.0",
+		"VideoChannels": [
+			{
+				"cereal_class_version": 22,
+				"VideoChannelID": 0,
+				"VideoChanInfo": {
+					"cereal_class_version": 22,
+					"Description": ""
+				},
+				"MediaInfo": {
+					"cereal_class_version": 22,
+					"MediaType": 3,
+					"FilePath": "D:/proiect/工作/AI训练平台/hikvision-dataset-tool/标准格式/实际下载样例/混合标注实例数据/dataset_100160323_20260511_195632_hikvision_official/包含目标",
+					"FileTime": 0,
+					"FrameNum": 3,
+					"FrameWidth": -1,
+					"FrameHeight": -1,
+					"breakFrameNum": "8_13_1_00000000000000000_0_2560_1440_r1115_r3631.jpg"
+				},
+				"BasicConfig": {
+					"cereal_class_version": 22,
+					"AlgorithmValue": 1,
+					"EventValue": 1,
+					"FrameStepLength": 10,
+					"MinObjWidth": 10,
+					"MinObjHeight": 10
+				},
+				"GeneralTag": {
+					"cereal_class_version": 22,
+					"SceneType": -1,
+					"Weather": ""
+				},
+				"VideoInfo": {
+					"cereal_class_version": 22,
+					"MainTagPage": {
+						"cereal_class_version": 22,
+						"PropertyPageName": "",
+						"PropertyPageDescript": "",
+						"TagGroups": [],
+						"IsDisplay": ""
+					},
+					"mapFrameInfos": [
+						{
+							"key": {
+								"cereal_class_version": 22,
+								"FrameNum": "8_13_1_00000000000000000_0_2560_1440_r1115_r3631.jpg",
+								"MediaType": 3
+							},
+							"value": {
+								"cereal_class_version": 22,
+								"FrameNum": "8_13_1_00000000000000000_0_2560_1440_r1115_r3631.jpg",
+								"TimeStamp": 0,
+								"OsdTime": 0,
+								"mapRules": [],
+								"mapTargets": [
+									{
+										"key": 1,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 1,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.717578125,
+													"fY": 0.43472222222222223,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.909375,
+													"fY": 0.43472222222222223
+												},
+												{
+													"fX": 0.909375,
+													"fY": 0.6
+												},
+												{
+													"fX": 0.717578125,
+													"fY": 0.6
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "0",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "1",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "2",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "3",
+																			"SubTagDescript": "折叠屏",
+																			"SubTagValue": "4"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 2,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 2,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.32109375,
+													"fY": 0.09513888888888888,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.419921875,
+													"fY": 0.09513888888888888
+												},
+												{
+													"fX": 0.419921875,
+													"fY": 0.2465277777777778
+												},
+												{
+													"fX": 0.32109375,
+													"fY": 0.2465277777777778
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "5",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "6",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "7",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "8",
+																			"SubTagDescript": "直屏",
+																			"SubTagValue": "9"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 3,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 3,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.091796875,
+													"fY": 0.6708333333333333,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.223828125,
+													"fY": 0.6708333333333333
+												},
+												{
+													"fX": 0.223828125,
+													"fY": 0.8402777777777778
+												},
+												{
+													"fX": 0.091796875,
+													"fY": 0.8402777777777778
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "10",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "11",
+															"TagGroupDescript": "",
+															"Tags": []
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 4,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 4,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.599609375,
+													"fY": 0.5506944444444445,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.69921875,
+													"fY": 0.5506944444444445
+												},
+												{
+													"fX": 0.69921875,
+													"fY": 0.7131944444444445
+												},
+												{
+													"fX": 0.599609375,
+													"fY": 0.7131944444444445
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "12",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "13",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "14",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "15",
+																			"SubTagDescript": "左手",
+																			"SubTagValue": "16"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 5,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 5,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.7453125,
+													"fY": 0.11805555555555555,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.835546875,
+													"fY": 0.11805555555555555
+												},
+												{
+													"fX": 0.835546875,
+													"fY": 0.2548611111111111
+												},
+												{
+													"fX": 0.7453125,
+													"fY": 0.2548611111111111
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "17",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "18",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "19",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "20",
+																			"SubTagDescript": "右手",
+																			"SubTagValue": "21"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 6,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 6,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.340234375,
+													"fY": 0.3486111111111111,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.4796875,
+													"fY": 0.3486111111111111
+												},
+												{
+													"fX": 0.4796875,
+													"fY": 0.48125
+												},
+												{
+													"fX": 0.340234375,
+													"fY": 0.48125
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "22",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "23",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "24",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "25",
+																			"SubTagDescript": "折叠屏",
+																			"SubTagValue": "26"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 7,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 7,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.267578125,
+													"fY": 0.6201388888888889,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.389453125,
+													"fY": 0.6201388888888889
+												},
+												{
+													"fX": 0.389453125,
+													"fY": 0.8138888888888889
+												},
+												{
+													"fX": 0.267578125,
+													"fY": 0.8138888888888889
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "27",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "28",
+															"TagGroupDescript": "",
+															"Tags": []
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 8,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 8,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.5828125,
+													"fY": 0.08263888888888889,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.672265625,
+													"fY": 0.08263888888888889
+												},
+												{
+													"fX": 0.672265625,
+													"fY": 0.28888888888888886
+												},
+												{
+													"fX": 0.5828125,
+													"fY": 0.28888888888888886
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "29",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "30",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "31",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "32",
+																			"SubTagDescript": "直屏",
+																			"SubTagValue": "33"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 9,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 9,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.728515625,
+													"fY": 0.7375,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.839453125,
+													"fY": 0.7375
+												},
+												{
+													"fX": 0.839453125,
+													"fY": 0.9097222222222222
+												},
+												{
+													"fX": 0.728515625,
+													"fY": 0.9097222222222222
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "34",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "35",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "36",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "37",
+																			"SubTagDescript": "右手",
+																			"SubTagValue": "38"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 10,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 10,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.1578125,
+													"fY": 0.16875,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.28125,
+													"fY": 0.16875
+												},
+												{
+													"fX": 0.28125,
+													"fY": 0.32569444444444445
+												},
+												{
+													"fX": 0.1578125,
+													"fY": 0.32569444444444445
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "39",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "40",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "41",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "42",
+																			"SubTagDescript": "右手",
+																			"SubTagValue": "43"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 11,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 11,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.45234375,
+													"fY": 0.6847222222222222,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.56484375,
+													"fY": 0.6847222222222222
+												},
+												{
+													"fX": 0.56484375,
+													"fY": 0.8305555555555556
+												},
+												{
+													"fX": 0.45234375,
+													"fY": 0.8305555555555556
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "44",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "45",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "46",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "47",
+																			"SubTagDescript": "左手",
+																			"SubTagValue": "48"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 12,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 12,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.051171875,
+													"fY": 0.5222222222222223,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.1515625,
+													"fY": 0.5222222222222223
+												},
+												{
+													"fX": 0.1515625,
+													"fY": 0.6479166666666667
+												},
+												{
+													"fX": 0.051171875,
+													"fY": 0.6479166666666667
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "49",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "50",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "51",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "52",
+																			"SubTagDescript": "直屏",
+																			"SubTagValue": "53"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 13,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 13,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.125390625,
+													"fY": 0.3923611111111111,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.212109375,
+													"fY": 0.3923611111111111
+												},
+												{
+													"fX": 0.212109375,
+													"fY": 0.5291666666666667
+												},
+												{
+													"fX": 0.125390625,
+													"fY": 0.5291666666666667
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "54",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "55",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "56",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "57",
+																			"SubTagDescript": "左手",
+																			"SubTagValue": "58"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									}
+								],
+								"mapFrameEvents": [],
+								"PropertyPages": [
+									{
+										"PropertyPageName": "",
+										"PropertyPageDescript": "",
+										"TagGroups": [],
+										"IsDisplay": ""
+									}
+								]
+							}
+						},
+						{
+							"key": {
+								"cereal_class_version": 22,
+								"FrameNum": "8_13_1_00000000000000000_4_2560_1440_r1392.jpg",
+								"MediaType": 3
+							},
+							"value": {
+								"cereal_class_version": 22,
+								"FrameNum": "8_13_1_00000000000000000_4_2560_1440_r1392.jpg",
+								"TimeStamp": 0,
+								"OsdTime": 0,
+								"mapRules": [],
+								"mapTargets": [
+									{
+										"key": 14,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 14,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.430859375,
+													"fY": 0.7743055555555556,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.543359375,
+													"fY": 0.7743055555555556
+												},
+												{
+													"fX": 0.543359375,
+													"fY": 0.9208333333333333
+												},
+												{
+													"fX": 0.430859375,
+													"fY": 0.9208333333333333
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "59",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "60",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "61",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "62",
+																			"SubTagDescript": "左手",
+																			"SubTagValue": "63"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 15,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 15,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.094921875,
+													"fY": 0.7638888888888888,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.226953125,
+													"fY": 0.7638888888888888
+												},
+												{
+													"fX": 0.226953125,
+													"fY": 0.9326388888888889
+												},
+												{
+													"fX": 0.094921875,
+													"fY": 0.9326388888888889
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "64",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "65",
+															"TagGroupDescript": "",
+															"Tags": []
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 16,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 16,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.671484375,
+													"fY": 0.45416666666666666,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.86328125,
+													"fY": 0.45416666666666666
+												},
+												{
+													"fX": 0.86328125,
+													"fY": 0.61875
+												},
+												{
+													"fX": 0.671484375,
+													"fY": 0.61875
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "66",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "67",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "68",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "69",
+																			"SubTagDescript": "折叠屏",
+																			"SubTagValue": "70"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 17,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 17,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.051171875,
+													"fY": 0.5222222222222223,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.1515625,
+													"fY": 0.5222222222222223
+												},
+												{
+													"fX": 0.1515625,
+													"fY": 0.6479166666666667
+												},
+												{
+													"fX": 0.051171875,
+													"fY": 0.6479166666666667
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "71",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "72",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "73",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "74",
+																			"SubTagDescript": "直屏",
+																			"SubTagValue": "75"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 18,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 18,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.5828125,
+													"fY": 0.08263888888888889,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.672265625,
+													"fY": 0.08263888888888889
+												},
+												{
+													"fX": 0.672265625,
+													"fY": 0.28888888888888886
+												},
+												{
+													"fX": 0.5828125,
+													"fY": 0.28888888888888886
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "76",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "77",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "78",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "79",
+																			"SubTagDescript": "直屏",
+																			"SubTagValue": "80"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 19,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 19,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.7453125,
+													"fY": 0.11805555555555555,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.835546875,
+													"fY": 0.11805555555555555
+												},
+												{
+													"fX": 0.835546875,
+													"fY": 0.2548611111111111
+												},
+												{
+													"fX": 0.7453125,
+													"fY": 0.2548611111111111
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "81",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "82",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "83",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "84",
+																			"SubTagDescript": "右手",
+																			"SubTagValue": "85"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 20,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 20,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.665625,
+													"fY": 0.7701388888888889,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.7765625,
+													"fY": 0.7701388888888889
+												},
+												{
+													"fX": 0.7765625,
+													"fY": 0.9423611111111111
+												},
+												{
+													"fX": 0.665625,
+													"fY": 0.9423611111111111
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "86",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "87",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "88",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "89",
+																			"SubTagDescript": "右手",
+																			"SubTagValue": "90"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 21,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 21,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.125390625,
+													"fY": 0.3923611111111111,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.212109375,
+													"fY": 0.3923611111111111
+												},
+												{
+													"fX": 0.212109375,
+													"fY": 0.5291666666666667
+												},
+												{
+													"fX": 0.125390625,
+													"fY": 0.5291666666666667
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "91",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "92",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "93",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "94",
+																			"SubTagDescript": "左手",
+																			"SubTagValue": "95"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 22,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 22,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.1578125,
+													"fY": 0.16875,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.28125,
+													"fY": 0.16875
+												},
+												{
+													"fX": 0.28125,
+													"fY": 0.32569444444444445
+												},
+												{
+													"fX": 0.1578125,
+													"fY": 0.32569444444444445
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "96",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "97",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "98",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "99",
+																			"SubTagDescript": "右手",
+																			"SubTagValue": "100"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 23,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 23,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.299609375,
+													"fY": 0.5097222222222222,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.4390625,
+													"fY": 0.5097222222222222
+												},
+												{
+													"fX": 0.4390625,
+													"fY": 0.6423611111111112
+												},
+												{
+													"fX": 0.299609375,
+													"fY": 0.6423611111111112
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "101",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "102",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "103",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "104",
+																			"SubTagDescript": "折叠屏",
+																			"SubTagValue": "105"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 24,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 24,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.292578125,
+													"fY": 0.7513888888888889,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.41484375,
+													"fY": 0.7513888888888889
+												},
+												{
+													"fX": 0.41484375,
+													"fY": 0.9451388888888889
+												},
+												{
+													"fX": 0.292578125,
+													"fY": 0.9451388888888889
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "106",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "107",
+															"TagGroupDescript": "",
+															"Tags": []
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 25,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 25,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.518359375,
+													"fY": 0.4597222222222222,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.61796875,
+													"fY": 0.4597222222222222
+												},
+												{
+													"fX": 0.61796875,
+													"fY": 0.6215277777777778
+												},
+												{
+													"fX": 0.518359375,
+													"fY": 0.6215277777777778
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "108",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "109",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "110",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "111",
+																			"SubTagDescript": "左手",
+																			"SubTagValue": "112"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 26,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 26,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.32109375,
+													"fY": 0.09513888888888888,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.419921875,
+													"fY": 0.09513888888888888
+												},
+												{
+													"fX": 0.419921875,
+													"fY": 0.2465277777777778
+												},
+												{
+													"fX": 0.32109375,
+													"fY": 0.2465277777777778
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "113",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "114",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "115",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "116",
+																			"SubTagDescript": "直屏",
+																			"SubTagValue": "117"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									}
+								],
+								"mapFrameEvents": [],
+								"PropertyPages": [
+									{
+										"PropertyPageName": "",
+										"PropertyPageDescript": "",
+										"TagGroups": [],
+										"IsDisplay": ""
+									}
+								]
+							}
+						},
+						{
+							"key": {
+								"cereal_class_version": 22,
+								"FrameNum": "8_13_1_00000000000000000_7_2560_1440_r1556.jpg",
+								"MediaType": 3
+							},
+							"value": {
+								"cereal_class_version": 22,
+								"FrameNum": "8_13_1_00000000000000000_7_2560_1440_r1556.jpg",
+								"TimeStamp": 0,
+								"OsdTime": 0,
+								"mapRules": [],
+								"mapTargets": [
+									{
+										"key": 27,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 27,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.19765625,
+													"fY": 0.27361111111111114,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.32109375,
+													"fY": 0.27361111111111114
+												},
+												{
+													"fX": 0.32109375,
+													"fY": 0.4305555555555556
+												},
+												{
+													"fX": 0.19765625,
+													"fY": 0.4305555555555556
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "118",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "119",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "120",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "121",
+																			"SubTagDescript": "右手",
+																			"SubTagValue": "122"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 28,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 28,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.421484375,
+													"fY": 0.43472222222222223,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.52109375,
+													"fY": 0.43472222222222223
+												},
+												{
+													"fX": 0.52109375,
+													"fY": 0.5972222222222222
+												},
+												{
+													"fX": 0.421484375,
+													"fY": 0.5972222222222222
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "123",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "124",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "125",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "126",
+																			"SubTagDescript": "左手",
+																			"SubTagValue": "127"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 29,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 29,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.092578125,
+													"fY": 0.33541666666666664,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.179296875,
+													"fY": 0.33541666666666664
+												},
+												{
+													"fX": 0.179296875,
+													"fY": 0.47152777777777777
+												},
+												{
+													"fX": 0.092578125,
+													"fY": 0.47152777777777777
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "128",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "129",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "130",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "131",
+																			"SubTagDescript": "左手",
+																			"SubTagValue": "132"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 30,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 30,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.571875,
+													"fY": 0.7458333333333333,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.683203125,
+													"fY": 0.7458333333333333
+												},
+												{
+													"fX": 0.683203125,
+													"fY": 0.9180555555555555
+												},
+												{
+													"fX": 0.571875,
+													"fY": 0.9180555555555555
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "133",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "134",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "135",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "136",
+																			"SubTagDescript": "右手",
+																			"SubTagValue": "137"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 31,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 31,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.591796875,
+													"fY": 0.4375,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.78359375,
+													"fY": 0.4375
+												},
+												{
+													"fX": 0.78359375,
+													"fY": 0.6027777777777777
+												},
+												{
+													"fX": 0.591796875,
+													"fY": 0.6027777777777777
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "138",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "139",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "140",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "141",
+																			"SubTagDescript": "折叠屏",
+																			"SubTagValue": "142"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 32,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 32,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.756640625,
+													"fY": 0.11805555555555555,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.847265625,
+													"fY": 0.11805555555555555
+												},
+												{
+													"fX": 0.847265625,
+													"fY": 0.2548611111111111
+												},
+												{
+													"fX": 0.756640625,
+													"fY": 0.2548611111111111
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "143",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "144",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "145",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "146",
+																			"SubTagDescript": "右手",
+																			"SubTagValue": "147"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 33,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 33,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.24453125,
+													"fY": 0.5222222222222223,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.383984375,
+													"fY": 0.5222222222222223
+												},
+												{
+													"fX": 0.383984375,
+													"fY": 0.6541666666666667
+												},
+												{
+													"fX": 0.24453125,
+													"fY": 0.6541666666666667
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "148",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "149",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "150",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "151",
+																			"SubTagDescript": "折叠屏",
+																			"SubTagValue": "152"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 34,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 34,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.5828125,
+													"fY": 0.08263888888888889,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.672265625,
+													"fY": 0.08263888888888889
+												},
+												{
+													"fX": 0.672265625,
+													"fY": 0.28888888888888886
+												},
+												{
+													"fX": 0.5828125,
+													"fY": 0.28888888888888886
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "153",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "154",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "155",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "156",
+																			"SubTagDescript": "直屏",
+																			"SubTagValue": "157"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 35,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 35,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.377734375,
+													"fY": 0.15347222222222223,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.476953125,
+													"fY": 0.15347222222222223
+												},
+												{
+													"fX": 0.476953125,
+													"fY": 0.3055555555555556
+												},
+												{
+													"fX": 0.377734375,
+													"fY": 0.3055555555555556
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "158",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "159",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "160",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "161",
+																			"SubTagDescript": "直屏",
+																			"SubTagValue": "162"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 36,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 36,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.39921875,
+													"fY": 0.7458333333333333,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.512109375,
+													"fY": 0.7458333333333333
+												},
+												{
+													"fX": 0.512109375,
+													"fY": 0.8916666666666667
+												},
+												{
+													"fX": 0.39921875,
+													"fY": 0.8916666666666667
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "163",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "164",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "165",
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "166",
+																			"SubTagDescript": "左手",
+																			"SubTagValue": "167"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 37,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 37,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.24453125,
+													"fY": 0.7319444444444444,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.36640625,
+													"fY": 0.7319444444444444
+												},
+												{
+													"fX": 0.36640625,
+													"fY": 0.9256944444444445
+												},
+												{
+													"fX": 0.24453125,
+													"fY": 0.9256944444444445
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "168",
+													"PropertyPageDescript": "人",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "169",
+															"TagGroupDescript": "",
+															"Tags": []
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 38,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 38,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.051171875,
+													"fY": 0.5222222222222223,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.1515625,
+													"fY": 0.5222222222222223
+												},
+												{
+													"fX": 0.1515625,
+													"fY": 0.6479166666666667
+												},
+												{
+													"fX": 0.051171875,
+													"fY": 0.6479166666666667
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "170",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "171",
+															"TagGroupDescript": "",
+															"Tags": [
+																{
+																	"cereal_class_version": 22,
+																	"TagName": "172",
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"cereal_class_version": 22,
+																			"SubTagName": "173",
+																			"SubTagDescript": "直屏",
+																			"SubTagValue": "174"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"key": 39,
+										"value": {
+											"cereal_class_version": 22,
+											"TargetID": 39,
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.03671875,
+													"fY": 0.7784722222222222,
+													"cereal_class_version": 22
+												},
+												{
+													"fX": 0.168359375,
+													"fY": 0.7784722222222222
+												},
+												{
+													"fX": 0.168359375,
+													"fY": 0.9479166666666666
+												},
+												{
+													"fX": 0.03671875,
+													"fY": 0.9479166666666666
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageName": "175",
+													"PropertyPageDescript": "手机",
+													"IsDisplay": "1",
+													"TagGroups": [
+														{
+															"cereal_class_version": 22,
+															"TagGroupName": "176",
+															"TagGroupDescript": "",
+															"Tags": []
+														}
+													]
+												}
+											]
+										}
+									}
+								],
+								"mapFrameEvents": [],
+								"PropertyPages": [
+									{
+										"PropertyPageName": "",
+										"PropertyPageDescript": "",
+										"TagGroups": [],
+										"IsDisplay": ""
+									}
+								]
+							}
+						}
+					],
+					"VideoChanEvents": []
+				}
+			}
+		],
+		"AudioChannels": [],
+		"GlobalEvents": []
+	}
+}

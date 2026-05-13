@@ -1,0 +1,539 @@
+{
+	"calibInfo": {
+		"VideoChannels": [
+			{
+				"VideoInfo": {
+					"mapFrameInfos": [
+						{
+							"value": {
+								"FrameNum": "8_13_1_00000000000000000_4_2560_1440_r1392.jpg",
+								"mapTargets": [
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.430859375,
+													"fY": 0.7743055555555556
+												},
+												{
+													"fX": 0.543359375,
+													"fY": 0.7743055555555556
+												},
+												{
+													"fX": 0.543359375,
+													"fY": 0.9208333333333333
+												},
+												{
+													"fX": 0.430859375,
+													"fY": 0.9208333333333333
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "人",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "左手"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.094921875,
+													"fY": 0.7638888888888888
+												},
+												{
+													"fX": 0.226953125,
+													"fY": 0.7638888888888888
+												},
+												{
+													"fX": 0.226953125,
+													"fY": 0.9326388888888889
+												},
+												{
+													"fX": 0.094921875,
+													"fY": 0.9326388888888889
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "手机",
+													"TagGroups": []
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.671484375,
+													"fY": 0.45416666666666666
+												},
+												{
+													"fX": 0.86328125,
+													"fY": 0.45416666666666666
+												},
+												{
+													"fX": 0.86328125,
+													"fY": 0.61875
+												},
+												{
+													"fX": 0.671484375,
+													"fY": 0.61875
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "手机",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "折叠屏"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.051171875,
+													"fY": 0.5222222222222223
+												},
+												{
+													"fX": 0.1515625,
+													"fY": 0.5222222222222223
+												},
+												{
+													"fX": 0.1515625,
+													"fY": 0.6479166666666667
+												},
+												{
+													"fX": 0.051171875,
+													"fY": 0.6479166666666667
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "手机",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "直屏"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.5828125,
+													"fY": 0.08263888888888889
+												},
+												{
+													"fX": 0.672265625,
+													"fY": 0.08263888888888889
+												},
+												{
+													"fX": 0.672265625,
+													"fY": 0.28888888888888886
+												},
+												{
+													"fX": 0.5828125,
+													"fY": 0.28888888888888886
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "手机",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "直屏"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.7453125,
+													"fY": 0.11805555555555555
+												},
+												{
+													"fX": 0.835546875,
+													"fY": 0.11805555555555555
+												},
+												{
+													"fX": 0.835546875,
+													"fY": 0.2548611111111111
+												},
+												{
+													"fX": 0.7453125,
+													"fY": 0.2548611111111111
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "人",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "右手"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.665625,
+													"fY": 0.7701388888888889
+												},
+												{
+													"fX": 0.7765625,
+													"fY": 0.7701388888888889
+												},
+												{
+													"fX": 0.7765625,
+													"fY": 0.9423611111111111
+												},
+												{
+													"fX": 0.665625,
+													"fY": 0.9423611111111111
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "人",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "右手"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.125390625,
+													"fY": 0.3923611111111111
+												},
+												{
+													"fX": 0.212109375,
+													"fY": 0.3923611111111111
+												},
+												{
+													"fX": 0.212109375,
+													"fY": 0.5291666666666667
+												},
+												{
+													"fX": 0.125390625,
+													"fY": 0.5291666666666667
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "人",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "左手"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.1578125,
+													"fY": 0.16875
+												},
+												{
+													"fX": 0.28125,
+													"fY": 0.16875
+												},
+												{
+													"fX": 0.28125,
+													"fY": 0.32569444444444445
+												},
+												{
+													"fX": 0.1578125,
+													"fY": 0.32569444444444445
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "人",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "右手"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.299609375,
+													"fY": 0.5097222222222222
+												},
+												{
+													"fX": 0.4390625,
+													"fY": 0.5097222222222222
+												},
+												{
+													"fX": 0.4390625,
+													"fY": 0.6423611111111112
+												},
+												{
+													"fX": 0.299609375,
+													"fY": 0.6423611111111112
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "手机",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "折叠屏"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.292578125,
+													"fY": 0.7513888888888889
+												},
+												{
+													"fX": 0.41484375,
+													"fY": 0.7513888888888889
+												},
+												{
+													"fX": 0.41484375,
+													"fY": 0.9451388888888889
+												},
+												{
+													"fX": 0.292578125,
+													"fY": 0.9451388888888889
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "人",
+													"TagGroups": []
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.518359375,
+													"fY": 0.4597222222222222
+												},
+												{
+													"fX": 0.61796875,
+													"fY": 0.4597222222222222
+												},
+												{
+													"fX": 0.61796875,
+													"fY": 0.6215277777777778
+												},
+												{
+													"fX": 0.518359375,
+													"fY": 0.6215277777777778
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "人",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "手部",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "左手"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									},
+									{
+										"value": {
+											"TargetType": 1,
+											"Vertex": [
+												{
+													"fX": 0.32109375,
+													"fY": 0.09513888888888888
+												},
+												{
+													"fX": 0.419921875,
+													"fY": 0.09513888888888888
+												},
+												{
+													"fX": 0.419921875,
+													"fY": 0.2465277777777778
+												},
+												{
+													"fX": 0.32109375,
+													"fY": 0.2465277777777778
+												}
+											],
+											"PropertyPages": [
+												{
+													"PropertyPageDescript": "手机",
+													"TagGroups": [
+														{
+															"Tags": [
+																{
+																	"TagDescript": "类别",
+																	"SubTags": [
+																		{
+																			"SubTagDescript": "直屏"
+																		}
+																	]
+																}
+															]
+														}
+													]
+												}
+											]
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		]
+	}
+}

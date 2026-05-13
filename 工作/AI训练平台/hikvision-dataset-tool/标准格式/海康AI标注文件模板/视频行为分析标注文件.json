@@ -1,0 +1,59 @@
+{
+	"calibInfo": {
+		"VideoChannels": [{
+
+			"MediaInfo": {
+				"FilePath": "C:/Users/pubyjyhzbd320/Desktop/新建文件夹/2.mp4",//视频路径或者视频名
+				"FrameWidth": 2560,//视频分辨率
+				"FrameHeight": 1440
+			},
+			"BasicConfig": {
+				"FrameStepLength": 3//标注步长
+			},
+			"VideoInfo": {
+				"mapFrameInfos": [{
+					"value": {
+						"FrameNum": "0",//视频帧号
+						"mapTargets": [{
+							"value": {
+								"TargetID": 1,//行为ID
+								"TargetType": 1,//1--矩形，3--四边形，视频行为分析必须为矩形
+								"Vertex": [{//矩形标注框四个顶点
+									"fX": 0.2982594966888428,
+									"fY": 0.037974681705236438
+								},
+								{
+									"fX": 0.4462025463581085,
+									"fY": 0.037974681705236438
+								},
+								{
+									"fX": 0.4462025463581085,
+									"fY": 0.8213783502578735
+								},
+								{
+									"fX": 0.2982594966888428,
+									"fY": 0.8213783502578735
+								}],
+								"PropertyPages": [{
+									"PropertyPageDescript": "电脑主机"//标签名
+								}]
+							}
+						}]
+					}
+				}],
+				"VideoChanEvents": []
+			},
+			"ExtraInfo": {
+				"csd_version": 35,
+				"mapExtraFrameInfos": [],
+				"clsFileCombineItem": {
+					"csd_version": 35,
+					"mapUID": []
+				},
+				"mapFrameEventUid": []
+			}
+		}],
+		"AudioChannels": [],
+		"GlobalEvents": []
+	}
+}
